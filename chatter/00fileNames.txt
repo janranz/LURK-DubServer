@@ -1,7 +1,9 @@
-awaken_messages.datbaddies.dat
+awaken_messages.dat
 baddies.dat
 danger_messages.dat
+death_messages.dat
 error_messages.dat
+fightHit_messages.dat
 food.dat
 health_messages.dat
 loot_messages.dat
