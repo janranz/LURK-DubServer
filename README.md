@@ -35,8 +35,13 @@ Private Repo for DubServer
 * Do plan for random events/messages. Assume the client will acknowledge such messages.
 
 \[Messages\]
+* Parse .dat files
 
 \[Rooms\]
+* Portal Room connects to all rooms. This is room 0
+* Randomly generated names and descriptions.
+* Need to find some way to connect said rooms.
+* Mystery rooms with some way to return to previous room.
 
 \[Fight Logic\]
 
