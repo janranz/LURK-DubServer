@@ -14,7 +14,7 @@ class Player: public Baddie
     void setSocketFD(int);
     void setGold(uint16_t);
 
-    void controller();
+    // void controller();
     //read
     //send
 };

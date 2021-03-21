@@ -1,7 +1,7 @@
-#include"baddie.h"
-#include"player.h"
-#include"room.h"
-#include"splitter.h"
+#include"../headers/baddie.h"
+#include"../headers/player.h"
+#include"../headers/room.h"
+#include"../headers/splitter.h"
 #include<fstream>
 
 int main(int argc,char** argv)

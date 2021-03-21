@@ -32,7 +32,7 @@ class Baddie
         ~Baddie();
         void lock();
         void unlock();
-        char* getName();
+        std::string getName();
         uint8_t getFlags();
         uint16_t getAttack();
         uint16_t getDefense();

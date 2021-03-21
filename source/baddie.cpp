@@ -28,3 +28,7 @@ void Baddie::unlock()
 {
     padlock.unlock();
 }
+std::string Baddie::getName()
+{
+    return name;
+}

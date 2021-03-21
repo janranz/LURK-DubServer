@@ -1,4 +1,4 @@
-#include"splitter.h"
+#include"../headers/splitter.h"
 
 std::vector<std::string> splitter(std::string s, std::string delimiter)
 {

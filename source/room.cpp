@@ -1,4 +1,4 @@
-#include"room.h"
+#include"../headers/room.h"
 
 Room::Room(uint16_t num,std::string name ,uint32_t roomDescLen ,std::string roomD)
 {
@@ -22,16 +22,19 @@ void Room::unlock()
     innerlock.unlock();
 }
 
-int Room::searchPlayer(std::string s)
+int Room::searchPlayer(std::string const&s)
 {
+    int i = 0;
     lock();
-    auto index = std::find(playerList.begin(),playerList.end(),s);
-    unlock();
-    if(index != playerList.end())
+    for(auto &t : playerList)
     {
-        
-        return reinterpret_cast<int>(*index);
+        if(t->getName() == s)
+        {
+            unlock();
+            return i;
+        }
     }
+    unlock();
     return -1;
 }
 

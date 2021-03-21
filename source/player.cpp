@@ -1,4 +1,4 @@
-#include"player.h"
+#include"../headers/player.h"
 
 //setter
 void Player::setSocketFD(int s)

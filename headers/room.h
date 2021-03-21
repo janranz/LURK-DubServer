@@ -24,7 +24,7 @@ class Room
         void setConnectedRooms(uint8_t);
         void addBaddie(Baddie);
         void addPlayer(Player*);
-        int searchPlayer(std::string);
+        int searchPlayer(std::string const&);
         void removePlayer(Player*);
         std::vector<Baddie*> getBaddieList();
         std::vector<Player*> getPlayerList();
