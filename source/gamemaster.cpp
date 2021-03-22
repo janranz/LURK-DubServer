@@ -75,35 +75,92 @@ void Gamemaster::estabSizes()
     Gamemaster::SAFEEV_VECTOR_SIZE = c_m.safeEv.size();
     Gamemaster::TRANS_VECTOR_SIZE = c_m.trans.size();
     Gamemaster::WEAPONS_VECTOR_SIZE = c_m.weapons.size();
-
-    std::cout << Gamemaster::FOOD_VECTOR_SIZE << std::endl;
 }
 
 void Gamemaster::populateSpawner()
 {
+    
     uint8_t flags = 248;
     uint16_t attack, defense, regen, gold;
     int16_t health;
-    
-    for(uint16_t i; i < Gamemaster::MAX_BADDIES; i++)
+    for(uint16_t i = 0; i < Gamemaster::MAX_BADDIES; i++)
     {
         //give stats opportunities to roll big;
         uint16_t remaining = Gamemaster::MAX_STAT;
         int statRoll = i % 3;
         int dex = fast_rand() % (Gamemaster::BADDIES_VECTOR_SIZE);
+        int roll;
         std::string n = c_m.baddies.at(dex);
         
-        int roll = (fast_rand() % (remaining) + 1);
-        remaining = ((remaining - roll) > 0) ? (remaining - roll) : 1;
-        std::cout << roll <<" REmainder: " <<remaining << std::endl;
-
-        // switch(statRoll)
-        // {
-        //     case 0:
-        //     {// attack - def - regen
-        //         attack = 
-        //     }
-        // }
-        
+        switch(statRoll)
+        {
+            case 0:
+            {// attack - def - regen |  remaining = ((remaining - roll) > 0) ? (remaining - roll) : 0;
+                roll = (fast_rand() % (remaining) + 1);
+                attack = roll;
+                remaining -= roll;
+                if(!(remaining > 0))
+                {
+                    defense = 0;
+                    regen = 0;
+                    break; 
+                }
+                roll = (fast_rand() % (remaining) + 1);
+                defense = roll;
+                remaining -= roll;
+                if(!(remaining > 0))
+                {
+                    regen = 0;
+                    break;
+                }
+                regen = remaining;
+                break;
+            }
+            case 1:
+            {// def - regen - attack
+                roll = (fast_rand() % (remaining) + 1);
+                defense = roll;
+                remaining -= roll;
+                if(!(remaining > 0))
+                {
+                    regen = 0;
+                    attack = 0;
+                    break; 
+                }
+                roll = (fast_rand() % (remaining) + 1);
+                regen = roll;
+                remaining -= roll;
+                if(!(remaining > 0))
+                {
+                    attack = 0;
+                    break;
+                }
+                attack = remaining;
+                break;
+            }
+            case 2:
+            {// regen - attack - def
+                roll = (fast_rand() % (remaining) + 1);
+                regen = roll;
+                remaining -= roll;
+                if(!(remaining > 0))
+                {
+                    attack = 0;
+                    defense = 0;
+                    break; 
+                }
+                roll = (fast_rand() % (remaining) + 1);
+                attack = roll;
+                remaining -= roll;
+                if(!(remaining > 0))
+                {
+                    defense = 0;
+                    break;
+                }
+                defense = remaining;
+                break;
+            }
+        }
+        // health = (fast_rand() % (remaining) + 1);
     }
 }
