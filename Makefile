@@ -12,9 +12,9 @@ OBJS := $(SRC:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
 
 CXX=g++
 RM=rm -f
-CPPFLAGS := -g -Iinclude -MMD -MP
+CPPFLAGS := -Iinclude -MMD -MP
 CFLAGS := -Wall
-LDFLAGS :=-g -Llib
+LDFLAGS := -Llib
 LDLIBS :=-lm
 
 

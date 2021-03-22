@@ -3,6 +3,8 @@
 #include"../headers/room.h"
 #include"../headers/splitter.h"
 #include"../headers/structs.h"
+#include"../headers/gamemaster.h"
+
 #include<fstream>
 
 int main(int argc,char** argv)
@@ -13,7 +15,7 @@ int main(int argc,char** argv)
         exit(-1);
     }
     std::ifstream fileNames;
-    fileNames.open("../chatter/00fileNames.txt", std::fstream::in);
+    fileNames.open("../chatter/00fileNames.txt", std::ios::in);
     if(!fileNames.is_open())
     {
         std::cout << "Could not find 00fileNames.txt" << std::endl;
@@ -37,7 +39,8 @@ int main(int argc,char** argv)
         fds.push_back(fd);
     }
     int i = 0;
-    chatter_messages c_m;
+    // chatter_messages c_m;
+    Gamemaster GM;
     
     for(auto &t : fds)
     {
@@ -51,32 +54,16 @@ int main(int argc,char** argv)
         t->close();
         for(std::vector<std::string>::iterator m = parsed.begin(); m != (parsed.end()); m++)
         {
-            // std::cout << "Line: " << *m << std::endl;
-            switch(i)
-            {
-                case 0:{c_m.awaken.push_back(*m);c_m.awakenKEY = i;break;}
-                case 1:{c_m.baddies.push_back(*m);c_m.baddiesKEY = i;break;}
-                case 2:{c_m.danger.push_back(*m);c_m.dangerKEY = i;break;}
-                case 3:{c_m.death.push_back(*m);c_m.deathKEY = i;break;}
-                case 4:{c_m.error.push_back(*m);c_m.errorKEY = i;break;}
-                case 5:{c_m.fightHit.push_back(*m);c_m.fightHitKEY = i;break;}
-                case 6:{c_m.food.push_back(*m);c_m.foodKEY = i;break;}
-                case 7:{c_m.health.push_back(*m);c_m.healthKEY = i;break;}
-                case 8:{c_m.loot.push_back(*m);c_m.lootKEY = i;break;}
-                case 9:{c_m.pvp.push_back(*m);c_m.pvpKEY = i;break;}
-                case 10:{c_m.roomNames.push_back(*m);c_m.roomNamesKEY = i;break;}
-                case 11:{c_m.safeEv.push_back(*m);c_m.safeEvKEY = i;break;}
-                case 12:{c_m.trans.push_back(*m);c_m.transKEY = i;break;}
-                case 13:{c_m.weapons.push_back(*m);c_m.weaponsKEY = i;break;}
-            }
+            bool checksOut = GM.buildChatter(i,m);
+            if(!checksOut)
+                std::cout << "Failure in buildChatter()!" << std::endl;
         }
         i++;
     }
-    for(auto t : fds)
-    {
-        delete t;
-    }
+    for(auto t : fds){delete t;}
     fds.clear();
-    
+    // build baddies
+    GM.estabSizes();
+    GM.populateSpawner();
     return 0;
 }
