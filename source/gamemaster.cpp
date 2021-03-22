@@ -2,6 +2,7 @@
 
 unsigned int Gamemaster::g_seed = 0;
 uint16_t Gamemaster::MAX_BADDIES = 1000;
+uint16_t Gamemaster::MAX_STAT = 4000;
 uint16_t Gamemaster::AWAKEN_VECTOR_SIZE;
 uint16_t Gamemaster::BADDIES_VECTOR_SIZE;
 uint16_t Gamemaster::DANGER_VECTOR_SIZE;
@@ -83,18 +84,24 @@ void Gamemaster::populateSpawner()
     uint8_t flags = 248;
     uint16_t attack, defense, regen, gold;
     int16_t health;
+    
     for(uint16_t i; i < Gamemaster::MAX_BADDIES; i++)
     {
-        int statRoll = i % 5;
+        //give stats opportunities to roll big;
+        uint16_t remaining = Gamemaster::MAX_STAT;
+        int statRoll = i % 3;
         int dex = fast_rand() % (Gamemaster::BADDIES_VECTOR_SIZE);
         std::string n = c_m.baddies.at(dex);
-
         
+        int roll = (fast_rand() % (remaining) + 1);
+        remaining = ((remaining - roll) > 0) ? (remaining - roll) : 1;
+        std::cout << roll <<" REmainder: " <<remaining << std::endl;
+
         // switch(statRoll)
         // {
         //     case 0:
-        //     {
-
+        //     {// attack - def - regen
+        //         attack = 
         //     }
         // }
         

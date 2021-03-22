@@ -14,7 +14,7 @@ class Baddie
     Baddie* selfRef;
 
     protected:
-        static uint16_t MAX_STAT;
+        // static uint16_t MAX_STAT;
         std::string name;
         uint8_t flags;
         uint16_t attack;

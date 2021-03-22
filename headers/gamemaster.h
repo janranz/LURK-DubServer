@@ -6,10 +6,12 @@
 #include"../headers/splitter.h"
 #include"../headers/structs.h"
 #include<time.h>
+
 class Gamemaster
 {
     private:
         static unsigned int g_seed;
+        static uint16_t MAX_STAT;
         static uint16_t MAX_BADDIES;
         static uint16_t AWAKEN_VECTOR_SIZE;
         static uint16_t BADDIES_VECTOR_SIZE;
