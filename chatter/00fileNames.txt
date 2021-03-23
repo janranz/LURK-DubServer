@@ -12,3 +12,5 @@ roomNames.dat
 safeEvents_messages.dat
 transition_messages.dat
 weapons.dat
+baddie_desc.dat
+room_desc.dat

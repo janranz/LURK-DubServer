@@ -40,20 +40,22 @@ bool Gamemaster::buildChatter(int i, std::vector<std::string>::iterator m)
     bool checksOut = true;
     switch(i)
     {
-        case 0:{c_m.awaken.push_back(*m);c_m.awakenKEY = i;break;}
-        case 1:{c_m.baddies.push_back(*m);c_m.baddiesKEY = i;break;}
-        case 2:{c_m.danger.push_back(*m);c_m.dangerKEY = i;break;}
-        case 3:{c_m.death.push_back(*m);c_m.deathKEY = i;break;}
-        case 4:{c_m.error.push_back(*m);c_m.errorKEY = i;break;}
-        case 5:{c_m.fightHit.push_back(*m);c_m.fightHitKEY = i;break;}
-        case 6:{c_m.food.push_back(*m);c_m.foodKEY = i;break;}
-        case 7:{c_m.health.push_back(*m);c_m.healthKEY = i;break;}
-        case 8:{c_m.loot.push_back(*m);c_m.lootKEY = i;break;}
-        case 9:{c_m.pvp.push_back(*m);c_m.pvpKEY = i;break;}
-        case 10:{c_m.roomNames.push_back(*m);c_m.roomNamesKEY = i;break;}
-        case 11:{c_m.safeEv.push_back(*m);c_m.safeEvKEY = i;break;}
-        case 12:{c_m.trans.push_back(*m);c_m.transKEY = i;break;}
-        case 13:{c_m.weapons.push_back(*m);c_m.weaponsKEY = i;break;}
+        case 0:{c_m.awaken.push_back(*m);break;}
+        case 1:{c_m.baddies.push_back(*m);break;}
+        case 2:{c_m.danger.push_back(*m);break;}
+        case 3:{c_m.death.push_back(*m);break;}
+        case 4:{c_m.error.push_back(*m);break;}
+        case 5:{c_m.fightHit.push_back(*m);break;}
+        case 6:{c_m.food.push_back(*m);break;}
+        case 7:{c_m.health.push_back(*m);break;}
+        case 8:{c_m.loot.push_back(*m);break;}
+        case 9:{c_m.pvp.push_back(*m);break;}
+        case 10:{c_m.roomNames.push_back(*m);break;}
+        case 11:{c_m.safeEv.push_back(*m);break;}
+        case 12:{c_m.trans.push_back(*m);break;}
+        case 13:{c_m.weapons.push_back(*m);break;}
+        case 14:{c_m.baddie_desc.push_back(*m);break;}
+        case 15:{c_m.room_desc.push_back(*m);break;}
         default:{checksOut = false;}
     }
     return checksOut;
@@ -87,6 +89,8 @@ void Gamemaster::populateSpawner()
     {
         //give stats opportunities to roll big;
         uint16_t remaining = Gamemaster::MAX_STAT;
+        uint16_t MIN = 500;
+        uint16_t MAX = 8000;
         int statRoll = i % 3;
         int dex = fast_rand() % (Gamemaster::BADDIES_VECTOR_SIZE);
         int roll;
@@ -161,6 +165,9 @@ void Gamemaster::populateSpawner()
                 break;
             }
         }
-        // health = (fast_rand() % (remaining) + 1);
+        health = (fast_rand() % (MAX-MIN + 1) + MIN);
+        MIN = 100;
+        MAX = 100000;
+        gold = (fast_rand() % (MAX-MIN + 1) + MIN);
     }
 }
