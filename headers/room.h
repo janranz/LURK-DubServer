@@ -28,7 +28,7 @@ class Room
         int searchPlayer(std::string const&);
         void removePlayer(Player*);
         void setStressLevel(char);
-        std::vector<Baddie*> getBaddieList();
+        std::vector<Baddie> getBaddieList();
         std::vector<Player*> getPlayerList();
         std::string getRoomName();
         

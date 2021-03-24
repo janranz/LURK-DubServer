@@ -30,8 +30,8 @@ Gamemaster::Gamemaster()
 Gamemaster::~Gamemaster()
 {
     // delete baddie spawner
-    for(auto t : BDSpawner){delete t;}
-    BDSpawner.clear();
+    // for(auto t : BDSpawner){delete t;}
+    // BDSpawner.clear();
     //delete room list
 
     std::cout << "Goodbye, Gamemaster." << std::endl;
@@ -266,12 +266,19 @@ void Gamemaster::populateRooms()
             Baddie* release = BDSpawner.at((fast_rand() % (BDSpawner.size())));
             t->injectBaddie(release);
         }
-        // std::cout <<"Room Name: " << t->getRoomName()
-        //           << "\tConnections: " << t->DEBUG_getConnected().at(0)
-        //           <<"\nRoom Number: " << t->DEBUG_getRoomNumber()
-        //           << "\tBaddie Count: "<< t->DEBUG_getBaddieListSize() 
-        //           << std::endl << std::endl;
-        
     }
-    std::cout << "\nRooms have been populated!" << std::endl;
+    for(auto t: BDSpawner)
+        delete t;
+    BDSpawner.clear();
+    std::cout << "\nRooms have been populated! BDSpawner has been deleted. Size: " 
+              << BDSpawner.size()
+              << std::endl;
+    std::cout << "Sanity check - Baddie List Size in a random room: "
+              << MasterRoomList.at(5)->DEBUG_getBaddieListSize()
+              << std::endl;
+}
+
+void startPortal(long& s)
+{
+    std::cout << "I'm in a thread." << std::endl;
 }

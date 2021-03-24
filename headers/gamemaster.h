@@ -45,5 +45,8 @@ class Gamemaster
         void populateSpawner();
         void buildRooms(int);
         void populateRooms();
+
+        // network functions
+        void startPortal(long&);
 };
 

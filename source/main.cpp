@@ -4,16 +4,33 @@
 #include"../headers/splitter.h"
 #include"../headers/structs.h"
 #include"../headers/gamemaster.h"
-
+#include<errno.h>
+#include<limits.h>
+#include<stdlib.h>
+#include<string.h>
+#include<thread>
 #include<fstream>
 
 int main(int argc,char** argv)
 {
-    if( argc != 3)
+    if( argc != 2)
     {
-        std::cout << "Please include a HOST and PORT" << std::endl;
+        printf("Invalid number of arguments: %s [port]\n",argv[0]);
         exit(-1);
     }
+
+    // sanitize user input
+    char *p;
+    int num;
+    errno = 0;
+    long port = strtol(argv[1], &p, 10);
+    if(errno != 0 || *p != '\0' || port > INT_MAX || port < INT_MIN)
+    {
+        printf("Unable to accept port argument! errno: %s\n",strerror(errno));
+        exit(-1);
+    }
+
+
     std::ifstream fileNames;
     fileNames.open("../chatter/00fileNames.txt", std::ios::in);
     if(!fileNames.is_open())
@@ -71,5 +88,8 @@ int main(int argc,char** argv)
     // build rooms [portal + roomCount] 
     GM.buildRooms(roomCount);
     GM.populateRooms();
+
+    //establish connection
+    
     return 0;
 }
