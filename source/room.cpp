@@ -1,6 +1,6 @@
 #include"../headers/room.h"
 
-Room::Room(uint16_t num,std::string name ,uint32_t roomDescLen ,std::string roomD)
+Room::Room(uint16_t num,std::string name ,uint16_t roomDescLen ,std::string roomD)
 {
     roomNumber = num;
     roomName = name;
@@ -57,3 +57,7 @@ void Room::addPlayer(Player* s)
     unlock();
 }
 
+void Room::setConnectedRooms(uint16_t m)
+{
+    connectedRoomNums.push_back(m);
+}

@@ -17,6 +17,8 @@ uint16_t Gamemaster::ROOMNAMES_VECTOR_SIZE;
 uint16_t Gamemaster::SAFEEV_VECTOR_SIZE;
 uint16_t Gamemaster::TRANS_VECTOR_SIZE;
 uint16_t Gamemaster::WEAPONS_VECTOR_SIZE;
+uint16_t Gamemaster::BADDIE_DESC_SIZE;
+uint16_t Gamemaster::ROOM_DESC_SIZE;
 
 Gamemaster::Gamemaster()
 {
@@ -27,6 +29,11 @@ Gamemaster::Gamemaster()
 
 Gamemaster::~Gamemaster()
 {
+    // delete baddie spawner
+    for(auto t : BDSpawner){delete t;}
+    BDSpawner.clear();
+    //delete room list
+
     std::cout << "Goodbye, Gamemaster." << std::endl;
 }
 int Gamemaster::fast_rand(void)
@@ -50,16 +57,20 @@ bool Gamemaster::buildChatter(int i, std::vector<std::string>::iterator m)
         case 7:{c_m.health.push_back(*m);break;}
         case 8:{c_m.loot.push_back(*m);break;}
         case 9:{c_m.pvp.push_back(*m);break;}
-        case 10:{c_m.roomNames.push_back(*m);break;}
-        case 11:{c_m.safeEv.push_back(*m);break;}
-        case 12:{c_m.trans.push_back(*m);break;}
-        case 13:{c_m.weapons.push_back(*m);break;}
-        case 14:{c_m.baddie_desc.push_back(*m);break;}
-        case 15:{c_m.room_desc.push_back(*m);break;}
+        // case 10:{c_m.roomNames.push_back(*m);break;}
+        case 10:{c_m.safeEv.push_back(*m);break;}
+        case 11:{c_m.trans.push_back(*m);break;}
+        case 12:{c_m.weapons.push_back(*m);break;}
+        case 13:{c_m.baddie_desc.push_back(*m);break;}
+        case 14:{c_m.room_desc.push_back(*m);break;}
+        case 15:{c_m.adj.push_back(*m);break;}
+        case 16:{c_m.noun.push_back(*m);break;}
+        case 17:{c_m.roomTainer.push_back(*m);break;}
         default:{checksOut = false;}
     }
     return checksOut;
 }
+
 
 void Gamemaster::estabSizes()
 {
@@ -73,10 +84,12 @@ void Gamemaster::estabSizes()
     Gamemaster::HEALTH_VECTOR_SIZE = c_m.health.size();
     Gamemaster::LOOT_VECTOR_SIZE = c_m.loot.size();
     Gamemaster::PVP_VECTOR_SIZE = c_m.pvp.size();
-    Gamemaster::ROOMNAMES_VECTOR_SIZE = c_m.roomNames.size();
+    // Gamemaster::ROOMNAMES_VECTOR_SIZE = c_m.roomNames.size();
     Gamemaster::SAFEEV_VECTOR_SIZE = c_m.safeEv.size();
     Gamemaster::TRANS_VECTOR_SIZE = c_m.trans.size();
     Gamemaster::WEAPONS_VECTOR_SIZE = c_m.weapons.size();
+    Gamemaster::BADDIE_DESC_SIZE = c_m.baddie_desc.size();
+    Gamemaster::ROOM_DESC_SIZE = c_m.room_desc.size();
 }
 
 void Gamemaster::populateSpawner()
@@ -167,7 +180,63 @@ void Gamemaster::populateSpawner()
         }
         health = (fast_rand() % (MAX-MIN + 1) + MIN);
         MIN = 100;
-        MAX = 100000;
+        MAX = UINT16_MAX - 1;
         gold = (fast_rand() % (MAX-MIN + 1) + MIN);
+        roll = (fast_rand() % Gamemaster::BADDIE_DESC_SIZE);
+        std::string descGrab = c_m.baddie_desc.at(roll);
+        uint16_t descLength = descGrab.length();
+
+        Baddie* p = new Baddie(n,flags,attack,defense,regen,health,gold,0,descLength,descGrab);
+        BDSpawner.push_back(p);
     }
+    std::cout << "\nSpawner populated! Size of BDSpawner: " << BDSpawner.size() << std::endl;
+}
+
+void Gamemaster::craftRoomNames(int roomCount)
+{
+    std::string finalName;
+    int adjSize = c_m.adj.size();
+    int nounSize = c_m.noun.size();
+    int tainerSize = c_m.roomTainer.size();
+    
+    for(int i = 0; i < roomCount; i++)
+    {
+        int dex1 = (fast_rand() % adjSize);
+        int dex2 = (fast_rand() % nounSize);
+        int dex3 = (fast_rand() % tainerSize);
+
+        finalName = c_m.adj.at(dex1) + " " + c_m.noun.at(dex2) + " " + c_m.roomTainer.at(dex3);
+        if(finalName.length() > 32)
+            finalName = c_m.adj.at(dex1) + " " + c_m.roomTainer.at(dex3);
+        c_m.roomNames.push_back(finalName);
+    }
+    std::cout << "\nRoom names generated! Size of room name names: " << c_m.roomNames.size();
+}
+
+void Gamemaster::buildRooms(int roomCount)
+{
+    uint16_t roomNumber;
+    uint16_t roomDescLength;
+    std::string roomName, roomDesc;
+    uint8_t connectedRoom = 0;
+
+    // build portalRoom
+    roomNumber = 0;
+    roomName = "The Portal Room";
+    roomDesc = c_m.room_desc.at(0);
+    roomDescLength = roomDesc.length();
+
+    Room* p = new Room(roomNumber,roomName,roomDescLength,roomDesc);
+    std::vector<uint16_t> connectedRoomNums;
+    for(int i = 0; i < roomCount; i++)
+    {
+        p->setConnectedRooms(i + 1);
+    }
+    MasterRoomList.push_back(p);
+
+    // for(int i = 1; i < roomCount; i++)
+    // {
+    //     roomNumber = i;
+    //     roomDesc = c_m.room_desc
+    // }
 }

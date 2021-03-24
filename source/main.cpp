@@ -63,7 +63,12 @@ int main(int argc,char** argv)
     for(auto t : fds){delete t;}
     fds.clear();
     // build baddies
+    int roomCount = 100;
+    GM.craftRoomNames(roomCount);
     GM.estabSizes();
     GM.populateSpawner();
+    
+    // build rooms [portal + roomCount] 
+    GM.buildRooms(roomCount);
     return 0;
 }

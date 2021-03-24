@@ -27,9 +27,12 @@ class Gamemaster
         static uint16_t SAFEEV_VECTOR_SIZE;
         static uint16_t TRANS_VECTOR_SIZE;
         static uint16_t WEAPONS_VECTOR_SIZE;
+        static uint16_t BADDIE_DESC_SIZE;
+        static uint16_t ROOM_DESC_SIZE;
 
         chatter_messages c_m;
         std::vector<Baddie*> BDSpawner;
+        std::vector<Room*> MasterRoomList;
 
     public:
         Gamemaster();
@@ -37,8 +40,9 @@ class Gamemaster
         // inline void fast_srand(int seed);
         int fast_rand(void);
         bool buildChatter(int,std::vector<std::string>::iterator);
+        void craftRoomNames(int);
         void estabSizes();
         void populateSpawner();
-
+        void buildRooms(int);
 };
 

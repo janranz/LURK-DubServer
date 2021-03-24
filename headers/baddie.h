@@ -11,7 +11,7 @@
 class Baddie
 {
     private:
-    Baddie* selfRef;
+    Baddie* selfRef; // replace with this.
 
     protected:
         // static uint16_t MAX_STAT;

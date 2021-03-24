@@ -18,7 +18,7 @@ Baddie::Baddie(std::string n,uint8_t f,uint16_t a,uint16_t d,uint16_t r,int16_t 
 
 Baddie::~Baddie()
 {
-    std::cout << "baddie was casted into the lake of fire." << std::endl;
+    // std::cout << "baddie was casted into the lake of fire." << std::endl;
 }
 
 void Baddie::lock()
