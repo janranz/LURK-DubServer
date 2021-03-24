@@ -21,15 +21,16 @@ Baddie::~Baddie()
     // std::cout << "baddie was casted into the lake of fire." << std::endl;
 }
 
-void Baddie::lock()
-{
-    padlock.lock();
-}
-void Baddie::unlock()
-{
-    padlock.unlock();
-}
+// void Baddie::lock()
+// {
+//     padlock.lock();
+// }
+// void Baddie::unlock()
+// {
+//     padlock.unlock();
+// }
 std::string Baddie::getName()
 {
     return name;
 }
+

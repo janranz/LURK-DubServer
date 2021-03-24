@@ -12,8 +12,9 @@ class Room
         uint16_t roomDescLength;
         std::string roomDesc;
         std::vector<uint16_t> connectedRoomNums;
-        std::vector<Baddie*> baddieList;
+        std::vector<Baddie> baddieList;
         std::vector<Player*> playerList;
+        char stress_level; // overall aggression of baddies;
         std::mutex innerlock;
 
     public:
@@ -21,11 +22,12 @@ class Room
         ~Room();
         void lock();
         void unlock();
-        void setConnectedRooms(uint16_t);
-        void addBaddie(Baddie);
+        void setConnectedRooms(char, uint16_t);
+        void injectBaddie(Baddie*);
         void addPlayer(Player*);
         int searchPlayer(std::string const&);
         void removePlayer(Player*);
+        void setStressLevel(char);
         std::vector<Baddie*> getBaddieList();
         std::vector<Player*> getPlayerList();
 };

@@ -70,5 +70,6 @@ int main(int argc,char** argv)
     
     // build rooms [portal + roomCount] 
     GM.buildRooms(roomCount);
+    GM.populateRooms();
     return 0;
 }

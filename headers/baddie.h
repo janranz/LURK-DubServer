@@ -25,14 +25,14 @@ class Baddie
         uint16_t roomNumber;
         uint16_t descriptionLength;
         std::string description;
-        std::mutex padlock;
+        // std::mutex padlock;
 
     public:
         Baddie(std::string,uint8_t,uint16_t,uint16_t,uint16_t,int16_t,
                 uint16_t,uint16_t,uint16_t,std::string);
         ~Baddie();
-        void lock();
-        void unlock();
+        // void lock();
+        // void unlock();
         std::string getName();
         uint8_t getFlags();
         uint16_t getAttack();

@@ -44,5 +44,6 @@ class Gamemaster
         void estabSizes();
         void populateSpawner();
         void buildRooms(int);
+        void populateRooms();
 };
 

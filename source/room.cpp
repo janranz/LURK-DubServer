@@ -6,6 +6,7 @@ Room::Room(uint16_t num,std::string name ,uint16_t roomDescLen ,std::string room
     roomName = name;
     roomDescLength = roomDescLen;
     roomDesc = roomD;
+    stress_level = 0;
     
 }
 Room::~Room()
@@ -57,7 +58,49 @@ void Room::addPlayer(Player* s)
     unlock();
 }
 
-void Room::setConnectedRooms(uint16_t m)
+void Room::setConnectedRooms(char p, uint16_t m)
 {
-    connectedRoomNums.push_back(m);
+    switch(p)
+    {
+        case 'p':
+        {
+            connectedRoomNums.push_back(m); // portal room takes all
+            break;
+        }
+        case 'n':
+        {
+            connectedRoomNums.push_back(m - 1);
+            connectedRoomNums.push_back(m + 1); // Normal room: to-fro
+            break;
+        }
+        case 'l':
+        {
+            connectedRoomNums.push_back(m - 1); // last room takes last only.
+            break;
+        }
+    }
+    
 }
+
+void Room::setStressLevel(char s)
+{// 0 - 10 [passive / torment]
+    stress_level = s;
+}
+
+void Room::injectBaddie(Baddie* s)
+{// initial injection of Baddies. They are to remain here for eternity (or fatal error lol)
+    baddieList.push_back(*s);
+}
+
+    // std::string a = s.getName();
+    // uint8_t b = s.getFlags();
+    // uint16_t c = s.getAttack();
+    // uint16_t d = s.getDefense();
+    // uint16_t e = s.getRegen();
+    // int16_t f = s.getHealth();
+    // uint16_t g = s.getGold();
+    // uint16_t h = s.getRoomNumber();
+    // uint16_t i = s.getDescriptionLength();
+    // std::string j = s.getDescription();
+
+    // Baddie* p = new Baddie(a,b,c,d,e,f,g,h,i,j);

@@ -230,13 +230,40 @@ void Gamemaster::buildRooms(int roomCount)
     std::vector<uint16_t> connectedRoomNums;
     for(int i = 0; i < roomCount; i++)
     {
-        p->setConnectedRooms(i + 1);
+        p->setConnectedRooms('p',i); // portal room
     }
     MasterRoomList.push_back(p);
 
-    // for(int i = 1; i < roomCount; i++)
-    // {
-    //     roomNumber = i;
-    //     roomDesc = c_m.room_desc
-    // }
+    for(int i = 1; i < roomCount; i++)
+    {
+        roomNumber = i;
+        roomDesc = c_m.room_desc.at(i);
+        roomDescLength = roomDesc.length();
+        Room* p = new Room(roomNumber,roomName,roomDescLength,roomDesc);
+        if(i == roomCount - 1)
+        {
+            p->setConnectedRooms('l',i); // last room needs no +1 connected room.
+        } else {
+            p->setConnectedRooms('n',i); // normal room.
+        }
+        MasterRoomList.push_back(p);
+    }
+    std::cout << "\nMasterRoomList succeeds! Size: "<< MasterRoomList.size() << std::endl;
+}
+
+void Gamemaster::populateRooms()
+{
+    int roomCount = MasterRoomList.size();
+    int min = 3;
+    int max = 20;
+    for(auto t: MasterRoomList)
+    {
+        
+        int baddieCount = (fast_rand() % (max) + min);
+        for(int i = 0; i < baddieCount; i++)
+        {
+            Baddie* release = BDSpawner.at((fast_rand() % (BDSpawner.size())));
+            t->injectBaddie(release);
+        }
+    }
 }
