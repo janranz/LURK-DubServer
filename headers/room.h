@@ -30,4 +30,9 @@ class Room
         void setStressLevel(char);
         std::vector<Baddie*> getBaddieList();
         std::vector<Player*> getPlayerList();
+        std::string getRoomName();
+        
+        int DEBUG_getBaddieListSize();
+        int DEBUG_getRoomNumber();
+        std::vector<uint16_t> DEBUG_getConnected();
 };

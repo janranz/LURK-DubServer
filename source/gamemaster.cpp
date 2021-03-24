@@ -236,6 +236,7 @@ void Gamemaster::buildRooms(int roomCount)
 
     for(int i = 1; i < roomCount; i++)
     {
+        roomName = c_m.roomNames.at(i);
         roomNumber = i;
         roomDesc = c_m.room_desc.at(i);
         roomDescLength = roomDesc.length();
@@ -259,11 +260,18 @@ void Gamemaster::populateRooms()
     for(auto t: MasterRoomList)
     {
         
-        int baddieCount = (fast_rand() % (max) + min);
+        int baddieCount = (fast_rand() % (max - min) + min);
         for(int i = 0; i < baddieCount; i++)
         {
             Baddie* release = BDSpawner.at((fast_rand() % (BDSpawner.size())));
             t->injectBaddie(release);
         }
+        // std::cout <<"Room Name: " << t->getRoomName()
+        //           << "\tConnections: " << t->DEBUG_getConnected().at(0)
+        //           <<"\nRoom Number: " << t->DEBUG_getRoomNumber()
+        //           << "\tBaddie Count: "<< t->DEBUG_getBaddieListSize() 
+        //           << std::endl << std::endl;
+        
     }
+    std::cout << "\nRooms have been populated!" << std::endl;
 }

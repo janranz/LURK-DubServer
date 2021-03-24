@@ -23,6 +23,26 @@ void Room::unlock()
     innerlock.unlock();
 }
 
+std::string Room::getRoomName()
+{
+    return roomName;
+}
+
+int Room::DEBUG_getBaddieListSize()
+{
+    return baddieList.size();
+}
+
+int Room::DEBUG_getRoomNumber()
+{
+    return roomNumber;
+}
+
+std::vector<uint16_t> Room::DEBUG_getConnected()
+{
+    return connectedRoomNums;
+}
+
 int Room::searchPlayer(std::string const&s)
 {
     int i = 0;
