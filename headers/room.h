@@ -1,8 +1,7 @@
-#pragma once
-
+#ifndef ROOM_H
+#define ROOM_H
 #include<algorithm>
-#include"baddie.h"
-#include"player.h"
+#include"../headers/gamemaster.h"
 
 class Room
 {
@@ -36,3 +35,5 @@ class Room
         int DEBUG_getRoomNumber();
         std::vector<uint16_t> DEBUG_getConnected();
 };
+
+#endif //ROOM_H

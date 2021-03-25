@@ -1,20 +1,22 @@
-#pragma once
-
-#include"baddie.h"
+#ifndef PLAYER_H
+#define PLAYER_H
+#include"../headers/gamemaster.h"
 
 class Player: public Baddie
 {
     private:
-    // Player* selfRef; this
     int socketFD;
 
     
     public:
+    Player();
+    ~Player();
     using Baddie::Baddie;
-    void setSocketFD(int);
-    void setGold(uint16_t);
-
-    // void controller();
+    void controller();
     //read
+    void listenPlayer();
     //send
+    void chatterPlayer(char);
 };
+
+#endif //PLAYER_H

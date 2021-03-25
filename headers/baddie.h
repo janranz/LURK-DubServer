@@ -1,4 +1,5 @@
-#pragma once
+#ifndef BADDIE_H
+#define BADDIE_H
 
 #include<string>
 #include<cstdint>
@@ -7,6 +8,7 @@
 #include<string>
 #include<vector>
 #include<mutex>
+
 
 class Baddie
 {
@@ -28,6 +30,7 @@ class Baddie
         // std::mutex padlock;
 
     public:
+        Baddie();
         Baddie(std::string,uint8_t,uint16_t,uint16_t,uint16_t,int16_t,
                 uint16_t,uint16_t,uint16_t,std::string);
         ~Baddie();
@@ -47,3 +50,5 @@ class Baddie
         void setFlags(uint8_t);
         void setHealth(int16_t);
 };
+
+#endif // BADDIE_H

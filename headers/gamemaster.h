@@ -1,12 +1,13 @@
-#pragma once
-
-#include"../headers/room.h"
+#ifndef GM_H
+#define GM_H
+#include"../headers/structs.h"
 #include"../headers/baddie.h"
 #include"../headers/player.h"
-#include"../headers/splitter.h"
-#include"../headers/structs.h"
+#include"../headers/room.h"
+#include<cstdint>
 #include<time.h>
-
+// class Baddie;
+// class Player;
 class Gamemaster
 {
     private:
@@ -47,6 +48,7 @@ class Gamemaster
         void populateRooms();
 
         // network functions
-        void startPortal(long&);
+        void startPortal(int);
 };
 
+#endif //GM_H

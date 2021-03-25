@@ -1,4 +1,5 @@
-#pragma once
+#ifndef STRUCTS_H
+#define STRUCTS_H
 #include<string>
 #include<vector>
 
@@ -10,3 +11,5 @@ struct chatter_messages
     // char awakenKEY,baddiesKEY,dangerKEY,deathKEY,errorKEY,fightHitKEY,foodKEY,healthKEY,
     //                          lootKEY,pvpKEY,roomNamesKEY,safeEvKEY,transKEY,weaponsKEY;
 };
+
+#endif //STRUCTS_H

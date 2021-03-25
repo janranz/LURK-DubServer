@@ -1,25 +1,33 @@
-#include"../headers/baddie.h"
-#include"../headers/player.h"
-#include"../headers/room.h"
-#include"../headers/splitter.h"
-#include"../headers/structs.h"
 #include"../headers/gamemaster.h"
+#include"../headers/splitter.h"
 #include<errno.h>
 #include<limits.h>
 #include<stdlib.h>
 #include<string.h>
 #include<thread>
 #include<fstream>
+#include<sys/socket.h>
+#include<netinet/in.h>
+#include<netinet/ip.h>
+#include<arpa/inet.h>
+#include<signal.h>
+#include<stdbool.h>
+#include<iostream>
+#include<vector>
+#include<string>
+
+// volatile bool STOP = false;
+// void sigint_handler(int sig);
 
 int main(int argc,char** argv)
 {
     if( argc != 2)
     {
-        printf("Invalid number of arguments: %s [port]\n",argv[0]);
+        printf("You're clearly drunk... Invalid number of arguments: %s [port]\n",argv[0]);
         exit(-1);
     }
 
-    // sanitize user input
+    // check port input
     char *p;
     int num;
     errno = 0;
@@ -56,7 +64,6 @@ int main(int argc,char** argv)
         fds.push_back(fd);
     }
     int i = 0;
-    // chatter_messages c_m;
     Gamemaster GM;
     
     for(auto &t : fds)
@@ -90,6 +97,35 @@ int main(int argc,char** argv)
     GM.populateRooms();
 
     //establish connection
-    
+    // accept connections in main, pass a REF to the inside of Gamemaster.
+    // signal(SIGINT, sigint_handler);
+    struct sockaddr_in sai;
+    sai.sin_family = AF_INET;
+    sai.sin_addr.s_addr = INADDR_ANY;
+    sai.sin_port = htons(port);
+
+    int dubSkt = socket(AF_INET,SOCK_STREAM, 0);
+    bind(dubSkt, (struct sockaddr *)(&sai), sizeof(struct sockaddr_in));
+    listen(dubSkt, 32);
+
+    int player_fd;
+    struct sockaddr_in client_addr;
+    socklen_t address_size = sizeof(struct sockaddr_in);
+
+    while(1)
+    {
+        std::cout << "Listening..." << std::endl;
+        player_fd = accept(dubSkt, (struct sockaddr*)(&client_addr), &address_size);
+        printf("DEBUG: %s has successfully connected.\n",inet_ntoa(client_addr.sin_addr));
+
+        Player* p = new Player();
+
+        // std::thread t(Player::playerSetup, p, player_fd)
+        
+        
+    }
+    // say goodbye.
     return 0;
 }
+
+// void sigint_handler(int sig){STOP = true;}

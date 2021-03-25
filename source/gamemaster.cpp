@@ -278,7 +278,11 @@ void Gamemaster::populateRooms()
               << std::endl;
 }
 
-void startPortal(long& s)
+void Gamemaster::startPortal(int s)
 {
-    std::cout << "I'm in a thread." << std::endl;
+    std::cout << "I'm in a thread" << s << std::endl;
+    while(true)
+    {
+
+    }
 }
