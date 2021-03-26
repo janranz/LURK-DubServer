@@ -42,6 +42,20 @@ struct LURK_CURRENTRM
     uint16_t DESC_LENGTH;
 }__attribute__((packed));
 
+struct LURK_CHARACTER
+{
+    uint8_t TYPE = 10;
+    char CHARACTER_NAME[32];
+    uint8_t FLAGS;
+    uint16_t ATTACK;
+    uint16_t DEFENSE;
+    uint16_t REGEN;
+    int16_t HEALTH;
+    uint16_t GOLD;
+    uint16_t CURRENT_ROOM_NUMBER;
+    uint16_t DESC_LENGTH;
+}__attribute__((packed));
+
 struct LURK_GAME
 {
     uint8_t TYPE = 11;

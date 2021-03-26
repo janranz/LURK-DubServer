@@ -100,7 +100,7 @@ int main(int argc,char** argv)
     //establish connection
     // signal(SIGINT, sigint_handler);
     signal(SIGPIPE, SIG_IGN);
-    
+
     struct sockaddr_in sai;
     sai.sin_family = AF_INET;
     sai.sin_addr.s_addr = INADDR_ANY;
@@ -114,14 +114,15 @@ int main(int argc,char** argv)
     struct sockaddr_in client_addr;
     socklen_t address_size = sizeof(struct sockaddr_in);
 
+    std::vector<std::thread> threads;
     while(1)
     {
         std::cout << "Listening..." << std::endl;
         player_fd = accept(dubSkt, (struct sockaddr*)(&client_addr), &address_size);
         printf("DEBUG: %s has successfully connected.\n",inet_ntoa(client_addr.sin_addr));
 
-        std::thread t1(Gamemaster::constructPlayer, GM, player_fd);
-
+        std::thread t1(&Gamemaster::GMController,&GM,player_fd);
+        threads.push_back(std::move(t1));
     }
     // say goodbye.
     return 0;

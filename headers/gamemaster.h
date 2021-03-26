@@ -8,6 +8,9 @@
 #include<cstdint>
 #include<time.h>
 #include<sys/socket.h>
+#include<unistd.h>
+#include<sys/types.h>
+#include<thread>
 
 class Gamemaster
 {
@@ -34,6 +37,7 @@ class Gamemaster
 
         chatter_messages c_m;
         std::vector<Baddie*> BDSpawner;
+        
         std::vector<Room*> MasterRoomList;
         std::vector<Player> MasterPlayerList;
         
@@ -42,8 +46,8 @@ class Gamemaster
         std::mutex GMlock;
         Gamemaster();
         ~Gamemaster();
-        // inline void fast_srand(int seed);
         int fast_rand(void);
+        //server innit functions
         bool buildChatter(int,std::vector<std::string>::iterator);
         void craftRoomNames(int);
         void estabSizes();
@@ -51,13 +55,8 @@ class Gamemaster
         void buildRooms(int);
         void populateRooms();
 
-        void constructPlayer(int);
-        
-        // void pushPlayerList(int);
-        // void popPlayerList(int);
-
         // network functions
-        void GMController();
+        void GMController(int);
         void ragequit();
 };
 

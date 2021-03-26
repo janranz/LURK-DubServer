@@ -289,22 +289,59 @@ void Gamemaster::populateRooms()
 // END server initialization ////////
 
 //START network functions ////////
-void Gamemaster::constructPlayer(int fd)
+void Gamemaster::GMController(int fd)
 {
-    int status;
+    std::cout << "WOW?" << std::endl;
+    int32_t typeCheck;
     LURK_ACCEPT lurk_accept;
     LURK_ERROR lurk_error;
     LURK_GAME lurk_game;
     LURK_VERSION lurk_version;
 
+    
     std::string description = c_m.room_desc.at(0);
     lurk_game.DESC_LENGTH = description.length();
 
-    // send initial messages to client
-    status = send(fd,&lurk_version,sizeof(LURK_VERSION));
-    
-    
-    Player* np = new Player(fd);
+    std::cout << "Description: " << description << std::endl;
 
+    // send initial messages to client
+    
+    if(write(fd,&lurk_version,sizeof(LURK_VERSION)) == -1){ragequit();return;}
+    std::cout << "Hello?" << std::endl;
+    if(write(fd,&lurk_game,sizeof(LURK_GAME)) == -1){ragequit();return;}
+    if(write(fd,description.data(),description.size()) == -1){ragequit();return;}
+
+    // wait for character message. We do this manually here not to disrupt other valid players
+    bool softStop = false;
+
+    while(!softStop)
+    {
+        recv(fd,&typeCheck,1,MSG_WAITALL|MSG_PEEK);
+        std::cout << "typeCheck: " << typeCheck << std::endl;
+        if(typeCheck != 10)
+        {
+            printf("Invalid type received: %d\n",typeCheck);
+            softStop = true;
+            continue;
+        }
+        printf("Valid type received: %d\n",typeCheck);
+        LURK_CHARACTER charTainer;
+        recv(fd,&charTainer,sizeof(LURK_CHARACTER),MSG_WAITALL);
+        printf("\nName:%s\nFlags: %d\nAttack: %d\nDefense: %d\nRegen: %d\nHealth: %d\
+                \nGold: %d\nCurrent Room: %d\nDescription Length: %d",\
+                charTainer.CHARACTER_NAME,charTainer.FLAGS,charTainer.ATTACK,\
+                charTainer.DEFENSE,charTainer.REGEN,charTainer.HEALTH,charTainer.GOLD,\
+                charTainer.CURRENT_ROOM_NUMBER,charTainer.DESC_LENGTH);
+        
+        char data[1024 * 1024];
+        recv(fd,&data,charTainer.DESC_LENGTH,MSG_WAITALL);
+        data[charTainer.DESC_LENGTH] = 0;
+        std::string desc(data);
+        printf("\nDescription: %s\n",desc);
+        softStop = true;
+    }
+
+    std::cout << "Yo i'm out" << std::endl;
+    // Player* np = new Player(fd);
 }
 //END network functions ////////
