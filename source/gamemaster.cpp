@@ -313,7 +313,7 @@ void Gamemaster::GMController(int fd)
 
     // wait for character message. We do this manually here not to disrupt other valid players
     bool softStop = false;
-
+    char dataDump[BIG_BUFFER];
     while(!softStop)
     {
         recv(fd,&typeCheck,1,MSG_WAITALL|MSG_PEEK);
@@ -321,23 +321,31 @@ void Gamemaster::GMController(int fd)
         if(typeCheck != 10)
         {
             printf("Invalid type received: %d\n",typeCheck);
-            softStop = true;
+            memset(dataDump, 0, BIG_BUFFER);
+            recv(fd,&dataDump,BIG_BUFFER,MSG_DONTWAIT);
+            std::string errorMsg = "Incorrect Type. Expecting Type: 10";
+            lurk_error.MSG_LEN = errorMsg.length();
+            lurk_error.CODE = 0;
+            write(fd,&lurk_error,sizeof(LURK_ERROR));
+            write(fd,errorMsg.c_str(),lurk_error.MSG_LEN);
             continue;
         }
         printf("Valid type received: %d\n",typeCheck);
         LURK_CHARACTER charTainer;
         recv(fd,&charTainer,sizeof(LURK_CHARACTER),MSG_WAITALL);
+
         printf("\nName:%s\nFlags: %d\nAttack: %d\nDefense: %d\nRegen: %d\nHealth: %d\
-                \nGold: %d\nCurrent Room: %d\nDescription Length: %d",\
+                \nGold: %d\nCurrent Room: %d\nDescription Length: %d\n",\
                 charTainer.CHARACTER_NAME,charTainer.FLAGS,charTainer.ATTACK,\
                 charTainer.DEFENSE,charTainer.REGEN,charTainer.HEALTH,charTainer.GOLD,\
                 charTainer.CURRENT_ROOM_NUMBER,charTainer.DESC_LENGTH);
-        
-        char data[1024 * 1024];
+
+        char data[charTainer.DESC_LENGTH];
         recv(fd,&data,charTainer.DESC_LENGTH,MSG_WAITALL);
         data[charTainer.DESC_LENGTH] = 0;
+        
         std::string desc(data);
-        printf("\nDescription: %s\n",desc);
+        std::cout << desc << std::endl << desc.size()<<std::endl;
         softStop = true;
     }
 
