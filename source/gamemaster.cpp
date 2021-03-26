@@ -352,21 +352,24 @@ void Gamemaster::GMController(int fd)
             continue;
         }
 
-        printf("\nName:%s\nFlags: %d\nAttack: %d\nDefense: %d\nRegen: %d\nHealth: %d\
-                \nGold: %d\nCurrent Room: %d\nDescription Length: %d\n",\
-                p->charTainer.CHARACTER_NAME,p->charTainer.FLAGS,p->charTainer.ATTACK,\
-                p->charTainer.DEFENSE,p->charTainer.REGEN,p->charTainer.HEALTH,p->charTainer.GOLD,\
-                p->charTainer.CURRENT_ROOM_NUMBER,p->charTainer.DESC_LENGTH);
+        // printf("\nName:%s\nFlags: %d\nAttack: %d\nDefense: %d\nRegen: %d\nHealth: %d\
+        //         \nGold: %d\nCurrent Room: %d\nDescription Length: %d\n",\
+        //         p->charTainer.CHARACTER_NAME,p->charTainer.FLAGS,p->charTainer.ATTACK,\
+        //         p->charTainer.DEFENSE,p->charTainer.REGEN,p->charTainer.HEALTH,p->charTainer.GOLD,\
+        //         p->charTainer.CURRENT_ROOM_NUMBER,p->charTainer.DESC_LENGTH);
 
         char data[p->charTainer.DESC_LENGTH];
         recv(fd,&data,p->charTainer.DESC_LENGTH,MSG_WAITALL);
         data[p->charTainer.DESC_LENGTH] = 0;
         
         p->desc.assign(data);
-        std:: cout << p->desc << std::endl;
+        // std:: cout << p->desc << std::endl;
         softStop = true;
+        MasterPlayerList.push_back(*p);
+        std::cout << "Desc: " << MasterPlayerList.at(0).desc << std::endl;
         delete p;
     }
+    std::cout << "PASSED Desc: " << MasterPlayerList.at(0).desc << std::endl;
 
     std::cout << "Yo i'm out" << std::endl;
     

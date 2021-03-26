@@ -114,7 +114,6 @@ int main(int argc,char** argv)
     struct sockaddr_in client_addr;
     socklen_t address_size = sizeof(struct sockaddr_in);
 
-    std::vector<std::thread> threads;
     while(1)
     {
         std::cout << "Listening..." << std::endl;
@@ -122,7 +121,7 @@ int main(int argc,char** argv)
         printf("DEBUG: %s has successfully connected.\n",inet_ntoa(client_addr.sin_addr));
 
         std::thread t1(&Gamemaster::GMController,&GM,player_fd);
-        threads.push_back(std::move(t1));
+        t1.detach();
     }
     // say goodbye.
     return 0;

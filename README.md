@@ -75,3 +75,9 @@ main function
 
 
 }
+
+---
+
+##TO-FIX:
+
+If CLIENT Ctrl + C's from inital accept, it will create an infinite loop (severe)
