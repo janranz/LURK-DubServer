@@ -27,6 +27,7 @@ Gamemaster::Gamemaster()
     std::cout << "Gamemaster: your g_seed: " << g_seed << std::endl;
 }
 
+// destruction handling ////////
 Gamemaster::~Gamemaster()
 {
     // delete baddie spawner
@@ -36,12 +37,20 @@ Gamemaster::~Gamemaster()
 
     std::cout << "Goodbye, Gamemaster." << std::endl;
 }
+
+void Gamemaster::ragequit()
+{// player has ragequit (left ungracefully)
+    std::cout << "Player ragequit" << std::endl;
+}
+
 int Gamemaster::fast_rand(void)
 {
     Gamemaster::g_seed = (214013*g_seed+2531011);
     return(g_seed>>16)&0x7FFF;
 }
+// END destruction handling ////////
 
+// START server initialization ////////
 bool Gamemaster::buildChatter(int i, std::vector<std::string>::iterator m)
 {
     bool checksOut = true;
@@ -277,12 +286,25 @@ void Gamemaster::populateRooms()
               << MasterRoomList.at(5)->DEBUG_getBaddieListSize()
               << std::endl;
 }
+// END server initialization ////////
 
-void Gamemaster::startPortal(int s)
+//START network functions ////////
+void Gamemaster::constructPlayer(int fd)
 {
-    std::cout << "I'm in a thread" << s << std::endl;
-    while(true)
-    {
+    int status;
+    LURK_ACCEPT lurk_accept;
+    LURK_ERROR lurk_error;
+    LURK_GAME lurk_game;
+    LURK_VERSION lurk_version;
 
-    }
+    std::string description = c_m.room_desc.at(0);
+    lurk_game.DESC_LENGTH = description.length();
+
+    // send initial messages to client
+    status = send(fd,&lurk_version,sizeof(LURK_VERSION));
+    
+    
+    Player* np = new Player(fd);
+
 }
+//END network functions ////////

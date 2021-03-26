@@ -1,29 +1,13 @@
-#include"../headers/gamemaster.h"
+#include"../headers/player.h"
 
-Player::Player() : Baddie()
+Player::Player(int s) : Baddie()
 {
     std::cout << "Player created" << std::endl;
+    socketFD = s;
+}
+Player::~Player()
+{
+    std::cout << "Player destroyed." << std::endl;
 }
 
-// void Player::playerSetup(const int& m, const Gamemaster& G)
-// {
-//     GM = G;
-//     socketFD =;
-// }
-// //setter
-// void Player::setSocketFD(int s)
-// {
-//     socketFD = s;
-// }
-// void Player::setGold(uint16_t s)
-// {
-//     gold = s;
-// }
-//getter
-
-//controller
-// void Player::controller()
-// {
-
-// }
-
+//

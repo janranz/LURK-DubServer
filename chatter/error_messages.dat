@@ -1,3 +1,9 @@
-{} attempts to {}, but realizes that doesn't make any sense right now.
-Despite it being a serious mistake, {} attempts to {}... what were they thinking?
-Against all odds, {} attempts to {}... and fails miserably.
+Error Code: 0 <OTHER>
+Error Code: 1 <BAD_ROOM>
+Error Code: 2 <PLAYER_EXISTS>
+Error Code: 3 <BAD_MONSTER>
+Error Code: 4 <STAT_ERROR>
+Error Code: 5 <NOT_READY>
+Error Code: 6 <NO_TARGET>
+Error Code: 7 <NO_FIGHT>
+Error Code: 8 <NO PVP>

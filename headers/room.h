@@ -1,8 +1,9 @@
 #ifndef ROOM_H
 #define ROOM_H
 #include<algorithm>
-#include"../headers/gamemaster.h"
 
+class Gamemaster;
+class Player;
 class Room
 {
     private:

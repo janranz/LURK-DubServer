@@ -4,10 +4,11 @@
 #include"../headers/baddie.h"
 #include"../headers/player.h"
 #include"../headers/room.h"
+
 #include<cstdint>
 #include<time.h>
-// class Baddie;
-// class Player;
+#include<sys/socket.h>
+
 class Gamemaster
 {
     private:
@@ -34,8 +35,11 @@ class Gamemaster
         chatter_messages c_m;
         std::vector<Baddie*> BDSpawner;
         std::vector<Room*> MasterRoomList;
+        std::vector<Player> MasterPlayerList;
+        
 
     public:
+        std::mutex GMlock;
         Gamemaster();
         ~Gamemaster();
         // inline void fast_srand(int seed);
@@ -47,8 +51,14 @@ class Gamemaster
         void buildRooms(int);
         void populateRooms();
 
+        void constructPlayer(int);
+        
+        // void pushPlayerList(int);
+        // void popPlayerList(int);
+
         // network functions
-        void startPortal(int);
+        void GMController();
+        void ragequit();
 };
 
 #endif //GM_H

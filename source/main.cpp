@@ -19,6 +19,7 @@
 // volatile bool STOP = false;
 // void sigint_handler(int sig);
 
+
 int main(int argc,char** argv)
 {
     if( argc != 2)
@@ -97,8 +98,9 @@ int main(int argc,char** argv)
     GM.populateRooms();
 
     //establish connection
-    // accept connections in main, pass a REF to the inside of Gamemaster.
     // signal(SIGINT, sigint_handler);
+    signal(SIGPIPE, SIG_IGN);
+    
     struct sockaddr_in sai;
     sai.sin_family = AF_INET;
     sai.sin_addr.s_addr = INADDR_ANY;
@@ -118,11 +120,8 @@ int main(int argc,char** argv)
         player_fd = accept(dubSkt, (struct sockaddr*)(&client_addr), &address_size);
         printf("DEBUG: %s has successfully connected.\n",inet_ntoa(client_addr.sin_addr));
 
-        Player* p = new Player();
+        std::thread t1(Gamemaster::constructPlayer, GM, player_fd);
 
-        // std::thread t(Player::playerSetup, p, player_fd)
-        
-        
     }
     // say goodbye.
     return 0;

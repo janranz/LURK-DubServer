@@ -1,6 +1,6 @@
 #ifndef PLAYER_H
 #define PLAYER_H
-#include"../headers/gamemaster.h"
+#include"../headers/baddie.h"
 
 class Player: public Baddie
 {
@@ -9,7 +9,7 @@ class Player: public Baddie
 
     
     public:
-    Player();
+    Player(int);
     ~Player();
     using Baddie::Baddie;
     void controller();
