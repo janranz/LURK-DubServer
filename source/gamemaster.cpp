@@ -309,7 +309,7 @@ void Gamemaster::GMController(int fd)
     if(write(fd,&lurk_version,sizeof(LURK_VERSION)) == -1){ragequit();return;}
     std::cout << "Hello?" << std::endl;
     if(write(fd,&lurk_game,sizeof(LURK_GAME)) == -1){ragequit();return;}
-    if(write(fd,description.data(),description.size()) == -1){ragequit();return;}
+    if(write(fd,description.data(),description.length()) == -1){ragequit();return;}
 
     // wait for character message. We do this manually here not to disrupt other valid players
     bool softStop = false;
@@ -331,25 +331,45 @@ void Gamemaster::GMController(int fd)
             continue;
         }
         printf("Valid type received: %d\n",typeCheck);
-        LURK_CHARACTER charTainer;
-        recv(fd,&charTainer,sizeof(LURK_CHARACTER),MSG_WAITALL);
+
+        //attempt to assemble character.
+        Player* p = new Player(fd);
+        // LURK_CHARACTER charTainer;
+
+        recv(fd,&p->charTainer,sizeof(LURK_CHARACTER),MSG_WAITALL);
+
+        if(p->charTainer.DESC_LENGTH > 1000)
+        {
+            printf("Invalid Description Length (too big): %d\n",p->charTainer.DESC_LENGTH);
+            memset(dataDump,0,BIG_BUFFER);
+            recv(fd,&dataDump,BIG_BUFFER,MSG_DONTWAIT);
+            std::string errorMsg = "Please limit description length to 1000 characters. (You psycho.)";
+            lurk_error.MSG_LEN = errorMsg.length();
+            lurk_error.CODE = 0;
+            write(fd,&lurk_error,sizeof(LURK_ERROR));
+            write(fd,errorMsg.c_str(),lurk_error.MSG_LEN);
+            delete p;
+            continue;
+        }
 
         printf("\nName:%s\nFlags: %d\nAttack: %d\nDefense: %d\nRegen: %d\nHealth: %d\
                 \nGold: %d\nCurrent Room: %d\nDescription Length: %d\n",\
-                charTainer.CHARACTER_NAME,charTainer.FLAGS,charTainer.ATTACK,\
-                charTainer.DEFENSE,charTainer.REGEN,charTainer.HEALTH,charTainer.GOLD,\
-                charTainer.CURRENT_ROOM_NUMBER,charTainer.DESC_LENGTH);
+                p->charTainer.CHARACTER_NAME,p->charTainer.FLAGS,p->charTainer.ATTACK,\
+                p->charTainer.DEFENSE,p->charTainer.REGEN,p->charTainer.HEALTH,p->charTainer.GOLD,\
+                p->charTainer.CURRENT_ROOM_NUMBER,p->charTainer.DESC_LENGTH);
 
-        char data[charTainer.DESC_LENGTH];
-        recv(fd,&data,charTainer.DESC_LENGTH,MSG_WAITALL);
-        data[charTainer.DESC_LENGTH] = 0;
+        char data[p->charTainer.DESC_LENGTH];
+        recv(fd,&data,p->charTainer.DESC_LENGTH,MSG_WAITALL);
+        data[p->charTainer.DESC_LENGTH] = 0;
         
-        std::string desc(data);
-        std::cout << desc << std::endl << desc.size()<<std::endl;
+        p->desc.assign(data);
+        std:: cout << p->desc << std::endl;
         softStop = true;
+        delete p;
     }
 
     std::cout << "Yo i'm out" << std::endl;
+    
     // Player* np = new Player(fd);
 }
 //END network functions ////////
