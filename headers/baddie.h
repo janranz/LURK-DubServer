@@ -13,7 +13,7 @@
 class Baddie
 {
     private:
-    Baddie* selfRef; // replace with this.
+    // Baddie* selfRef; // replace with this.
 
     protected:
         // static uint16_t MAX_STAT;
@@ -30,7 +30,7 @@ class Baddie
         // std::mutex padlock;
 
     public:
-        Baddie();
+        // Baddie();
         Baddie(std::string,uint8_t,uint16_t,uint16_t,uint16_t,int16_t,
                 uint16_t,uint16_t,uint16_t,std::string);
         ~Baddie();

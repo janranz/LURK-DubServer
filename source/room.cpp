@@ -43,40 +43,40 @@ std::vector<uint16_t> Room::DEBUG_getConnected()
     return connectedRoomNums;
 }
 
-int Room::searchPlayer(std::string const&s)
-{
-    int i = 0;
-    lock();
-    for(auto &t : playerList)
-    {
-        if(t->getName() == s)
-        {
-            unlock();
-            return i;
-        }
-    }
-    unlock();
-    return -1;
-}
+// int Room::searchPlayer(std::string const&s)  ////MODIFY
+// {
+//     int i = 0;
+//     lock();
+//     for(auto &t : playerList)
+//     {
+//         if(t->getName() == s)
+//         {
+//             unlock();
+//             return i;
+//         }
+//     }
+//     unlock();
+//     return -1;
+// }
 
-void Room::addPlayer(Player* s)
-{
-    lock();
-    if(playerList.empty())
-    {
-        playerList.push_back(s);
-        unlock();
-        return;
-    }
+// void Room::addPlayer(Player* s) ////MODIFY
+// {
+//     lock();
+//     if(playerList.empty())
+//     {
+//         playerList.push_back(s);
+//         unlock();
+//         return;
+//     }
     
-    int index = searchPlayer(s->getName());
-    if(index != -1)
-    {
-        playerList.erase(playerList.begin() + index);
-        playerList.push_back(s);
-    }
-    unlock();
-}
+//     int index = searchPlayer(s->getName());
+//     if(index != -1)
+//     {
+//         playerList.erase(playerList.begin() + index);
+//         playerList.push_back(s);
+//     }
+//     unlock();
+// }
 
 void Room::setConnectedRooms(char p, uint16_t m)
 {

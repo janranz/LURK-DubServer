@@ -291,12 +291,12 @@ void Gamemaster::populateRooms()
 //START network functions ////////
 void Gamemaster::GMController(int fd)
 {
-    std::cout << "WOW?" << std::endl;
     int32_t typeCheck;
     LURK_ACCEPT lurk_accept;
     LURK_ERROR lurk_error;
     LURK_GAME lurk_game;
     LURK_VERSION lurk_version;
+    ssize_t bytes; // consider cnd-checking while loops
 
     
     std::string description = c_m.room_desc.at(0);
@@ -314,6 +314,7 @@ void Gamemaster::GMController(int fd)
     // wait for character message. We do this manually here not to disrupt other valid players
     bool softStop = false;
     char dataDump[BIG_BUFFER];
+    Player p(fd);
     while(!softStop)
     {
         recv(fd,&typeCheck,1,MSG_WAITALL|MSG_PEEK);
@@ -333,14 +334,11 @@ void Gamemaster::GMController(int fd)
         printf("Valid type received: %d\n",typeCheck);
 
         //attempt to assemble character.
-        Player* p = new Player(fd);
-        // LURK_CHARACTER charTainer;
+        recv(fd,&p.charTainer,sizeof(LURK_CHARACTER),MSG_WAITALL);
 
-        recv(fd,&p->charTainer,sizeof(LURK_CHARACTER),MSG_WAITALL);
-
-        if(p->charTainer.DESC_LENGTH > 1000)
+        if(p.charTainer.DESC_LENGTH > 1000)
         {
-            printf("Invalid Description Length (too big): %d\n",p->charTainer.DESC_LENGTH);
+            printf("Invalid Description Length (too big): %d\n",p.charTainer.DESC_LENGTH);
             memset(dataDump,0,BIG_BUFFER);
             recv(fd,&dataDump,BIG_BUFFER,MSG_DONTWAIT);
             std::string errorMsg = "Please limit description length to 1000 characters. (You psycho.)";
@@ -348,7 +346,7 @@ void Gamemaster::GMController(int fd)
             lurk_error.CODE = 0;
             write(fd,&lurk_error,sizeof(LURK_ERROR));
             write(fd,errorMsg.c_str(),lurk_error.MSG_LEN);
-            delete p;
+            
             continue;
         }
 
@@ -358,21 +356,41 @@ void Gamemaster::GMController(int fd)
         //         p->charTainer.DEFENSE,p->charTainer.REGEN,p->charTainer.HEALTH,p->charTainer.GOLD,\
         //         p->charTainer.CURRENT_ROOM_NUMBER,p->charTainer.DESC_LENGTH);
 
-        char data[p->charTainer.DESC_LENGTH];
-        recv(fd,&data,p->charTainer.DESC_LENGTH,MSG_WAITALL);
-        data[p->charTainer.DESC_LENGTH] = 0;
+        char data[p.charTainer.DESC_LENGTH];
+        recv(fd,&data,p.charTainer.DESC_LENGTH,MSG_WAITALL);
+        data[p.charTainer.DESC_LENGTH] = 0;
         
-        p->desc.assign(data);
-        // std:: cout << p->desc << std::endl;
+        p.desc.assign(data);
         softStop = true;
-        MasterPlayerList.push_back(*p);
-        std::cout << "Desc: " << MasterPlayerList.at(0).desc << std::endl;
-        delete p;
+        MasterPlayerList.push_back(p);
     }
-    std::cout << "PASSED Desc: " << MasterPlayerList.at(0).desc << std::endl;
-
-    std::cout << "Yo i'm out" << std::endl;
+    // Any new threads should be considered here.
     
-    // Player* np = new Player(fd);
+    // read from client - expect to send a RESPONSE back.
+
+    while(bytes = (fd,&typeCheck,1,MSG_WAITALL|MSG_PEEK) > 0)
+    {
+        
+    }
+    // client most likely closed the socket or some error occured here.
+    printf("Lost recv() comms with peer socket, bytes: %d\n",bytes);
+}
+
+void Gamemaster::mailroom(int fd,int32_t type)
+{// process client data (Since mutex is a shared_ptr, try and lock it via MasterPlayerList?)
+    LURK_MSG lurk_msg;
+    switch(type)
+    {
+        case 1:
+        {// MESSAGE
+            recv(fd,&lurk_msg,sizeof(LURK_MSG),MSG_WAITALL);
+            char data[lurk_msg.MSG_LEN];
+            recv(fd,&data,lurk_msg.MSG_LEN,MSG_WAITALL);
+            data[lurk_msg.MSG_LEN] = 0;
+            std::string s(data, lurk_msg.MSG_LEN);
+            std ::cout << "lurk message: " << s << std::endl;
+            break;
+        }
+    }
 }
 //END network functions ////////
