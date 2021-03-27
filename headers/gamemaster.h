@@ -58,6 +58,7 @@ class Gamemaster
         // network functions
         void GMController(int);
         void mailroom(int,int32_t);
+        void postman(LURK_MSG,char*);
         void ragequit();
 };
 

@@ -302,12 +302,10 @@ void Gamemaster::GMController(int fd)
     std::string description = c_m.room_desc.at(0);
     lurk_game.DESC_LENGTH = description.length();
 
-    std::cout << "Description: " << description << std::endl;
-
     // send initial messages to client
     
     if(write(fd,&lurk_version,sizeof(LURK_VERSION)) == -1){ragequit();return;}
-    std::cout << "Hello?" << std::endl;
+
     if(write(fd,&lurk_game,sizeof(LURK_GAME)) == -1){ragequit();return;}
     if(write(fd,description.data(),description.length()) == -1){ragequit();return;}
 
@@ -369,9 +367,8 @@ void Gamemaster::GMController(int fd)
     
     // read from client - expect to send a RESPONSE back.
 
-    while(1)
+    while(bytes = recv(fd,&typeCheck,1,MSG_WAITALL|MSG_PEEK) > 0)
     {
-        bytes = recv(fd,&typeCheck,1,MSG_WAITALL|MSG_PEEK);
         mailroom(fd,typeCheck);
     }
     // client most likely closed the socket or some error occured here.
@@ -381,7 +378,9 @@ void Gamemaster::GMController(int fd)
 void Gamemaster::mailroom(int fd,int32_t type)
 {// process client data (Since mutex is a shared_ptr, try and lock it via MasterPlayerList?)
     LURK_MSG lurk_msg;
-    std::cout << "Type: " << type << std::endl;
+    bool hotAccept;
+
+    std::cout << "fd: " << fd << std::endl;
     switch(type)
     {
         case 1:
@@ -390,10 +389,21 @@ void Gamemaster::mailroom(int fd,int32_t type)
             char data[lurk_msg.MSG_LEN];
             recv(fd,&data,lurk_msg.MSG_LEN,MSG_WAITALL);
             data[lurk_msg.MSG_LEN] = 0;
-            std::string s(data, lurk_msg.MSG_LEN);
-            std ::cout << "lurk message: " << s << std::endl;
+            postman(lurk_msg,data);
+            // std::string s(data, lurk_msg.MSG_LEN);
             break;
         }
     }
+}
+
+void Gamemaster::postman(LURK_MSG lurk_msg,char* data)
+{// consider if a lock should be implemented, protecting MastPlayerList from manip
+    // for(auto t:MasterPlayerList)
+    // {
+    //     std::cout << "In postman: " << t.socketFD << std::endl;
+    //     t.writeToMe(lurk_msg,data);
+    // }
+    int theFD = MasterPlayerList.at(0).socketFD;
+    MasterPlayerList.at(0).writeToMe(lurk_msg,data);
 }
 //END network functions ////////

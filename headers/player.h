@@ -3,23 +3,25 @@
 #include"../headers/structs.h"
 #include<memory>
 #include<mutex>
-
+#include<iostream>
+// #include<sys/socket.h>
+#include<unistd.h>
 class Player
 {
     private:
-    int socketFD;
+    
     
     
     public:
     LURK_CHARACTER charTainer;
     std::string desc;
     std::shared_ptr<std::mutex> pLock;
-
+    int socketFD;
     Player(int);
     ~Player();
     //read
     //write
-    
+    void writeToMe(LURK_MSG,char*);
 };
 
 
