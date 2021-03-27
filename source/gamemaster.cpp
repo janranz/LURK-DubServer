@@ -364,13 +364,15 @@ void Gamemaster::GMController(int fd)
         softStop = true;
         MasterPlayerList.push_back(p);
     }
+    printf("Player successfully added to Master: %d\n",MasterPlayerList.size());
     // Any new threads should be considered here.
     
     // read from client - expect to send a RESPONSE back.
 
-    while(bytes = (fd,&typeCheck,1,MSG_WAITALL|MSG_PEEK) > 0)
+    while(1)
     {
-        
+        bytes = recv(fd,&typeCheck,1,MSG_WAITALL|MSG_PEEK);
+        mailroom(fd,typeCheck);
     }
     // client most likely closed the socket or some error occured here.
     printf("Lost recv() comms with peer socket, bytes: %d\n",bytes);
@@ -379,6 +381,7 @@ void Gamemaster::GMController(int fd)
 void Gamemaster::mailroom(int fd,int32_t type)
 {// process client data (Since mutex is a shared_ptr, try and lock it via MasterPlayerList?)
     LURK_MSG lurk_msg;
+    std::cout << "Type: " << type << std::endl;
     switch(type)
     {
         case 1:
