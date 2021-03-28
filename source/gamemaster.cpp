@@ -298,7 +298,6 @@ void Gamemaster::GMController(int fd)
     LURK_VERSION lurk_version;
     ssize_t bytes; // consider cnd-checking while loops
 
-    
     std::string description = c_m.room_desc.at(0);
     lurk_game.DESC_LENGTH = description.length();
 
@@ -311,7 +310,7 @@ void Gamemaster::GMController(int fd)
 
     // wait for character message. We do this manually here not to disrupt other valid players
     bool softStop = false;
-    char dataDump[BIG_BUFFER];
+    
     Player p(fd);
     while(!softStop)
     {
@@ -321,7 +320,7 @@ void Gamemaster::GMController(int fd)
         {
             printf("Invalid type received: %d\n",typeCheck);
             memset(dataDump, 0, BIG_BUFFER);
-            recv(fd,&dataDump,BIG_BUFFER,MSG_DONTWAIT);
+            recv(fd,dataDump,BIG_BUFFER,MSG_DONTWAIT); // DOUBLE CHECK dataDump
             std::string errorMsg = "Incorrect Type. Expecting Type: 10";
             lurk_error.MSG_LEN = errorMsg.length();
             lurk_error.CODE = 0;
@@ -348,12 +347,6 @@ void Gamemaster::GMController(int fd)
             continue;
         }
 
-        // printf("\nName:%s\nFlags: %d\nAttack: %d\nDefense: %d\nRegen: %d\nHealth: %d\
-        //         \nGold: %d\nCurrent Room: %d\nDescription Length: %d\n",\
-        //         p->charTainer.CHARACTER_NAME,p->charTainer.FLAGS,p->charTainer.ATTACK,\
-        //         p->charTainer.DEFENSE,p->charTainer.REGEN,p->charTainer.HEALTH,p->charTainer.GOLD,\
-        //         p->charTainer.CURRENT_ROOM_NUMBER,p->charTainer.DESC_LENGTH);
-
         char data[p.charTainer.DESC_LENGTH];
         recv(fd,&data,p.charTainer.DESC_LENGTH,MSG_WAITALL);
         data[p.charTainer.DESC_LENGTH] = 0;
@@ -369,17 +362,30 @@ void Gamemaster::GMController(int fd)
 
     while(bytes = recv(fd,&typeCheck,1,MSG_WAITALL|MSG_PEEK) > 0)
     {
-        mailroom(fd,typeCheck);
+        mailroom(p,fd,typeCheck);
     }
     // client most likely closed the socket or some error occured here.
     printf("Lost recv() comms with peer socket, bytes: %d\n",bytes);
 }
 
-void Gamemaster::mailroom(int fd,int32_t type)
+void Gamemaster::GMPM(Player& p, std::string& msg)
+{
+    GM_MSG gm;
+    gm.MSG_LEN = msg.length();
+    strncpy(gm.CEIVER_NAME,p.charTainer.CHARACTER_NAME,32);
+    
+    {
+        std::lock_guard<std::mutex> lock(*p.pLock);
+        write(p.socketFD,&gm,sizeof(gm));
+        write(p.socketFD,msg.c_str(),gm.MSG_LEN);
+    }
+}
+
+void Gamemaster::mailroom(Player& p,int fd,int32_t type)
 {// process client data (Since mutex is a shared_ptr, try and lock it via MasterPlayerList?)
     LURK_MSG lurk_msg;
     bool hotAccept;
-
+    
     std::cout << "fd: " << fd << std::endl;
     switch(type)
     {
@@ -387,23 +393,80 @@ void Gamemaster::mailroom(int fd,int32_t type)
         {// MESSAGE
             recv(fd,&lurk_msg,sizeof(LURK_MSG),MSG_WAITALL);
             char data[lurk_msg.MSG_LEN];
-            recv(fd,&data,lurk_msg.MSG_LEN,MSG_WAITALL);
+            recv(fd,data,lurk_msg.MSG_LEN,MSG_WAITALL);
             data[lurk_msg.MSG_LEN] = 0;
-            postman(lurk_msg,data);
+            postman(p,lurk_msg,data);
             // std::string s(data, lurk_msg.MSG_LEN);
             break;
+        }
+        default:
+        {
+            std::string m = "Invalid type received!";
+            GMPM(p,m);
+            memset(dataDump,0,BIG_BUFFER);
+            recv(p.socketFD,dataDump,BIG_BUFFER,MSG_DONTWAIT);
         }
     }
 }
 
-void Gamemaster::postman(LURK_MSG lurk_msg,char* data)
+void Gamemaster::postman(Player& sender,LURK_MSG lurk_msg,char* data)
 {// consider if a lock should be implemented, protecting MastPlayerList from manip
-    // for(auto t:MasterPlayerList)
-    // {
-    //     std::cout << "In postman: " << t.socketFD << std::endl;
-    //     t.writeToMe(lurk_msg,data);
-    // }
-    int theFD = MasterPlayerList.at(0).socketFD;
-    MasterPlayerList.at(0).writeToMe(lurk_msg,data);
+    // Player* temp = &sender;
+    bool found = false;
+    for(auto t:MasterPlayerList)
+    {
+        if(strcmp(t.charTainer.CHARACTER_NAME,lurk_msg.CEIVER_NAME) == 0)
+        {
+            t.writeToMe(lurk_msg,data);
+            sender.writeToMe(lurk_msg,data);
+            gatekeeper('a',sender,1,0);
+            found = true;
+            break;
+        }
+    }
+    if(!found){gatekeeper('d',sender,0,6);}
+}
+
+void Gamemaster::gatekeeper(char ad,Player& t,uint8_t action,uint8_t err)
+{
+    if(ad == 'a')
+    {// action accepted
+        LURK_ACCEPT la;
+        la.ACCEPT_TYPE = action;
+        {
+            std::lock_guard<std::mutex> lock(*t.pLock);
+            write(t.socketFD,&la,sizeof(LURK_ACCEPT));
+        }
+    } else if(ad == 'd')
+    {// action declined
+        LURK_ERROR le;
+        le.CODE = err;
+        std::string desc = c_m.error.at(err);
+        le.MSG_LEN = desc.length();
+        {
+            std::lock_guard<std::mutex> lock(*t.pLock);
+            write(t.socketFD,&le,sizeof(LURK_ERROR));
+            write(t.socketFD,desc.c_str(),le.MSG_LEN);
+        }
+    }
 }
 //END network functions ////////
+
+
+/* 
+USEFUL CLIPS:
+std::lock_guard<std::mutex> lock(*t->pLock);
+memset(dataDump, 0, BIG_BUFFER);
+ERROR CODES:
+0	Other (not covered by any below error code)
+1	Bad room
+2	Player Exists
+3	Bad Monster
+4	Stat error
+5	Not Ready
+6	No target
+7	No fight
+8	No player vs. player
+
+*/
+

@@ -25,6 +25,14 @@ struct LURK_MSG
     char SENDER_NAME[32];
 }__attribute__((packed));
 
+struct GM_MSG
+{
+    uint8_t TYPE = 1;
+    uint16_t MSG_LEN;
+    char CEIVER_NAME[32];
+    char SENDER_NAME[32] = "<MASTER DUBS>";
+}__attribute__((packed));
+
 struct LURK_ERROR
 {
     uint8_t TYPE = 7;

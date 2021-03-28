@@ -34,7 +34,8 @@ class Gamemaster
         static uint16_t WEAPONS_VECTOR_SIZE;
         static uint16_t BADDIE_DESC_SIZE;
         static uint16_t ROOM_DESC_SIZE;
-
+        // use dataDump with memset() to attempt to clear client's skt buffer in case of err.
+        char dataDump[BIG_BUFFER];
         chatter_messages c_m;
         std::vector<Baddie*> BDSpawner;
         
@@ -57,8 +58,10 @@ class Gamemaster
 
         // network functions
         void GMController(int);
-        void mailroom(int,int32_t);
-        void postman(LURK_MSG,char*);
+        void GMPM(Player&,std::string&); // personal custom messenger for GM
+        void mailroom(Player&,int,int32_t);
+        void postman(Player&,LURK_MSG,char*);
+        void gatekeeper(char,Player&,uint8_t,uint8_t); // fast access to accept/deny
         void ragequit();
 };
 
