@@ -33,6 +33,18 @@ struct GM_MSG
     char SENDER_NAME[32] = "<MASTER DUBS>";
 }__attribute__((packed));
 
+struct LURK_PVP
+{
+    uint8_t TYPE = 4;
+    char TARGET[32];
+}__attribute__((packed));
+
+struct LURK_LOOT
+{
+    uint8_t TYPE = 5;
+    char TARGET[32];
+}__attribute__((packed));
+
 struct LURK_ERROR
 {
     uint8_t TYPE = 7;
@@ -62,7 +74,7 @@ struct LURK_CHARACTER
     uint16_t ATTACK;
     uint16_t DEFENSE;
     uint16_t REGEN;
-    int16_t HEALTH;
+    int16_t HEALTH; // stay under 32,760;
     uint16_t GOLD;
     uint16_t CURRENT_ROOM_NUMBER;
     uint16_t DESC_LENGTH;

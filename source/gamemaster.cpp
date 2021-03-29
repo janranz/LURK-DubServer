@@ -3,6 +3,7 @@
 unsigned int Gamemaster::g_seed = 0;
 uint16_t Gamemaster::MAX_BADDIES = 1000;
 uint16_t Gamemaster::MAX_STAT = 4000;
+int16_t Gamemaster::BASE_HEALTH = 6000;
 uint16_t Gamemaster::AWAKEN_VECTOR_SIZE;
 uint16_t Gamemaster::BADDIES_VECTOR_SIZE;
 uint16_t Gamemaster::DANGER_VECTOR_SIZE;
@@ -291,7 +292,9 @@ void Gamemaster::populateRooms()
 //START network functions ////////
 void Gamemaster::GMController(int fd)
 {
-    int32_t typeCheck;
+    Player p(fd);
+    std::string m;
+    int32_t typeCheck = 0;
     LURK_ACCEPT lurk_accept;
     LURK_ERROR lurk_error;
     LURK_GAME lurk_game;
@@ -308,64 +311,118 @@ void Gamemaster::GMController(int fd)
     if(write(fd,&lurk_game,sizeof(LURK_GAME)) == -1){ragequit();return;}
     if(write(fd,description.data(),description.length()) == -1){ragequit();return;}
 
-    // wait for character message. We do this manually here not to disrupt other valid players
-    bool softStop = false;
-    
-    Player p(fd);
-    while(!softStop)
-    {
-        recv(fd,&typeCheck,1,MSG_WAITALL|MSG_PEEK);
-        std::cout << "typeCheck: " << typeCheck << std::endl;
-        if(typeCheck != 10)
+    // wait for character message. We do this manually here
+    while(bytes = recv(fd, &typeCheck,1,MSG_WAITALL|MSG_PEEK) > 0)
+    {// confirm character
+        bool checksOut = false;
+        std::cout << "Type: " << typeCheck << std::endl;
+        if(typeCheck == 10)
         {
-            printf("Invalid type received: %d\n",typeCheck);
-            memset(dataDump, 0, BIG_BUFFER);
-            recv(fd,dataDump,BIG_BUFFER,MSG_DONTWAIT); // DOUBLE CHECK dataDump
-            std::string errorMsg = "Incorrect Type. Expecting Type: 10";
-            lurk_error.MSG_LEN = errorMsg.length();
-            lurk_error.CODE = 0;
-            write(fd,&lurk_error,sizeof(LURK_ERROR));
-            write(fd,errorMsg.c_str(),lurk_error.MSG_LEN);
-            continue;
-        }
-        printf("Valid type received: %d\n",typeCheck);
 
-        //attempt to assemble character.
-        recv(fd,&p.charTainer,sizeof(LURK_CHARACTER),MSG_WAITALL);
-
-        if(p.charTainer.DESC_LENGTH > 1000)
-        {
-            printf("Invalid Description Length (too big): %d\n",p.charTainer.DESC_LENGTH);
-            memset(dataDump,0,BIG_BUFFER);
-            recv(fd,&dataDump,BIG_BUFFER,MSG_DONTWAIT);
-            std::string errorMsg = "Please limit description length to 1000 characters. (You psycho.)";
-            lurk_error.MSG_LEN = errorMsg.length();
-            lurk_error.CODE = 0;
-            write(fd,&lurk_error,sizeof(LURK_ERROR));
-            write(fd,errorMsg.c_str(),lurk_error.MSG_LEN);
+            recv(fd,&p.charTainer,sizeof(LURK_CHARACTER),MSG_WAITALL);
             
-            continue;
+            char tmp[p.charTainer.DESC_LENGTH];
+            recv(fd,tmp,p.charTainer.DESC_LENGTH,MSG_WAITALL);
+            tmp[p.charTainer.DESC_LENGTH] = 0;
+            p.desc.assign(tmp);
+            checksOut = checkStats(p);
+            break;
         }
-
-        char data[p.charTainer.DESC_LENGTH];
-        recv(fd,&data,p.charTainer.DESC_LENGTH,MSG_WAITALL);
-        data[p.charTainer.DESC_LENGTH] = 0;
-        
-        p.desc.assign(data);
-        softStop = true;
-        MasterPlayerList.push_back(p);
+        if(checksOut == false)
+        {
+            std::cout << "Pump n dumpin' data. Bad stats" << std::endl;
+            memset(dataDump,0,BIG_BUFFER);
+            recv(fd,dataDump,BIG_BUFFER,MSG_DONTWAIT);
+        }
     }
+    std::cout << p.charTainer.CHARACTER_NAME << " checks out!" << std::endl;
+    MasterPlayerList.push_back(p);
+
     printf("Player successfully added to Master: %d\n",MasterPlayerList.size());
+    std::cout << "Sanity check desc: " << p.desc << std::endl;
+
+    // wait for start....
+    std::string name(p.charTainer.CHARACTER_NAME);
+    m = "Welcome to these savage streets, " + name
+        + ". There's nothing to be afraid about (yet), "
+        + "I just need to know that you're ready to START.";
+                GMPM(p,m);
+    while(bytes = recv(fd,&typeCheck,1,MSG_WAITALL|MSG_PEEK) > 0)
+    {// confirm start
+        if(typeCheck == 6)
+        {
+            uint8_t tmp;
+            recv(fd,&tmp,sizeof(uint8_t),MSG_WAITALL);
+            std::cout << "User has started!: Type(" << typeCheck << ")" << std::endl;
+            
+            /*TESTING CONCAT */
+            // int dex = (fast_rand() % (c_m.awaken.size()));
+            // int size = c_m.awaken.at(dex).length() + 1;
+            // char buffer[size];
+            // m = c_m.awaken.at(dex);
+            // snprintf(buffer,size,m.c_str(),p.charTainer.CHARACTER_NAME);
+            // m.assign(buffer);
+            // GMPM(p,m);
+            break;
+        }
+            std::cout << "User has NOT started!: Type(" << typeCheck << ")" << std::endl;
+            m = "Invalid type received!";
+            GMPM(p,m);
+            memset(dataDump,0,BIG_BUFFER);
+            recv(p.socketFD,dataDump,BIG_BUFFER,MSG_DONTWAIT);
+            gatekeeper('d',p,0,5);
+            m = "hmm.. I'm looking for a \"START\" message, " + name
+                + " (pssst... It's TYPE 6.)";
+            GMPM(p,m);
+    }
     // Any new threads should be considered here.
     
     // read from client - expect to send a RESPONSE back.
 
     while(bytes = recv(fd,&typeCheck,1,MSG_WAITALL|MSG_PEEK) > 0)
-    {
+    {// consider how we will require a START (type 6)
         mailroom(p,fd,typeCheck);
     }
     // client most likely closed the socket or some error occured here.
     printf("Lost recv() comms with peer socket, bytes: %d\n",bytes);
+}
+
+bool Gamemaster::checkStats(Player& p)
+{
+    // check name conflicts
+    std::cout << "Checking stats" << std::endl;
+    RECHECK:
+    for(auto t : MasterPlayerList)
+    {
+        if(strcmp(t.charTainer.CHARACTER_NAME,p.charTainer.CHARACTER_NAME) == 0)
+        {
+            // p.charTainer.CHARACTER_NAME[32] = 0;
+            std::string base(p.charTainer.CHARACTER_NAME);
+            std::string suff= std::to_string(((fast_rand() % 4000)));
+            std::string full = base + suff;
+            strncpy(p.charTainer.CHARACTER_NAME,full.c_str(),32);
+            std::cout << "Name changed to: " << p.charTainer.CHARACTER_NAME << std::endl;
+            goto RECHECK;
+        }
+    }
+    uint32_t stat = p.charTainer.ATTACK + p.charTainer.DEFENSE + p.charTainer.REGEN;
+    
+    p.charTainer.HEALTH = BASE_HEALTH;
+    if(stat > MAX_STAT)
+    {
+        std::cout << "Inappropriate stats: " << stat << std::endl;
+        return false;
+    } else if(stat < MAX_STAT)
+    {
+        uint32_t dif = MAX_STAT - stat;
+        p.charTainer.HEALTH += dif;
+    }
+    p.charTainer.FLAGS = 0b11001000; // 200
+    p.charTainer.GOLD = (fast_rand() & (4200 - 69) + 69);
+    p.charTainer.CURRENT_ROOM_NUMBER = 0;
+    std::cout << "Appropriate stats: " << stat << std::endl;
+    return true;
+
 }
 
 void Gamemaster::GMPM(Player& p, std::string& msg)
@@ -383,20 +440,71 @@ void Gamemaster::GMPM(Player& p, std::string& msg)
 
 void Gamemaster::mailroom(Player& p,int fd,int32_t type)
 {// process client data (Since mutex is a shared_ptr, try and lock it via MasterPlayerList?)
-    LURK_MSG lurk_msg;
-    bool hotAccept;
+    // LURK_MSG lurk_msg;
+    // bool hotAccept;
     
     std::cout << "fd: " << fd << std::endl;
     switch(type)
     {
         case 1:
-        {// MESSAGE
+        {// MESSAGE (REWORK THIS)
+            LURK_MSG lurk_msg;
+
             recv(fd,&lurk_msg,sizeof(LURK_MSG),MSG_WAITALL);
             char data[lurk_msg.MSG_LEN];
             recv(fd,data,lurk_msg.MSG_LEN,MSG_WAITALL);
             data[lurk_msg.MSG_LEN] = 0;
             postman(p,lurk_msg,data);
             // std::string s(data, lurk_msg.MSG_LEN);
+            break;
+        }
+        case 3:
+        {// FIGHT
+            uint8_t tmp;
+            recv(fd,&tmp,sizeof(uint8_t),MSG_WAITALL);
+            std::cout << p.charTainer.CHARACTER_NAME << " STARTS BEEF" << std::endl;
+            break;
+        }
+        case 4:
+        {// PVP
+            LURK_PVP lurk_pvp;
+            recv(fd,&lurk_pvp,sizeof(LURK_PVP),MSG_WAITALL);
+            std::cout << p.charTainer.CHARACTER_NAME
+                      << " WANTS TO FIGHT " << lurk_pvp.TARGET << std::endl;
+            break;
+        }
+        case 5:
+        {// LOOT
+            LURK_LOOT lurk_loot;
+            recv(fd,&lurk_loot,sizeof(LURK_LOOT),MSG_WAITALL);
+            std::cout << p.charTainer.CHARACTER_NAME
+                      << " WANTS TO LOOT " << lurk_loot.TARGET << std::endl;
+            break;
+        }
+        case 6:
+        {// START
+            uint8_t tmp;
+            recv(fd,&tmp,sizeof(uint8_t),MSG_WAITALL);
+            // do something to here to throw user into the game.
+
+            std::cout << p.charTainer.CHARACTER_NAME << " requests a start" << std::endl;
+            break;
+        }
+        case 7:
+        {// LEAVE (Consider cleanup!)
+            uint8_t tmp;
+            recv(fd,&tmp,sizeof(uint8_t),MSG_WAITALL);
+            std::cout << p.charTainer.CHARACTER_NAME
+                      << " User has requested to leave gracefully" << std::endl;
+            //clean up
+            break;
+        }
+        case 10:
+        {// CHARACTER (bitset check state of JOIN_BATTLE ONLY)
+            LURK_CHARACTER lurk_char;
+            recv(fd,&lurk_char,sizeof(LURK_CHARACTER),MSG_WAITALL);
+            std::cout << p.charTainer.CHARACTER_NAME
+                      << " sends a character message. let's check her flags for JB" << std::endl;
             break;
         }
         default:
@@ -470,3 +578,46 @@ ERROR CODES:
 
 */
 
+    // while(!softStop)
+    // {
+    //     recv(fd,&typeCheck,1,MSG_WAITALL|MSG_PEEK);
+    //     std::cout << "typeCheck: " << typeCheck << std::endl;
+    //     if(typeCheck != 10)
+    //     {
+    //         printf("Invalid type received: %d\n",typeCheck);
+    //         memset(dataDump, 0, BIG_BUFFER);
+    //         recv(fd,dataDump,BIG_BUFFER,MSG_DONTWAIT); // DOUBLE CHECK dataDump
+    //         std::string errorMsg = "Incorrect Type. Expecting Type: 10";
+    //         lurk_error.MSG_LEN = errorMsg.length();
+    //         lurk_error.CODE = 0;
+    //         write(fd,&lurk_error,sizeof(LURK_ERROR));
+    //         write(fd,errorMsg.c_str(),lurk_error.MSG_LEN);
+    //         continue;
+    //     }
+    //     printf("Valid type received: %d\n",typeCheck);
+
+    //     //attempt to assemble character.
+    //     recv(fd,&p.charTainer,sizeof(LURK_CHARACTER),MSG_WAITALL);
+
+    //     if(p.charTainer.DESC_LENGTH > 1000)
+    //     {
+    //         printf("Invalid Description Length (too big): %d\n",p.charTainer.DESC_LENGTH);
+    //         memset(dataDump,0,BIG_BUFFER);
+    //         recv(fd,&dataDump,BIG_BUFFER,MSG_DONTWAIT);
+    //         std::string errorMsg = "Please limit description length to 1000 characters. (You psycho.)";
+    //         lurk_error.MSG_LEN = errorMsg.length();
+    //         lurk_error.CODE = 0;
+    //         write(fd,&lurk_error,sizeof(LURK_ERROR));
+    //         write(fd,errorMsg.c_str(),lurk_error.MSG_LEN);
+            
+    //         continue;
+    //     }
+
+    //     char data[p.charTainer.DESC_LENGTH];
+    //     recv(fd,&data,p.charTainer.DESC_LENGTH,MSG_WAITALL);
+    //     data[p.charTainer.DESC_LENGTH] = 0;
+        
+    //     p.desc.assign(data);
+    //     softStop = true;
+    //     MasterPlayerList.push_back(p);
+    // }

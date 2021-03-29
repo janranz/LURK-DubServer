@@ -7,16 +7,19 @@
 
 #include<cstdint>
 #include<time.h>
+#include<stdio.h>
 #include<sys/socket.h>
 #include<unistd.h>
 #include<sys/types.h>
 #include<thread>
+
 
 class Gamemaster
 {
     private:
         static unsigned int g_seed;
         static uint16_t MAX_STAT;
+        static int16_t BASE_HEALTH;
         static uint16_t MAX_BADDIES;
         static uint16_t AWAKEN_VECTOR_SIZE;
         static uint16_t BADDIES_VECTOR_SIZE;
@@ -58,6 +61,8 @@ class Gamemaster
 
         // network functions
         void GMController(int);
+        bool checkStats(Player&);
+
         void GMPM(Player&,std::string&); // personal custom messenger for GM
         void mailroom(Player&,int,int32_t);
         void postman(Player&,LURK_MSG,char*);
