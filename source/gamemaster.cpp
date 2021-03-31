@@ -196,7 +196,7 @@ void Gamemaster::populateSpawner()
         std::string descGrab = c_m.baddie_desc.at(roll);
         uint16_t descLength = descGrab.length();
 
-        Baddie* p = new Baddie(n,flags,attack,defense,regen,health,gold,0,descLength,descGrab);
+        Baddie p(n,flags,attack,defense,regen,health,gold,0,descLength,descGrab);
         BDSpawner.push_back(p);
     }
     std::cout << "\nSpawner populated! Size of BDSpawner: " << BDSpawner.size() << std::endl;
@@ -236,11 +236,11 @@ void Gamemaster::buildRooms(int roomCount)
     roomDesc = c_m.room_desc.at(0);
     roomDescLength = roomDesc.length();
 
-    Room* p = new Room(roomNumber,roomName,roomDescLength,roomDesc);
+    Room p(roomNumber,roomName,roomDescLength,roomDesc);
     std::vector<uint16_t> connectedRoomNums;
     for(int i = 0; i < roomCount; i++)
     {
-        p->setConnectedRooms('p',i); // portal room
+        p.setConnectedRooms('p',i); // portal room
     }
     MasterRoomList.push_back(p);
 
@@ -250,12 +250,12 @@ void Gamemaster::buildRooms(int roomCount)
         roomNumber = i;
         roomDesc = c_m.room_desc.at(i);
         roomDescLength = roomDesc.length();
-        Room* p = new Room(roomNumber,roomName,roomDescLength,roomDesc);
+        Room p(roomNumber,roomName,roomDescLength,roomDesc);
         if(i == roomCount - 1)
         {
-            p->setConnectedRooms('l',i); // last room needs no +1 connected room.
+            p.setConnectedRooms('l',i); // last room needs no +1 connected room.
         } else {
-            p->setConnectedRooms('n',i); // normal room.
+            p.setConnectedRooms('n',i); // normal room.
         }
         MasterRoomList.push_back(p);
     }
@@ -267,24 +267,24 @@ void Gamemaster::populateRooms()
     int roomCount = MasterRoomList.size();
     int min = 3;
     int max = 20;
-    for(auto t: MasterRoomList)
+    for(Room& t: MasterRoomList)
     {
         
         int baddieCount = (fast_rand() % (max - min) + min);
         for(int i = 0; i < baddieCount; i++)
         {
-            Baddie* release = BDSpawner.at((fast_rand() % (BDSpawner.size())));
-            t->injectBaddie(release);
+            Baddie release = BDSpawner.at((fast_rand() % (BDSpawner.size())));
+            t.injectBaddie(release);
         }
     }
-    for(auto t: BDSpawner)
-        delete t;
+    // for(auto t: BDSpawner)
+    //     delete t;
     BDSpawner.clear();
     std::cout << "\nRooms have been populated! BDSpawner has been deleted. Size: " 
               << BDSpawner.size()
               << std::endl;
     std::cout << "Sanity check - Baddie List Size in a random room: "
-              << MasterRoomList.at(5)->DEBUG_getBaddieListSize()
+              << MasterRoomList.at(5).DEBUG_getBaddieListSize()
               << std::endl;
 }
 // END server initialization ////////
@@ -455,24 +455,24 @@ void Gamemaster::movePlayer(Player& p, char direction)
     {
         case 's':
         {   p.charTainer.CURRENT_ROOM_NUMBER = 0;
-            MasterRoomList.at(0)->addPlayer(p);
+            MasterRoomList.at(0).addPlayer(p);
             break;
         }
         case 'f':
         {
             p.charTainer.CURRENT_ROOM_NUMBER += 1;
-            MasterRoomList.at(p.charTainer.CURRENT_ROOM_NUMBER)->addPlayer(p);
+            MasterRoomList.at(p.charTainer.CURRENT_ROOM_NUMBER).addPlayer(p);
             break;
         }
         case 'b':
         {
             p.charTainer.CURRENT_ROOM_NUMBER -= 1;
-            MasterRoomList.at(p.charTainer.CURRENT_ROOM_NUMBER)->addPlayer(p);
+            MasterRoomList.at(p.charTainer.CURRENT_ROOM_NUMBER).addPlayer(p);
             break;
         }
     }
     std::cout << p.charTainer.CHARACTER_NAME << ": In Room: " << p.charTainer.CURRENT_ROOM_NUMBER << std::endl;
-    std::cout << "Room Sanity Check: " << MasterRoomList.at(p.charTainer.CURRENT_ROOM_NUMBER)->DEBUG_getBaddieListSize() << std::endl;
+    std::cout << "Room Sanity Check: " << MasterRoomList.at(p.charTainer.CURRENT_ROOM_NUMBER).DEBUG_getBaddieListSize() << std::endl;
 }
 
 void Gamemaster::mailroom(Player& p,int fd,int32_t type)

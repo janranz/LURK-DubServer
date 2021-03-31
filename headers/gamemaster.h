@@ -43,11 +43,11 @@ class Gamemaster
         // use dataDump with memset() to attempt to clear client's skt buffer in case of err.
         char dataDump[BIG_BUFFER];
         chatter_messages c_m;
-        std::vector<Baddie*> BDSpawner;
+        std::vector<Baddie> BDSpawner;
         
-        std::vector<Room*> MasterRoomList;
+        std::vector<Room> MasterRoomList;
         std::vector<Player> MasterPlayerList;
-        std::mutex masterLock;
+        std::shared_ptr<std::mutex> masterLock;
         
 
     public:

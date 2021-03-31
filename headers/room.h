@@ -22,19 +22,16 @@ class Room
         Room(uint16_t,std::string,uint16_t,std::string);
         ~Room();
         // std::shared_ptr<std::mutex> pLock;
-        std::mutex rLock;
+        std::shared_ptr<std::mutex> rLock;
         std::vector<Baddie> baddieList;
         std::vector<std::reference_wrapper<Player>> playerList;
         void setConnectedRooms(char, uint16_t);
-        void injectBaddie(Baddie*);
+        void injectBaddie(Baddie);
         void addPlayer(Player&);
         int searchPlayer(std::string const&);
         void removePlayer(Player&);
         void setStressLevel(char);
-        std::vector<Baddie> getBaddieList();
-        std::vector<Player*> getPlayerList();
-        std::string getRoomName();
-        
+
         int DEBUG_getBaddieListSize();
         int DEBUG_getRoomNumber();
         std::vector<uint16_t> DEBUG_getConnected();

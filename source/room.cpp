@@ -7,21 +7,20 @@ Room::Room(uint16_t num,std::string name ,uint16_t roomDescLen ,std::string room
     roomDescLength = roomDescLen;
     roomDesc = roomD;
     stress_level = 0;
-    // pLock = std::make_shared<std::mutex>();
+    rLock = std::make_shared<std::mutex>();
 }
 Room::~Room()
 {
-    std::cout << "Room destroyed!" << std::endl;
+
 }
 
-
-std::string Room::getRoomName()
-{
-    return roomName;
-}
 
 int Room::DEBUG_getBaddieListSize()
 {
+    for(auto t:baddieList)
+    {
+        std::cout << fmt::format("\nBaddie Name: {}\n",t.getName());
+    }
     return baddieList.size();
 }
 
@@ -66,15 +65,15 @@ void Room::setStressLevel(char s)
     stress_level = s;
 }
 
-void Room::injectBaddie(Baddie* s)
+void Room::injectBaddie(Baddie s)
 {// initial injection of Baddies. They are to remain here for eternity (or fatal error lol)
-    baddieList.push_back(*s);
+    baddieList.push_back(s);
 }
 
 void Room::addPlayer(Player& p)
 {
     {
-        std::lock_guard<std::mutex> lock(rLock);
+        std::lock_guard<std::mutex> lock(*rLock);
         playerList.push_back(p);
     }
     std::cout << p.charTainer.CHARACTER_NAME << " has joined Room: " << roomNumber << std::endl;
@@ -84,7 +83,7 @@ void Room::addPlayer(Player& p)
 void Room::removePlayer(Player& p)
 {
     {
-        std::lock_guard<std::mutex> lock(rLock);
+        std::lock_guard<std::mutex> lock(*rLock);
         int i = 0;
         for(auto t: playerList)
         {
@@ -105,7 +104,7 @@ void Room::sendRoomInfo()
     int len = 0;
     // std::string s;
     {
-        std::lock_guard<std::mutex> lock(rLock);
+        std::lock_guard<std::mutex> lock(*rLock);
         for(auto t: playerList)
         {
             {
