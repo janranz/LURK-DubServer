@@ -12,6 +12,7 @@
 #include<unistd.h>
 #include<sys/types.h>
 #include<thread>
+#include<mutex>
 #include"../headers/fmt/format.h"
 
 
@@ -46,6 +47,7 @@ class Gamemaster
         
         std::vector<Room*> MasterRoomList;
         std::vector<Player> MasterPlayerList;
+        std::mutex masterLock;
         
 
     public:
@@ -69,6 +71,7 @@ class Gamemaster
         void mailroom(Player&,int,int32_t);
         void postman(Player&,LURK_MSG,char*);
         void gatekeeper(char,Player&,uint8_t,uint8_t); // fast access to accept/deny
+        void movePlayer(Player&,char);
         void ragequit();
 };
 

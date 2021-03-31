@@ -1,7 +1,9 @@
 #ifndef ROOM_H
 #define ROOM_H
 #include<algorithm>
-
+#include<stdio.h>
+#include<string.h>
+#include<vector>
 class Gamemaster;
 class Player;
 class Room
@@ -12,21 +14,22 @@ class Room
         uint16_t roomDescLength;
         std::string roomDesc;
         std::vector<uint16_t> connectedRoomNums;
-        std::vector<Baddie> baddieList;
-        std::vector<Player*> playerList;
+
         char stress_level; // overall aggression of baddies;
-        std::mutex innerlock;
+        
 
     public:
         Room(uint16_t,std::string,uint16_t,std::string);
         ~Room();
-        void lock();
-        void unlock();
+        // std::shared_ptr<std::mutex> pLock;
+        std::mutex rLock;
+        std::vector<Baddie> baddieList;
+        std::vector<std::reference_wrapper<Player>> playerList;
         void setConnectedRooms(char, uint16_t);
         void injectBaddie(Baddie*);
-        void addPlayer(Player*);
+        void addPlayer(Player&);
         int searchPlayer(std::string const&);
-        void removePlayer(Player*);
+        void removePlayer(Player&);
         void setStressLevel(char);
         std::vector<Baddie> getBaddieList();
         std::vector<Player*> getPlayerList();
@@ -35,6 +38,9 @@ class Room
         int DEBUG_getBaddieListSize();
         int DEBUG_getRoomNumber();
         std::vector<uint16_t> DEBUG_getConnected();
+
+        // writing to client
+        void sendRoomInfo();
 };
 
 #endif //ROOM_H

@@ -1,6 +1,7 @@
 #ifndef PLAYER_H
 #define PLAYER_H
 #include"../headers/structs.h"
+// #include"../headers/player.h"
 #include<memory>
 #include<mutex>
 #include<iostream>

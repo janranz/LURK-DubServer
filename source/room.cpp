@@ -7,21 +7,13 @@ Room::Room(uint16_t num,std::string name ,uint16_t roomDescLen ,std::string room
     roomDescLength = roomDescLen;
     roomDesc = roomD;
     stress_level = 0;
-    
+    // pLock = std::make_shared<std::mutex>();
 }
 Room::~Room()
 {
     std::cout << "Room destroyed!" << std::endl;
 }
 
-void Room::lock()
-{
-    innerlock.lock();
-}
-void Room::unlock()
-{
-    innerlock.unlock();
-}
 
 std::string Room::getRoomName()
 {
@@ -43,40 +35,7 @@ std::vector<uint16_t> Room::DEBUG_getConnected()
     return connectedRoomNums;
 }
 
-// int Room::searchPlayer(std::string const&s)  ////MODIFY
-// {
-//     int i = 0;
-//     lock();
-//     for(auto &t : playerList)
-//     {
-//         if(t->getName() == s)
-//         {
-//             unlock();
-//             return i;
-//         }
-//     }
-//     unlock();
-//     return -1;
-// }
 
-// void Room::addPlayer(Player* s) ////MODIFY
-// {
-//     lock();
-//     if(playerList.empty())
-//     {
-//         playerList.push_back(s);
-//         unlock();
-//         return;
-//     }
-    
-//     int index = searchPlayer(s->getName());
-//     if(index != -1)
-//     {
-//         playerList.erase(playerList.begin() + index);
-//         playerList.push_back(s);
-//     }
-//     unlock();
-// }
 
 void Room::setConnectedRooms(char p, uint16_t m)
 {
@@ -112,6 +71,63 @@ void Room::injectBaddie(Baddie* s)
     baddieList.push_back(*s);
 }
 
+void Room::addPlayer(Player& p)
+{
+    {
+        std::lock_guard<std::mutex> lock(rLock);
+        playerList.push_back(p);
+    }
+    std::cout << p.charTainer.CHARACTER_NAME << " has joined Room: " << roomNumber << std::endl;
+    sendRoomInfo();
+}
+
+void Room::removePlayer(Player& p)
+{
+    {
+        std::lock_guard<std::mutex> lock(rLock);
+        int i = 0;
+        for(auto t: playerList)
+        {
+            
+            if(strcmp(p.charTainer.CHARACTER_NAME,t.get().charTainer.CHARACTER_NAME) == 0)
+            {
+                std::cout << fmt::format("{}: Player: {} found! Removing.",roomNumber,p.charTainer.CHARACTER_NAME);
+                playerList.erase(playerList.begin() + i);
+                break;
+            }
+            i++;
+        }
+    }
+}
+
+void Room::sendRoomInfo()
+{
+    int len = 0;
+    // std::string s;
+    {
+        std::lock_guard<std::mutex> lock(rLock);
+        for(auto t: playerList)
+        {
+            {
+                std::lock_guard<std::mutex> lock(*t.get().pLock); // might crash
+                for(auto p: playerList)
+                {
+                    // s = p.get().desc.c_str();
+
+                    write(t.get().socketFD,&p.get().charTainer,sizeof(LURK_CHARACTER));
+                    write(t.get().socketFD,p.get().desc.c_str(),p.get().charTainer.DESC_LENGTH); // functional!
+                }
+
+                //Okay so... you might re-work baddies. check it out.
+                
+                // for(auto b: baddieList)
+                // {
+                //     write(t.get().socketFD,&b.,sizeof(LURK_CHARACTER));
+                // }
+            }
+        }
+    }
+}
     // std::string a = s.getName();
     // uint8_t b = s.getFlags();
     // uint16_t c = s.getAttack();

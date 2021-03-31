@@ -326,18 +326,24 @@ void Gamemaster::GMController(int fd)
             tmp[p.charTainer.DESC_LENGTH] = 0;
             p.desc.assign(tmp);
             checksOut = checkStats(p);
-            // break;
+            if(checksOut == false)
+            {
+                std::cout << "Pump n dumpin' data. Bad stats" << std::endl;
+                memset(dataDump,0,BIG_BUFFER);
+                recv(fd,dataDump,BIG_BUFFER,MSG_DONTWAIT);
+                gatekeeper('d',p,0,4);
+                m = fmt::format("Whoa let's calm down there with the stats, {0}."
+                " If you wanted God Mode, all you had to do was ask. [GOD-MODE ACTIVATED]",p.charTainer.CHARACTER_NAME);
+                GMPM(p,m);
+            } else{break;}
         }
-        if(checksOut == false)
-        {
-            std::cout << "Pump n dumpin' data. Bad stats" << std::endl;
-            memset(dataDump,0,BIG_BUFFER);
-            recv(fd,dataDump,BIG_BUFFER,MSG_DONTWAIT);
-            gatekeeper('d',p,0,4);
-            m = fmt::format("Whoa let's calm down there with the stats, {0}."
-            "If you wanted God Mode, all you had to do was ask. [GOD-MODE ACTIVATED]",p.charTainer.CHARACTER_NAME);
-            GMPM(p,m);
-        }
+        std::cout << "Pump n dumpin' data. Bad Type: "<< typeCheck << std::endl;
+        memset(dataDump,0,BIG_BUFFER);
+        recv(fd,dataDump,BIG_BUFFER,MSG_DONTWAIT);
+        gatekeeper('d',p,0,0);
+        m = "Hmm... Before we get going, you mind telling me who you are? (Type: 10)";
+        GMPM(p,m);
+
     }
     std::cout << p.charTainer.CHARACTER_NAME << " checks out!" << std::endl;
     MasterPlayerList.push_back(p);
@@ -350,9 +356,7 @@ void Gamemaster::GMController(int fd)
     m = fmt::format("Welcome to these savage streets, {0}."
                     "There's nothing to be afraid about (yet),"
                     "I just need to know you're ready to START.",name);
-    // m = "Welcome to these savage streets, " + name
-    //     + ". There's nothing to be afraid about (yet), "
-    //     + "I just need to know that you're ready to START.";
+
                 GMPM(p,m);
     while(bytes = recv(fd,&typeCheck,1,MSG_WAITALL|MSG_PEEK) > 0)
     {// confirm start
@@ -363,15 +367,9 @@ void Gamemaster::GMController(int fd)
             std::cout << "User has started!: Type(" << typeCheck << ")" << std::endl;
             
             /*TESTING CONCAT */
-            // int dex = (fast_rand() % (c_m.awaken.size()));
-            // int size = c_m.awaken.at(dex).length() + 1;
-            // char buffer[size];
-            // m = c_m.awaken.at(dex);
-            // snprintf(buffer,size,m.c_str(),p.charTainer.CHARACTER_NAME);
-            // m.assign(buffer);
-            // GMPM(p,m);
-            std::string s = fmt::format("Okay This is {1}, EPIC {0}\n","cool","siiick");
-            std::cout << s << std::endl;
+            int dex = (fast_rand() % (c_m.awaken.size()));
+            m = c_m.awaken.at(dex);
+            GMPM(p,m);
             break;
         }
             std::cout << "User has NOT started!: Type(" << typeCheck << ")" << std::endl;
@@ -387,6 +385,9 @@ void Gamemaster::GMController(int fd)
     // Any new threads should be considered here.
     
     // read from client - expect to send a RESPONSE back.
+    movePlayer(p,'s');
+    movePlayer(p,'f');
+    movePlayer(p,'b');
 
     while(bytes = recv(fd,&typeCheck,1,MSG_WAITALL|MSG_PEEK) > 0)
     {// consider how we will require a START (type 6)
@@ -446,6 +447,32 @@ void Gamemaster::GMPM(Player& p, std::string& msg)
         write(p.socketFD,&gm,sizeof(gm));
         write(p.socketFD,msg.c_str(),gm.MSG_LEN);
     }
+}
+
+void Gamemaster::movePlayer(Player& p, char direction)
+{
+    switch(direction)
+    {
+        case 's':
+        {   p.charTainer.CURRENT_ROOM_NUMBER = 0;
+            MasterRoomList.at(0)->addPlayer(p);
+            break;
+        }
+        case 'f':
+        {
+            p.charTainer.CURRENT_ROOM_NUMBER += 1;
+            MasterRoomList.at(p.charTainer.CURRENT_ROOM_NUMBER)->addPlayer(p);
+            break;
+        }
+        case 'b':
+        {
+            p.charTainer.CURRENT_ROOM_NUMBER -= 1;
+            MasterRoomList.at(p.charTainer.CURRENT_ROOM_NUMBER)->addPlayer(p);
+            break;
+        }
+    }
+    std::cout << p.charTainer.CHARACTER_NAME << ": In Room: " << p.charTainer.CURRENT_ROOM_NUMBER << std::endl;
+    std::cout << "Room Sanity Check: " << MasterRoomList.at(p.charTainer.CURRENT_ROOM_NUMBER)->DEBUG_getBaddieListSize() << std::endl;
 }
 
 void Gamemaster::mailroom(Player& p,int fd,int32_t type)
