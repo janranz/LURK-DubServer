@@ -326,13 +326,17 @@ void Gamemaster::GMController(int fd)
             tmp[p.charTainer.DESC_LENGTH] = 0;
             p.desc.assign(tmp);
             checksOut = checkStats(p);
-            break;
+            // break;
         }
         if(checksOut == false)
         {
             std::cout << "Pump n dumpin' data. Bad stats" << std::endl;
             memset(dataDump,0,BIG_BUFFER);
             recv(fd,dataDump,BIG_BUFFER,MSG_DONTWAIT);
+            gatekeeper('d',p,0,4);
+            m = fmt::format("Whoa let's calm down there with the stats, {0}."
+            "If you wanted God Mode, all you had to do was ask. [GOD-MODE ACTIVATED]",p.charTainer.CHARACTER_NAME);
+            GMPM(p,m);
         }
     }
     std::cout << p.charTainer.CHARACTER_NAME << " checks out!" << std::endl;
@@ -343,9 +347,12 @@ void Gamemaster::GMController(int fd)
 
     // wait for start....
     std::string name(p.charTainer.CHARACTER_NAME);
-    m = "Welcome to these savage streets, " + name
-        + ". There's nothing to be afraid about (yet), "
-        + "I just need to know that you're ready to START.";
+    m = fmt::format("Welcome to these savage streets, {0}."
+                    "There's nothing to be afraid about (yet),"
+                    "I just need to know you're ready to START.",name);
+    // m = "Welcome to these savage streets, " + name
+    //     + ". There's nothing to be afraid about (yet), "
+    //     + "I just need to know that you're ready to START.";
                 GMPM(p,m);
     while(bytes = recv(fd,&typeCheck,1,MSG_WAITALL|MSG_PEEK) > 0)
     {// confirm start
@@ -363,6 +370,8 @@ void Gamemaster::GMController(int fd)
             // snprintf(buffer,size,m.c_str(),p.charTainer.CHARACTER_NAME);
             // m.assign(buffer);
             // GMPM(p,m);
+            std::string s = fmt::format("Okay This is {1}, EPIC {0}\n","cool","siiick");
+            std::cout << s << std::endl;
             break;
         }
             std::cout << "User has NOT started!: Type(" << typeCheck << ")" << std::endl;
@@ -405,10 +414,11 @@ bool Gamemaster::checkStats(Player& p)
             goto RECHECK;
         }
     }
+    std::cout << p.charTainer.ATTACK << p.charTainer.DEFENSE << p.charTainer.REGEN << std::endl;
     uint32_t stat = p.charTainer.ATTACK + p.charTainer.DEFENSE + p.charTainer.REGEN;
     
     p.charTainer.HEALTH = BASE_HEALTH;
-    if(stat > MAX_STAT)
+    if((stat > MAX_STAT))
     {
         std::cout << "Inappropriate stats: " << stat << std::endl;
         return false;
