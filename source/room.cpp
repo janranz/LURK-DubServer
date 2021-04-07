@@ -70,27 +70,27 @@ void Room::injectBaddie(Baddie s)
     baddieList.push_back(s);
 }
 
-void Room::addPlayer(Player& p)
+void Room::addPlayer(Player* p)
 {
     {
         std::lock_guard<std::mutex> lock(*rLock);
-        playerList.push_back(p);
+        playerList.emplace_back(p);
     }
-    std::cout << p.charTainer.CHARACTER_NAME << " has joined Room: " << roomNumber << std::endl;
+    std::cout << p->charTainer.CHARACTER_NAME << " has joined Room: " << roomNumber << std::endl;
     sendRoomInfo();
 }
 
-void Room::removePlayer(Player& p)
+void Room::removePlayer(Player* p)
 {
     {
         std::lock_guard<std::mutex> lock(*rLock);
         int i = 0;
-        for(auto t: playerList)
+        for(auto& t: playerList)
         {
             
-            if(strcmp(p.charTainer.CHARACTER_NAME,t.get().charTainer.CHARACTER_NAME) == 0)
+            if(strcmp(p->charTainer.CHARACTER_NAME,t->charTainer.CHARACTER_NAME) == 0)
             {
-                std::cout << fmt::format("{}: Player: {} found! Removing.",roomNumber,p.charTainer.CHARACTER_NAME);
+                std::cout << fmt::format("{}: Player: {} found! Removing.",roomNumber,p->charTainer.CHARACTER_NAME);
                 playerList.erase(playerList.begin() + i);
                 break;
             }
@@ -105,16 +105,16 @@ void Room::sendRoomInfo()
     // std::string s;
     {
         std::lock_guard<std::mutex> lock(*rLock);
-        for(auto t: playerList)
+        for(auto& t: playerList)
         {
             {
-                std::lock_guard<std::mutex> lock(*t.get().pLock); // might crash
-                for(auto p: playerList)
+                std::lock_guard<std::mutex> lock(*t->pLock); // might crash
+                for(auto& p: playerList)
                 {
                     // s = p.get().desc.c_str();
 
-                    write(t.get().socketFD,&p.get().charTainer,sizeof(LURK_CHARACTER));
-                    write(t.get().socketFD,p.get().desc.c_str(),p.get().charTainer.DESC_LENGTH); // functional!
+                    write(t->socketFD,&p->charTainer,sizeof(LURK_CHARACTER));
+                    write(t->socketFD,p->desc.c_str(),p->charTainer.DESC_LENGTH); // functional!
                 }
 
                 //Okay so... you might re-work baddies. check it out.

@@ -24,12 +24,12 @@ class Room
         // std::shared_ptr<std::mutex> pLock;
         std::shared_ptr<std::mutex> rLock;
         std::vector<Baddie> baddieList;
-        std::vector<std::reference_wrapper<Player>> playerList;
+        std::vector<Player*> playerList;
         void setConnectedRooms(char, uint16_t);
         void injectBaddie(Baddie);
-        void addPlayer(Player&);
+        void addPlayer(Player*);
         int searchPlayer(std::string const&);
-        void removePlayer(Player&);
+        void removePlayer(Player*);
         void setStressLevel(char);
 
         int DEBUG_getBaddieListSize();
