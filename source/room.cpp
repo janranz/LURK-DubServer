@@ -15,7 +15,12 @@ Room::Room(uint16_t num,std::string name ,uint16_t roomDescLen ,std::string room
 }   
 Room::~Room()
 {
-
+    for(auto t: connectedRooms)
+    {
+        delete t;
+    }
+    connectedRooms.clear();
+    std::cout << "Connected Rooms Destructed!" << std::endl;
 }
 
 void Room::setConnectedRooms(LURK_CONNECTION* r)
@@ -74,8 +79,12 @@ void Room::sendRoomInfo(Player* p)
         std::lock_guard<std::mutex> lock(*p->pLock);
         for(auto t : connectedRooms)
         {
-            write(p->socketFD,&t->room,sizeof(LURK_ROOM));
-            write(p->socketFD,t->roomDesc.c_str(),t->room.DESC_LENGTH);
+            // write(p->socketFD,&t,sizeof(LURK_CONNECTION));
+            write(p->socketFD,&t->TYPE,sizeof(uint8_t));
+            write(p->socketFD,&t->ROOM_NUMBER,sizeof(uint16_t));
+            write(p->socketFD,t->ROOM_NAME,32);
+            write(p->socketFD,&t->DESC_LENGTH,sizeof(uint16_t));
+            write(p->socketFD,t->DESC,t->DESC_LENGTH);
         }
     }
 }

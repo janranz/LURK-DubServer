@@ -22,6 +22,7 @@ class Room
     public:
         LURK_ROOM room;
         std::string roomDesc;
+        
         Room(uint16_t,std::string,uint16_t,std::string);
         ~Room();
         // std::shared_ptr<std::mutex> pLock;

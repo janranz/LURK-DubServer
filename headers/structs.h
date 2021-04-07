@@ -100,7 +100,7 @@ struct LURK_CONNECTION
     uint16_t ROOM_NUMBER;
     char ROOM_NAME[32];
     uint16_t DESC_LENGTH;
-    char* DESC;
+    char DESC[1024];
 }__attribute__((packed));
 
 struct LURK_VERSION

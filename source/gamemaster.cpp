@@ -264,12 +264,14 @@ void Gamemaster::buildRooms(int roomCount)
         roomName = c_m.roomNames.at(i);
         roomDesc = c_m.room_desc.at(i);
         roomDescLength = roomDesc.length();
+        
         Room* r = new Room(roomNumber, roomName, roomDescLength,roomDesc);
         MasterRoomList.emplace_back(r);
     }
     // set connections
     for(auto t : MasterRoomList)
     {
+        std::cout << "I wanna press my\n";
         if(t->room.ROOM_NUMBER != 0)
         {
             LURK_CONNECTION* lc = new LURK_CONNECTION;
@@ -282,19 +284,35 @@ void Gamemaster::buildRooms(int roomCount)
         }
             
     }
-
+    
     for(auto t : MasterRoomList)
     {
+        if(t->room.ROOM_NUMBER != 0 && t->room.ROOM_NUMBER < MasterRoomList.back()->room.ROOM_NUMBER)
+        {
+            LURK_CONNECTION* cPast = new LURK_CONNECTION;
+            strncpy(cPast->ROOM_NAME,t->room.ROOM_NAME,32);
+            cPast->ROOM_NUMBER = std::prev(t)->room.ROOM_NUMBER;
+            cPast->DESC_LENGTH = t->room.DESC_LENGTH;
+            strncpy(cPast->DESC,t->roomDesc.c_str(),t->room.DESC_LENGTH + 1);
+            t->setConnectedRooms(cPast);
 
-        
-        // if(t->room.ROOM_NUMBER != 0 && t->room.ROOM_NUMBER < MasterRoomList.back()->room.ROOM_NUMBER)
-        // {
-        //     t->setConnectedRooms(std::prev(t));
-        //     t->setConnectedRooms(std::next(t));
-        // } else if(t->room.ROOM_NUMBER == MasterRoomList.back()->room.ROOM_NUMBER)
-        // {
-        //     t->setConnectedRooms(std::prev(t));
-        // }
+            LURK_CONNECTION* cNext = new LURK_CONNECTION;
+            strncpy(cNext->ROOM_NAME,t->room.ROOM_NAME,32);
+            cNext->ROOM_NUMBER = std::prev(t)->room.ROOM_NUMBER;
+            cNext->DESC_LENGTH = t->room.DESC_LENGTH;
+            strncpy(cNext->DESC,t->roomDesc.c_str(),t->room.DESC_LENGTH + 1);
+
+            t->setConnectedRooms(cNext);
+        } else if(t->room.ROOM_NUMBER == MasterRoomList.back()->room.ROOM_NUMBER)
+        {
+            LURK_CONNECTION* cPast = new LURK_CONNECTION;
+            strncpy(cPast->ROOM_NAME,t->room.ROOM_NAME,32);
+            cPast->ROOM_NUMBER = std::prev(t)->room.ROOM_NUMBER;
+            cPast->DESC_LENGTH = t->room.DESC_LENGTH;
+            strncpy(cPast->DESC,t->roomDesc.c_str(),t->room.DESC_LENGTH + 1);
+            t->setConnectedRooms(cPast);
+        }
+        std::cout << fmt::format("\nBuildRooms Sanity Check: Room Number (0|99): {0}\n",std::to_string(t->room.ROOM_NUMBER));
     }
 
     // uint8_t connectedRoom = 0;
