@@ -46,7 +46,7 @@ class Gamemaster
         chatter_messages c_m;
         std::vector<Baddie> BDSpawner;
         
-        std::vector<Room> MasterRoomList;
+        std::vector<Room*> MasterRoomList;
         std::vector<Player*> MasterPlayerList;
         std::shared_ptr<std::mutex> masterLock;
         

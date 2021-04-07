@@ -2,66 +2,25 @@
 
 Room::Room(uint16_t num,std::string name ,uint16_t roomDescLen ,std::string roomD)
 {
-    roomNumber = num;
-    roomName = name;
-    roomDescLength = roomDescLen;
-    roomDesc = roomD;
+    // roomNumber = num;
+    // roomName = name;
+    // roomDescLength = roomDescLen;
+    
     stress_level = 0;
     rLock = std::make_shared<std::mutex>();
-}
+    strncpy(room.ROOM_NAME,name.c_str(),32);
+    room.ROOM_NUMBER = num;
+    room.DESC_LENGTH = roomDescLen;
+    roomDesc = roomD;
+}   
 Room::~Room()
 {
 
 }
 
-std::string Room::DEBUG_getRoomname()
+void Room::setConnectedRooms(LURK_CONNECTION* r)
 {
-    return roomName;
-}
-
-int Room::DEBUG_getBaddieListSize()
-{
-    for(auto t:baddieList)
-    {
-        std::cout << fmt::format("\nBaddie Name: {}\n",t.getName());
-    }
-    return baddieList.size();
-}
-
-int Room::DEBUG_getRoomNumber()
-{
-    return roomNumber;
-}
-
-std::vector<uint16_t> Room::DEBUG_getConnected()
-{
-    return connectedRoomNums;
-}
-
-
-
-void Room::setConnectedRooms(char p, uint16_t m)
-{
-    switch(p)
-    {
-        case 'p':
-        {
-            connectedRoomNums.push_back(m); // portal room takes all
-            break;
-        }
-        case 'n':
-        {
-            connectedRoomNums.push_back(m - 1);
-            connectedRoomNums.push_back(m + 1); // Normal room: to-fro
-            break;
-        }
-        case 'l':
-        {
-            connectedRoomNums.push_back(m - 1); // last room takes last only.
-            break;
-        }
-    }
-    
+    connectedRooms.emplace_back(r);    
 }
 
 void Room::setStressLevel(char s)
@@ -80,8 +39,11 @@ void Room::addPlayer(Player* p)
         std::lock_guard<std::mutex> lock(*rLock);
         playerList.emplace_back(p);
     }
-    std::cout << p->charTainer.CHARACTER_NAME << " has joined Room: " << roomNumber << std::endl;
-    sendRoomInfo();
+    std::cout << fmt::format("<{0}> has joined {1}\n",p->charTainer.CHARACTER_NAME,room.ROOM_NAME);
+    
+    sendBaddieInfo();
+    sendRoomInfo(p);
+    // sendBaddieInfo();
 }
 
 void Room::removePlayer(Player* p)
@@ -89,44 +51,46 @@ void Room::removePlayer(Player* p)
     {
         std::lock_guard<std::mutex> lock(*rLock);
         int i = 0;
-        for(auto& t: playerList)
+        for(auto t: playerList)
         {
             
             if(strcmp(p->charTainer.CHARACTER_NAME,t->charTainer.CHARACTER_NAME) == 0)
             {
-                std::cout << fmt::format("{}: Player: {} found! Removing.",roomNumber,p->charTainer.CHARACTER_NAME);
+                std::cout << fmt::format("<{0}> has left {1}\n",p->charTainer.CHARACTER_NAME,room.ROOM_NAME);
                 playerList.erase(playerList.begin() + i);
                 break;
             }
             i++;
         }
+    sendBaddieInfo();
+    sendRoomInfo(p);
+    // sendBaddieInfo();
     }
 }
 
-void Room::sendRoomInfo()
+void Room::sendRoomInfo(Player* p)
 {
-    int len = 0;
-    // std::string s;
+    {
+        std::lock_guard<std::mutex> lock(*p->pLock);
+        for(auto t : connectedRooms)
+        {
+            write(p->socketFD,&t->room,sizeof(LURK_ROOM));
+            write(p->socketFD,t->roomDesc.c_str(),t->room.DESC_LENGTH);
+        }
+    }
+}
+
+void Room::sendBaddieInfo()
+{
     {
         std::lock_guard<std::mutex> lock(*rLock);
-        for(auto& t: playerList)
+        for(auto t: playerList)
         {
+            for(auto b: baddieList)
             {
-                std::lock_guard<std::mutex> lock(*t->pLock); // might crash
-                for(auto& p: playerList)
-                {
-                    // s = p.get().desc.c_str();
-
-                    write(t->socketFD,&p->charTainer,sizeof(LURK_CHARACTER));
-                    write(t->socketFD,p->desc.c_str(),p->charTainer.DESC_LENGTH); // functional!
-                }
-
-                //Okay so... you might re-work baddies. check it out.
-                
-                // for(auto b: baddieList)
-                // {
-                //     write(t.get().socketFD,&b.,sizeof(LURK_CHARACTER));
-                // }
+                std::lock_guard<std::mutex> lock(*t->pLock);
+                write(t->socketFD,&b.bTainer,sizeof(LURK_CHARACTER));
+                write(t->socketFD,b.description.c_str(),b.bTainer.DESC_LENGTH);
             }
         }
     }

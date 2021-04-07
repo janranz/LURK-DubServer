@@ -4,41 +4,40 @@
 #include<stdio.h>
 #include<string.h>
 #include<vector>
+#include"structs.h"
+
 class Gamemaster;
 class Player;
 class Room
 {
     private:
-        uint16_t roomNumber;
-        std::string roomName;
-        uint16_t roomDescLength;
-        std::string roomDesc;
-        std::vector<uint16_t> connectedRoomNums;
+        
+        // std::vector<uint16_t> connectedRoomNums;
+        std::vector<LURK_CONNECTION*> connectedRooms;
+
 
         char stress_level; // overall aggression of baddies;
         
 
     public:
+        LURK_ROOM room;
+        std::string roomDesc;
         Room(uint16_t,std::string,uint16_t,std::string);
         ~Room();
         // std::shared_ptr<std::mutex> pLock;
         std::shared_ptr<std::mutex> rLock;
         std::vector<Baddie> baddieList;
         std::vector<Player*> playerList;
-        void setConnectedRooms(char, uint16_t);
+        void setConnectedRooms(LURK_CONNECTION*);
         void injectBaddie(Baddie);
         void addPlayer(Player*);
         int searchPlayer(std::string const&);
         void removePlayer(Player*);
         void setStressLevel(char);
 
-        int DEBUG_getBaddieListSize();
-        int DEBUG_getRoomNumber();
-        std::string DEBUG_getRoomname();
-        std::vector<uint16_t> DEBUG_getConnected();
-
         // writing to client
-        void sendRoomInfo();
+        void sendBaddieInfo();
+        void sendRoomInfo(Player*);
 };
 
 #endif //ROOM_H

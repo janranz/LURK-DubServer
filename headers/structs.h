@@ -33,6 +33,12 @@ struct GM_MSG
     char SENDER_NAME[32] = "<MASTER DUBS>";
 }__attribute__((packed));
 
+struct LURK_CHANGEROOM
+{
+    uint8_t TYPE = 2;
+    uint16_t ROOM_NUMBER;
+}__attribute__((packed));
+
 struct LURK_PVP
 {
     uint8_t TYPE = 4;
@@ -58,7 +64,7 @@ struct LURK_ACCEPT
     uint8_t ACCEPT_TYPE;
 }__attribute__((packed));
 
-struct LURK_CURRENTRM
+struct LURK_ROOM
 {
     uint8_t TYPE = 9;
     uint16_t ROOM_NUMBER;
@@ -86,6 +92,15 @@ struct LURK_GAME
     uint16_t INITIAL_POINTS = 4000;
     uint16_t STAT_LIMIT = 65535;
     uint16_t DESC_LENGTH;
+}__attribute__((packed));
+
+struct LURK_CONNECTION
+{
+    uint8_t TYPE = 13;
+    uint16_t ROOM_NUMBER;
+    char ROOM_NAME[32];
+    uint16_t DESC_LENGTH;
+    char* DESC;
 }__attribute__((packed));
 
 struct LURK_VERSION

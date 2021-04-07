@@ -35,6 +35,10 @@ Gamemaster::~Gamemaster()
         delete p;
     MasterPlayerList.clear();
 
+    for(auto p : MasterRoomList)
+        delete p;
+    MasterRoomList.clear();
+
     std::cout << "Goodbye, Gamemaster." << std::endl;
 }
 
@@ -239,10 +243,11 @@ void Gamemaster::craftRoomNames(int roomCount)
 
 void Gamemaster::buildRooms(int roomCount)
 {
+    
+
     uint16_t roomNumber;
     uint16_t roomDescLength;
     std::string roomName, roomDesc;
-    uint8_t connectedRoom = 0;
 
     // build portalRoom
     roomNumber = 0;
@@ -250,29 +255,79 @@ void Gamemaster::buildRooms(int roomCount)
     roomDesc = c_m.room_desc.at(0);
     roomDescLength = roomDesc.length();
 
-    Room p(roomNumber,roomName,roomDescLength,roomDesc);
-    std::vector<uint16_t> connectedRoomNums;
-    for(int i = 0; i < roomCount; i++)
-    {
-        p.setConnectedRooms('p',i); // portal room
-    }
-    MasterRoomList.push_back(p);
+    Room* r = new Room(roomNumber, roomName, roomDescLength, roomDesc);
+    MasterRoomList.emplace_back(r);
 
     for(int i = 1; i < roomCount; i++)
     {
-        roomName = c_m.roomNames.at(i);
         roomNumber = i;
+        roomName = c_m.roomNames.at(i);
         roomDesc = c_m.room_desc.at(i);
         roomDescLength = roomDesc.length();
-        Room p(roomNumber,roomName,roomDescLength,roomDesc);
-        if(i == roomCount - 1)
-        {
-            p.setConnectedRooms('l',i); // last room needs no +1 connected room.
-        } else {
-            p.setConnectedRooms('n',i); // normal room.
-        }
-        MasterRoomList.push_back(p);
+        Room* r = new Room(roomNumber, roomName, roomDescLength,roomDesc);
+        MasterRoomList.emplace_back(r);
     }
+    // set connections
+    for(auto t : MasterRoomList)
+    {
+        if(t->room.ROOM_NUMBER != 0)
+        {
+            LURK_CONNECTION* lc = new LURK_CONNECTION;
+            strncpy(lc->ROOM_NAME,t->room.ROOM_NAME,32);
+            lc->ROOM_NUMBER = t->room.ROOM_NUMBER;
+            lc->DESC_LENGTH = t->room.DESC_LENGTH;
+            strncpy(lc->DESC,t->roomDesc.c_str(),t->room.DESC_LENGTH + 1);
+
+            MasterRoomList.at(0)->setConnectedRooms(lc);
+        }
+            
+    }
+
+    for(auto t : MasterRoomList)
+    {
+
+        
+        // if(t->room.ROOM_NUMBER != 0 && t->room.ROOM_NUMBER < MasterRoomList.back()->room.ROOM_NUMBER)
+        // {
+        //     t->setConnectedRooms(std::prev(t));
+        //     t->setConnectedRooms(std::next(t));
+        // } else if(t->room.ROOM_NUMBER == MasterRoomList.back()->room.ROOM_NUMBER)
+        // {
+        //     t->setConnectedRooms(std::prev(t));
+        // }
+    }
+
+    // uint8_t connectedRoom = 0;
+
+    // // build portalRoom
+    // roomNumber = 0;
+    // roomName = "The Portal Room";
+    // roomDesc = c_m.room_desc.at(0);
+    // roomDescLength = roomDesc.length();
+
+    // Room p(roomNumber,roomName,roomDescLength,roomDesc);
+    // std::vector<uint16_t> connectedRoomNums;
+    // for(int i = 0; i < roomCount; i++)
+    // {
+    //     p.setConnectedRooms('p',i); // portal room
+    // }
+    // MasterRoomList.push_back(p);
+
+    // for(int i = 1; i < roomCount; i++)
+    // {
+    //     roomName = c_m.roomNames.at(i);
+    //     roomNumber = i;
+    //     roomDesc = c_m.room_desc.at(i);
+    //     roomDescLength = roomDesc.length();
+    //     Room p(roomNumber,roomName,roomDescLength,roomDesc);
+    //     if(i == roomCount - 1)
+    //     {
+    //         p.setConnectedRooms('l',i); // last room needs no +1 connected room.
+    //     } else {
+    //         p.setConnectedRooms('n',i); // normal room.
+    //     }
+    //     MasterRoomList.push_back(p);
+    // }
     std::cout << "\nMasterRoomList succeeds! Size: "<< MasterRoomList.size() << std::endl;
 }
 
@@ -281,14 +336,14 @@ void Gamemaster::populateRooms()
     int roomCount = MasterRoomList.size();
     int min = 3;
     int max = 20;
-    for(Room& t: MasterRoomList)
+    for(auto t: MasterRoomList)
     {
         
         int baddieCount = (fast_rand() % (max - min) + min);
         for(int i = 0; i < baddieCount; i++)
         {
             Baddie release = BDSpawner.at((fast_rand() % (BDSpawner.size())));
-            t.injectBaddie(release);
+            t->injectBaddie(release);
         }
     }
 
@@ -297,7 +352,7 @@ void Gamemaster::populateRooms()
               << BDSpawner.size()
               << std::endl;
     std::cout << "Sanity check - Baddie List Size in a random room: "
-              << MasterRoomList.at(5).DEBUG_getBaddieListSize()
+              << MasterRoomList.at(0)->baddieList.size()
               << std::endl;
 }
 // END server initialization ////////
@@ -419,7 +474,8 @@ void Gamemaster::GMController(int fd)
     }
     printf("Player successfully added to Master: %d\n",MasterPlayerList.size());
     // push them into Portal Room
-    MasterRoomList.at(0).addPlayer(p);
+    
+    MasterRoomList.at(0)->addPlayer(p);
     std::cout << "Sanity check desc: " << p->desc << std::endl;
 
     while(bytes = recv(fd,&typeCheck,1,MSG_WAITALL|MSG_PEEK) > 0)
@@ -508,24 +564,22 @@ void Gamemaster::movePlayer(Player* p, char direction)
     {
         case 's':
         {   p->charTainer.CURRENT_ROOM_NUMBER = 0;
-            MasterRoomList.at(0).addPlayer(p);
+            MasterRoomList.at(0)->addPlayer(p);
             break;
         }
         case 'f':
         {
             p->charTainer.CURRENT_ROOM_NUMBER += 1;
-            MasterRoomList.at(p->charTainer.CURRENT_ROOM_NUMBER).addPlayer(p);
+            MasterRoomList.at(p->charTainer.CURRENT_ROOM_NUMBER)->addPlayer(p);
             break;
         }
         case 'b':
         {
             p->charTainer.CURRENT_ROOM_NUMBER -= 1;
-            MasterRoomList.at(p->charTainer.CURRENT_ROOM_NUMBER).addPlayer(p);
+            MasterRoomList.at(p->charTainer.CURRENT_ROOM_NUMBER)->addPlayer(p);
             break;
         }
     }
-    std::cout << p->charTainer.CHARACTER_NAME << ": In Room: " << p->charTainer.CURRENT_ROOM_NUMBER << std::endl;
-    std::cout << "Room Sanity Check: " << MasterRoomList.at(p->charTainer.CURRENT_ROOM_NUMBER).DEBUG_getBaddieListSize() << std::endl;
 }
 
 void Gamemaster::mailroom(Player* p,int fd,int32_t type)
@@ -546,11 +600,17 @@ void Gamemaster::mailroom(Player* p,int fd,int32_t type)
             // std::string s(data, lurk_msg.MSG_LEN);
             break;
         }
+        case 2:
+        {// CHANGEROOM
+            LURK_CHANGEROOM changeroom;
+
+        }
         case 3:
         {// FIGHT
             uint8_t tmp;
             recv(fd,&tmp,sizeof(uint8_t),MSG_WAITALL);
             std::cout << p->charTainer.CHARACTER_NAME << " STARTS BEEF" << std::endl;
+            gatekeeper('a',p,type,0);
             break;
         }
         case 4:
@@ -559,6 +619,7 @@ void Gamemaster::mailroom(Player* p,int fd,int32_t type)
             recv(fd,&lurk_pvp,sizeof(LURK_PVP),MSG_WAITALL);
             std::cout << p->charTainer.CHARACTER_NAME
                       << " WANTS TO FIGHT " << lurk_pvp.TARGET << std::endl;
+            gatekeeper('a',p,type,0);
             break;
         }
         case 5:
@@ -567,6 +628,7 @@ void Gamemaster::mailroom(Player* p,int fd,int32_t type)
             recv(fd,&lurk_loot,sizeof(LURK_LOOT),MSG_WAITALL);
             std::cout << p->charTainer.CHARACTER_NAME
                       << " WANTS TO LOOT " << lurk_loot.TARGET << std::endl;
+            gatekeeper('a',p,type,0);
             break;
         }
         case 6:
@@ -576,6 +638,7 @@ void Gamemaster::mailroom(Player* p,int fd,int32_t type)
             // do something to here to throw user into the game.
 
             std::cout << p->charTainer.CHARACTER_NAME << " requests a start" << std::endl;
+            gatekeeper('a',p,type,0);
             break;
         }
         case 7:
@@ -584,7 +647,9 @@ void Gamemaster::mailroom(Player* p,int fd,int32_t type)
             recv(fd,&tmp,sizeof(uint8_t),MSG_WAITALL);
             std::cout << p->charTainer.CHARACTER_NAME
                       << " User has requested to leave gracefully" << std::endl;
-            //clean up
+            gatekeeper('a',p,type,0);
+            //clean up... try
+            ragequit(p);
             break;
         }
         case 10:
@@ -593,14 +658,12 @@ void Gamemaster::mailroom(Player* p,int fd,int32_t type)
             recv(fd,&lurk_char,sizeof(LURK_CHARACTER),MSG_WAITALL);
             std::cout << p->charTainer.CHARACTER_NAME
                       << " sends a character message. let's check her flags for JB" << std::endl;
+            gatekeeper('a',p,type,0);
             break;
         }
         default:
         {
-            std::string m = "Invalid type received!";
-            GMPM(p,m);
-            memset(dataDump,0,BIG_BUFFER);
-            recv(p->socketFD,dataDump,BIG_BUFFER,MSG_DONTWAIT);
+            gatekeeper('d',p,type,0);
         }
     }
 }
