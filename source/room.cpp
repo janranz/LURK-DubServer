@@ -12,7 +12,6 @@ Room::Room(uint16_t num,std::string name ,uint16_t roomDescLen ,std::string room
     room.ROOM_NUMBER = num;
     room.DESC_LENGTH = roomDescLen;
     roomDesc = roomD;
-    std::cout << "Room created! Name: " << room.ROOM_NAME << std::endl;
 }   
 Room::~Room()
 {

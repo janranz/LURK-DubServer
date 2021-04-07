@@ -229,22 +229,15 @@ void Gamemaster::craftRoomNames(int roomCount)
     
     for(int i = 0; i < roomCount; i++)
     {
+    REROLL:
         int dex1 = (fast_rand() % adjSize);
         int dex2 = (fast_rand() % nounSize);
         int dex3 = (fast_rand() % tainerSize);
 
         finalName = c_m.adj.at(dex1) + " " + c_m.noun.at(dex2) + " " + c_m.roomTainer.at(dex3);
         if(finalName.length() > 30)
-        {
-            std::cout << "BIG ERROR TOO LONG: " << finalName << std::endl;
-            if(i - 1 > 0)
-            {
-                i--;
-            }else{
-                i = 0;
-            }
-            continue;
-        }
+            goto REROLL;
+        
         c_m.roomNames.push_back(finalName);
     }
     std::cout << "\nRoom names generated! Size of room name names: " << c_m.roomNames.size();
@@ -266,7 +259,7 @@ void Gamemaster::buildRooms(int roomCount)
 
     Room* portal = new Room(roomNumber, roomName, roomDescLength, roomDesc);
     MasterRoomList.emplace_back(portal);
-
+    std::cout << fmt::format("C_M.ROOMNAME SIZE: {}\n",std::to_string(c_m.roomNames.size()));
     for(int i = 1; i < roomCount; i++)
     {
         roomNumber = i;
@@ -293,48 +286,68 @@ void Gamemaster::buildRooms(int roomCount)
         }
             
     }
-    
-    for(auto t : MasterRoomList)
+    for(int i = 1; i < MasterRoomList.size(); ++i)
     {
-        std::cout << "Hello?: " << t->room.ROOM_NUMBER << std::endl;
-        std::cout << "test: " << MasterRoomList.back()->room.ROOM_NUMBER << std::endl;
-        if(t->room.ROOM_NUMBER > 0 && t->room.ROOM_NUMBER < MasterRoomList.back()->room.ROOM_NUMBER)
-        {
-            std::cout << fmt::format("Broken Room Name: {0}, Broken Room Number: {1}\n",t->room.ROOM_NAME,std::to_string(t->room.ROOM_NUMBER));
-            auto BACKED = std::prev(t);
-            // std::cout << fmt::format("Broken past Room Name: {0}, Broken Room Number: {1}\n",BACKED->room.ROOM_NAME,std::to_string(BACKED->room.ROOM_NUMBER));
-            LURK_CONNECTION* cPast = new LURK_CONNECTION;
-            strncpy(cPast->ROOM_NAME,BACKED->room.ROOM_NAME,32);
-            cPast->ROOM_NUMBER = BACKED->room.ROOM_NUMBER;
-            
-            cPast->DESC_LENGTH = BACKED->room.DESC_LENGTH;
-            strncpy(cPast->DESC,BACKED->roomDesc.c_str(),BACKED->room.DESC_LENGTH + 1);
-            std::cout << fmt::format("\nPassssst room connect: {0} {1} {2}\n",cPast->ROOM_NAME,std::to_string(cPast->ROOM_NUMBER),cPast->DESC);
-            t->setConnectedRooms(cPast);
+        LURK_CONNECTION* cPast = new LURK_CONNECTION;
+        strncpy(cPast->ROOM_NAME,MasterRoomList.at(i-1)->room.ROOM_NAME,32);
+        cPast->ROOM_NUMBER = MasterRoomList.at(i-1)->room.ROOM_NUMBER;
+        cPast->DESC_LENGTH = MasterRoomList.at(i-1)->room.DESC_LENGTH;
+        strncpy(cPast->DESC,MasterRoomList.at(i-1)->roomDesc.c_str(),MasterRoomList.at(i-1)->room.DESC_LENGTH);
+        MasterRoomList.at(i)->setConnectedRooms(cPast);
 
-            auto FWD = std::next(t);
+        if(i != MasterRoomList.size()-1)
+        {
             LURK_CONNECTION* cNext = new LURK_CONNECTION;
-            strncpy(cNext->ROOM_NAME,FWD->room.ROOM_NAME,32);
-            cNext->ROOM_NUMBER = FWD->room.ROOM_NUMBER;
-            cNext->DESC_LENGTH = FWD->room.DESC_LENGTH;
-            strncpy(cNext->DESC,FWD->roomDesc.c_str(),FWD->room.DESC_LENGTH + 1);
-            std::cout << fmt::format("\nPassssst room connect: {0}\n{1}\n{2}\n",cNext->ROOM_NAME,std::to_string(cNext->ROOM_NUMBER),cNext->DESC);
-
-            t->setConnectedRooms(cNext);
-        } else if(t->room.ROOM_NUMBER == MasterRoomList.back()->room.ROOM_NUMBER)
-        {
-            auto BACKED = std::prev(t);
-            LURK_CONNECTION* cPast = new LURK_CONNECTION;
-            strncpy(cPast->ROOM_NAME,BACKED->room.ROOM_NAME,32);
-            cPast->ROOM_NUMBER = BACKED->room.ROOM_NUMBER;
-            cPast->DESC_LENGTH = BACKED->room.DESC_LENGTH;
-            strncpy(cPast->DESC,BACKED->roomDesc.c_str(),BACKED->room.DESC_LENGTH + 1);
-            t->setConnectedRooms(cPast);
-        } else {
-            std::cout << fmt::format("\nBuildRooms Sanity Check: Room Number (0|99): {0}\n",std::to_string(t->room.ROOM_NUMBER));
+            strncpy(cNext->ROOM_NAME,MasterRoomList.at(i+1)->room.ROOM_NAME,32);
+            cNext->ROOM_NUMBER = MasterRoomList.at(i+1)->room.ROOM_NUMBER;
+            cNext->DESC_LENGTH = MasterRoomList.at(i+1)->room.DESC_LENGTH;
+            strncpy(cNext->DESC,MasterRoomList.at(i+1)->roomDesc.c_str(),MasterRoomList.at(i+1)->room.DESC_LENGTH);
+            MasterRoomList.at(i)->setConnectedRooms(cNext);
         }
-        
+
     }
+    // for(std::vector<Room*>::iterator t = MasterRoomList.begin(); t!= MasterRoomList.end(); ++t)
+    // {
+    //     t.
+    //     std::cout << "Hello?: " << (t)->room.ROOM_NUMBER << std::endl;
+    //     std::cout << "test: " << MasterRoomList.back()->room.ROOM_NUMBER << std::endl;
+    //     if((*t)->room.ROOM_NUMBER > 0 && (*t)->room.ROOM_NUMBER < MasterRoomList.back()->room.ROOM_NUMBER)
+    //     {
+    //         std::cout << fmt::format("Broken Room Name: {0}, Broken Room Number: {1}\n",(*t)->room.ROOM_NAME,std::to_string((*t)->room.ROOM_NUMBER));
+            
+    //         std::cout << fmt::format("Broken past Room Name: {0}, Broken Room Number: {1}\n",(*t-1)->room.ROOM_NAME,std::to_string((*t-1)->room.ROOM_NUMBER));
+    //         LURK_CONNECTION* cPast = new LURK_CONNECTION;
+    //         strncpy(cPast->ROOM_NAME,(*t-1)->room.ROOM_NAME,32);
+    //         cPast->ROOM_NUMBER = (*t-1)->room.ROOM_NUMBER;
+            
+    //         cPast->DESC_LENGTH = (*t-1)->room.DESC_LENGTH;
+    //         strncpy(cPast->DESC,(*t-1)->roomDesc.c_str(),(*t-1)->room.DESC_LENGTH + 1);
+    //         std::cout << fmt::format("\nPassssst room connect: {0} {1} {2}\n",cPast->ROOM_NAME,std::to_string(cPast->ROOM_NUMBER),cPast->DESC);
+    //         (*t)->setConnectedRooms(cPast);
+
+            
+    //         LURK_CONNECTION* cNext = new LURK_CONNECTION;
+    //         strncpy(cNext->ROOM_NAME,(*t+1)->room.ROOM_NAME,32);
+    //         cNext->ROOM_NUMBER = (*t+1)->room.ROOM_NUMBER;
+    //         cNext->DESC_LENGTH = (*t+1)->room.DESC_LENGTH;
+    //         strncpy(cNext->DESC,(*t+1)->roomDesc.c_str(),(*t+1)->room.DESC_LENGTH + 1);
+    //         std::cout << fmt::format("\nPassssst room connect: {0}\n{1}\n{2}\n",cNext->ROOM_NAME,std::to_string(cNext->ROOM_NUMBER),cNext->DESC);
+
+    //         (*t)->setConnectedRooms(cNext);
+    //     } else if((*t)->room.ROOM_NUMBER == MasterRoomList.back()->room.ROOM_NUMBER)
+    //     {
+            
+    //         LURK_CONNECTION* cPast = new LURK_CONNECTION;
+    //         strncpy(cPast->ROOM_NAME,(*t-1)->room.ROOM_NAME,32);
+    //         cPast->ROOM_NUMBER = (*t-1)->room.ROOM_NUMBER;
+    //         cPast->DESC_LENGTH = (*t-1)->room.DESC_LENGTH;
+    //         strncpy(cPast->DESC,(*t-1)->roomDesc.c_str(),(*t-1)->room.DESC_LENGTH + 1);
+    //         (*t)->setConnectedRooms(cPast);
+    //     } else {
+    //         std::cout << fmt::format("\nBuildRooms Sanity Check: Room Number (0|99): {0}\n",std::to_string((*t)->room.ROOM_NUMBER));
+    //     }
+        
+    // }
     std::cout << "\nMasterRoomList succeeds! Size: "<< MasterRoomList.size() << std::endl;
 }
 
