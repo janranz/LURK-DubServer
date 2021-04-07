@@ -54,6 +54,7 @@ void Gamemaster::ragequit(Player* p)
             }
             i++;
         }
+        std::cout << fmt::format("Current Player Count: {0}",std::to_string(MasterPlayerList.size()));
     }
 }
 
@@ -417,6 +418,8 @@ void Gamemaster::GMController(int fd)
         MasterPlayerList.push_back(p);
     }
     printf("Player successfully added to Master: %d\n",MasterPlayerList.size());
+    // push them into Portal Room
+    MasterRoomList.at(0).addPlayer(p);
     std::cout << "Sanity check desc: " << p->desc << std::endl;
 
     while(bytes = recv(fd,&typeCheck,1,MSG_WAITALL|MSG_PEEK) > 0)
@@ -424,7 +427,7 @@ void Gamemaster::GMController(int fd)
         std::cout << "TypeCheck: " << typeCheck << std::endl;
         mailroom(p,fd,typeCheck);
         // update client with all characters (consider noisy)
-        census(fd);
+        census(p);
 
     }
     // client most likely closed the socket or some error occured here.
@@ -432,15 +435,16 @@ void Gamemaster::GMController(int fd)
     ragequit(p);
 }
 
-void Gamemaster::census(int fd)
+void Gamemaster::census(Player* p)
 {
-    std::cout << fmt::format("Updating FD: {0} with character list\n",fd);
+    std::cout << fmt::format("Updating <{0}> with character list\n",p->charTainer.CHARACTER_NAME);
     {
         std::lock_guard<std::mutex> lock(GMlock);
         for(auto t: MasterPlayerList)
         {
-            write(fd,&(t->charTainer),sizeof(LURK_CHARACTER));
-            write(fd,(t->desc).c_str(),t->charTainer.DESC_LENGTH);
+            std::lock_guard<std::mutex> lock(*p->pLock);
+            write(p->socketFD,&(t->charTainer),sizeof(LURK_CHARACTER));
+            write(p->socketFD,(t->desc).c_str(),t->charTainer.DESC_LENGTH);
         }
     }
     
