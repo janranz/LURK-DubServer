@@ -8,10 +8,11 @@ Room::Room(uint16_t num,std::string name ,uint16_t roomDescLen ,std::string room
     
     stress_level = 0;
     rLock = std::make_shared<std::mutex>();
-    strncpy(room.ROOM_NAME,name.c_str(),32);
+    strncpy(room.ROOM_NAME,name.c_str(),sizeof(room.ROOM_NAME));
     room.ROOM_NUMBER = num;
     room.DESC_LENGTH = roomDescLen;
     roomDesc = roomD;
+    std::cout << "Room created! Name: " << room.ROOM_NAME << std::endl;
 }   
 Room::~Room()
 {
@@ -46,9 +47,8 @@ void Room::addPlayer(Player* p)
     }
     std::cout << fmt::format("<{0}> has joined {1}\n",p->charTainer.CHARACTER_NAME,room.ROOM_NAME);
     
-    sendBaddieInfo();
     sendRoomInfo(p);
-    // sendBaddieInfo();
+    sendBaddieInfo();
 }
 
 void Room::removePlayer(Player* p)
@@ -67,9 +67,6 @@ void Room::removePlayer(Player* p)
             }
             i++;
         }
-    sendBaddieInfo();
-    sendRoomInfo(p);
-    // sendBaddieInfo();
     }
 }
 
@@ -97,6 +94,7 @@ void Room::sendBaddieInfo()
         {
             for(auto b: baddieList)
             {
+                std::cout << fmt::format("Baddie In Room: {}\n",b.bTainer.CHARACTER_NAME);
                 std::lock_guard<std::mutex> lock(*t->pLock);
                 write(t->socketFD,&b.bTainer,sizeof(LURK_CHARACTER));
                 write(t->socketFD,b.description.c_str(),b.bTainer.DESC_LENGTH);

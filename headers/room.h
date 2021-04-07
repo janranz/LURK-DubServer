@@ -13,7 +13,7 @@ class Room
     private:
         
         // std::vector<uint16_t> connectedRoomNums;
-        std::vector<LURK_CONNECTION*> connectedRooms;
+        
 
 
         char stress_level; // overall aggression of baddies;
@@ -22,7 +22,7 @@ class Room
     public:
         LURK_ROOM room;
         std::string roomDesc;
-        
+        std::vector<LURK_CONNECTION*> connectedRooms;
         Room(uint16_t,std::string,uint16_t,std::string);
         ~Room();
         // std::shared_ptr<std::mutex> pLock;

@@ -74,7 +74,7 @@ class Gamemaster
         void postman(Player*,LURK_MSG,char*);
         void gatekeeper(char,Player*,uint8_t,uint8_t); // fast access to accept/deny
         void census(Player*);
-        void movePlayer(Player*,char);
+        void movePlayer(Player*,int);
         void ragequit(Player*);
 };
 
