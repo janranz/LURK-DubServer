@@ -73,8 +73,9 @@ class Gamemaster
         void mailroom(Player*,int,int32_t);
         void postman(Player*,LURK_MSG,char*);
         void gatekeeper(char,Player*,uint8_t,uint8_t); // fast access to accept/deny
+        void census(int);
         void movePlayer(Player*,char);
-        void ragequit();
+        void ragequit(Player*);
 };
 
 #endif //GM_H

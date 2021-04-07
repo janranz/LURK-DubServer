@@ -31,17 +31,30 @@ Gamemaster::Gamemaster()
 // destruction handling ////////
 Gamemaster::~Gamemaster()
 {
-    // delete baddie spawner
-    // for(auto t : BDSpawner){delete t;}
-    // BDSpawner.clear();
-    //delete room list
+    for(auto p : MasterPlayerList)
+        delete p;
+    MasterPlayerList.clear();
 
     std::cout << "Goodbye, Gamemaster." << std::endl;
 }
 
-void Gamemaster::ragequit()
+void Gamemaster::ragequit(Player* p)
 {// player has ragequit (left ungracefully)
-    std::cout << "Player ragequit" << std::endl;
+    // std::string m = ;
+    std::cout << fmt::format("<{0} has ragequit from room: {1}>\n",p->charTainer.CHARACTER_NAME,std::to_string(p->charTainer.CURRENT_ROOM_NUMBER));
+    int i = 0;
+    {
+        std::lock_guard<std::mutex>lock(GMlock);
+        for(auto t:MasterPlayerList)
+        {
+            if(p->socketFD == t->socketFD)
+            {
+                delete t;
+                MasterPlayerList.erase(MasterPlayerList.begin() + i);
+            }
+            i++;
+        }
+    }
 }
 
 int Gamemaster::fast_rand(void)
@@ -277,8 +290,7 @@ void Gamemaster::populateRooms()
             t.injectBaddie(release);
         }
     }
-    // for(auto t: BDSpawner)
-    //     delete t;
+
     BDSpawner.clear();
     std::cout << "\nRooms have been populated! BDSpawner has been deleted. Size: " 
               << BDSpawner.size()
@@ -292,9 +304,6 @@ void Gamemaster::populateRooms()
 //START network functions ////////
 void Gamemaster::GMController(int fd)
 {
-    // Player p(fd);
-    // Player* p = new Player(fd);
-    // std::shared_ptr<Player>p(new Player(fd));
     Player* p = new Player(fd);
     std::string m;
     int32_t typeCheck = 0;
@@ -309,10 +318,10 @@ void Gamemaster::GMController(int fd)
 
     // send initial messages to client
     
-    if(write(fd,&lurk_version,sizeof(LURK_VERSION)) == -1){ragequit();return;}
+    if(write(fd,&lurk_version,sizeof(LURK_VERSION)) == -1){ragequit(p);return;}
 
-    if(write(fd,&lurk_game,sizeof(LURK_GAME)) == -1){ragequit();return;}
-    if(write(fd,description.data(),description.length()) == -1){ragequit();return;}
+    if(write(fd,&lurk_game,sizeof(LURK_GAME)) == -1){ragequit(p);return;}
+    if(write(fd,description.data(),description.length()) == -1){ragequit(p);return;}
 
     // wait for character message. We do this manually here
     while(bytes = recv(fd, &typeCheck,1,MSG_WAITALL|MSG_PEEK) > 0)
@@ -331,36 +340,45 @@ void Gamemaster::GMController(int fd)
             checksOut = checkStats(p);
             if(checksOut == false)
             {
-                std::cout << "Pump n dumpin' data. Bad stats" << std::endl;
-                memset(dataDump,0,BIG_BUFFER);
-                recv(fd,dataDump,BIG_BUFFER,MSG_DONTWAIT);
+                // std::cout << "Pump n dumpin' data. Bad stats" << std::endl;
+                // memset(dataDump,0,BIG_BUFFER);
+                // recv(fd,dataDump,BIG_BUFFER,MSG_DONTWAIT);
                 gatekeeper('d',p,0,4);
-                m = fmt::format("Whoa let's calm down there with the stats, {0}."
-                " If you wanted God Mode, all you had to do was ask. [GOD-MODE ACTIVATED]",p->charTainer.CHARACTER_NAME);
-                GMPM(p,m);
-            } else{break;}
-        }
-        std::cout << "Pump n dumpin' data. Bad Type: "<< typeCheck << std::endl;
-        memset(dataDump,0,BIG_BUFFER);
-        recv(fd,dataDump,BIG_BUFFER,MSG_DONTWAIT);
+                // m = fmt::format("Whoa let's calm down there with the stats, {0}."
+                // " If you wanted God Mode, all you had to do was ask. [GOD-MODE ACTIVATED]",p->charTainer.CHARACTER_NAME);
+                // GMPM(p,m);
+            } else
+            {
+                LURK_ACCEPT acpt;
+                acpt.ACCEPT_TYPE = 10;
+                write(fd,&acpt,sizeof(LURK_ACCEPT));
+                // gatekeeper('a',p,10,0);
+                break;
+            }
+        } else {
+        // std::cout << "Pump n dumpin' data. Bad Type: "<< typeCheck << std::endl;
+        // memset(dataDump,0,BIG_BUFFER);
+        // recv(fd,dataDump,BIG_BUFFER,MSG_DONTWAIT);
         gatekeeper('d',p,0,0);
-        m = "Hmm... Before we get going, you mind telling me who you are? (Type: 10)";
-        GMPM(p,m);
+        // m = "Hmm... Before we get going, you mind telling me who you are? (Type: 10)";
+        // GMPM(p,m);
+        }
+        // TESTING POSSIBLE EXIT ROUTINE:
+        if(bytes <= 0)
+        {
+            ragequit(p);
+        }
+
 
     }
-    std::cout << p->charTainer.CHARACTER_NAME << " checks out!" << std::endl;
-    MasterPlayerList.push_back(p);
-
-    printf("Player successfully added to Master: %d\n",MasterPlayerList.size());
-    std::cout << "Sanity check desc: " << p->desc << std::endl;
 
     // wait for start....
-    std::string name(p->charTainer.CHARACTER_NAME);
-    m = fmt::format("Welcome to these savage streets, {0}."
-                    "There's nothing to be afraid about (yet),"
-                    "I just need to know you're ready to START.",name);
+    // std::string name(p->charTainer.CHARACTER_NAME);
+    // m = fmt::format("Welcome to these savage streets, {0}."
+    //                 "There's nothing to be afraid about (yet),"
+    //                 "I just need to know you're ready to START.",name);
 
-                GMPM(p,m);
+    //             GMPM(p,m);
     while(bytes = recv(fd,&typeCheck,1,MSG_WAITALL|MSG_PEEK) > 0)
     {// confirm start
         if(typeCheck == 6)
@@ -368,36 +386,64 @@ void Gamemaster::GMController(int fd)
             uint8_t tmp;
             recv(fd,&tmp,sizeof(uint8_t),MSG_WAITALL);
             std::cout << "User has started!: Type(" << typeCheck << ")" << std::endl;
-            
+            LURK_ACCEPT acpt;
+            acpt.ACCEPT_TYPE = 6;
+            write(fd,&acpt,sizeof(LURK_ACCEPT));
             /*TESTING CONCAT */
-            int dex = (fast_rand() % (c_m.awaken.size()));
-            m = c_m.awaken.at(dex);
-            GMPM(p,m);
+            // int dex = (fast_rand() % (c_m.awaken.size()));
+            // m = c_m.awaken.at(dex);
+            // GMPM(p,m);
             break;
         }
             std::cout << "User has NOT started!: Type(" << typeCheck << ")" << std::endl;
-            m = "Invalid type received!";
-            GMPM(p,m);
-            memset(dataDump,0,BIG_BUFFER);
-            recv(p->socketFD,dataDump,BIG_BUFFER,MSG_DONTWAIT);
+            // m = "Invalid type received!";
+            // GMPM(p,m);
+            // memset(dataDump,0,BIG_BUFFER);
+            // recv(p->socketFD,dataDump,BIG_BUFFER,MSG_DONTWAIT);
             gatekeeper('d',p,0,5);
-            m = "hmm.. I'm looking for a \"START\" message, " + name
-                + " (pssst... It's TYPE 6.)";
-            GMPM(p,m);
+            // m = "hmm.. I'm looking for a \"START\" message, " + name
+            //     + " (pssst... It's TYPE 6.)";
+            // GMPM(p,m);
     }
     // Any new threads should be considered here.
     
     // read from client - expect to send a RESPONSE back.
-    movePlayer(p,'s');
-    movePlayer(p,'f');
-    movePlayer(p,'b');
+    // movePlayer(p,'s');
+    // movePlayer(p,'f');
+    // movePlayer(p,'b');
+    std::cout << p->charTainer.CHARACTER_NAME << " checks out!" << std::endl;
+    {
+        std::lock_guard<std::mutex> lock(GMlock);
+        MasterPlayerList.push_back(p);
+    }
+    printf("Player successfully added to Master: %d\n",MasterPlayerList.size());
+    std::cout << "Sanity check desc: " << p->desc << std::endl;
 
     while(bytes = recv(fd,&typeCheck,1,MSG_WAITALL|MSG_PEEK) > 0)
-    {// consider how we will require a START (type 6)
+    {
+        std::cout << "TypeCheck: " << typeCheck << std::endl;
         mailroom(p,fd,typeCheck);
+        // update client with all characters (consider noisy)
+        census(fd);
+
     }
     // client most likely closed the socket or some error occured here.
     printf("Lost recv() comms with peer socket, bytes: %d\n",bytes);
+    ragequit(p);
+}
+
+void Gamemaster::census(int fd)
+{
+    std::cout << fmt::format("Updating FD: {0} with character list\n",fd);
+    {
+        std::lock_guard<std::mutex> lock(GMlock);
+        for(auto t: MasterPlayerList)
+        {
+            write(fd,&(t->charTainer),sizeof(LURK_CHARACTER));
+            write(fd,(t->desc).c_str(),t->charTainer.DESC_LENGTH);
+        }
+    }
+    
 }
 
 bool Gamemaster::checkStats(Player* p) //bool Gamemaster::checkStats(Player* p)
@@ -482,8 +528,6 @@ void Gamemaster::mailroom(Player* p,int fd,int32_t type)
 {// process client data (Since mutex is a shared_ptr, try and lock it via MasterPlayerList?)
     // LURK_MSG lurk_msg;
     // bool hotAccept;
-    
-    std::cout << "fd: " << fd << std::endl;
     switch(type)
     {
         case 1:

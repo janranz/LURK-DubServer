@@ -14,6 +14,10 @@ Room::~Room()
 
 }
 
+std::string Room::DEBUG_getRoomname()
+{
+    return roomName;
+}
 
 int Room::DEBUG_getBaddieListSize()
 {

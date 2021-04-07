@@ -16,7 +16,7 @@ Player::~Player()
 // write funcs
 void Player::writeToMe(LURK_MSG lurk_msg,char* data)
 {
-    std::cout << "Test: " << socketFD << std::endl;
+    std::cout << "FD: " << socketFD << std::endl;
     std::cout << "DATA: " << data << std::endl;
 
     {

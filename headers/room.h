@@ -34,6 +34,7 @@ class Room
 
         int DEBUG_getBaddieListSize();
         int DEBUG_getRoomNumber();
+        std::string DEBUG_getRoomname();
         std::vector<uint16_t> DEBUG_getConnected();
 
         // writing to client
