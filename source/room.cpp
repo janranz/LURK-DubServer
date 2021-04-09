@@ -38,20 +38,31 @@ void Room::injectBaddie(Baddie s)
     baddieList.push_back(s);
 }
 
-void Room::addPlayer(Player* p)
+ssize_t Room::addPlayer(Player* p)
 {
+    ssize_t bytes;
     {
         std::lock_guard<std::mutex> lock(*rLock);
         playerList.emplace_back(p);
     }
     std::cout << fmt::format("<{0}> has joined {1}\n",p->charTainer.CHARACTER_NAME,room.ROOM_NAME);
     
-    sendRoomInfo(p);
-    sendBaddieInfo();
+    bytes = sendRoomInfo(p);
+    if(bytes < 0){return bytes;}
+    bytes = sendBaddieInfo();
+    if(bytes < 0){return bytes;}
+    bytes = sendFriendInfo();
+    return bytes;
 }
 
 void Room::removePlayer(Player* p)
 {
+    ssize_t bytes = 0;
+    std::string m = fmt::format("A bright light flashes as {0} has stepped into a portal left the room..\nWill you follow them?\n",p->charTainer.CHARACTER_NAME);
+
+    GM_MSG pkg;
+    pkg.MSG_LEN = m.length();
+
     {
         std::lock_guard<std::mutex> lock(*rLock);
         int i = 0;
@@ -62,31 +73,61 @@ void Room::removePlayer(Player* p)
             {
                 std::cout << fmt::format("<{0}> has left {1}\n",p->charTainer.CHARACTER_NAME,room.ROOM_NAME);
                 playerList.erase(playerList.begin() + i);
-                break;
             }
+            
+            strncpy(pkg.CEIVER_NAME,t->charTainer.CHARACTER_NAME,32);
+            {
+                std::lock_guard<std::mutex> lock(*t->pLock);
+                write(t->socketFD,&pkg,sizeof(GM_MSG));
+                write(t->socketFD,m.c_str(),pkg.MSG_LEN);
+            }
+
             i++;
         }
     }
 }
 
-void Room::sendRoomInfo(Player* p)
+ssize_t Room::sendFriendInfo()
 {
+    ssize_t bytes;
+    {
+        std::lock_guard<std::mutex> lock(*rLock);
+        for(auto t : playerList)
+        {
+            for(auto b: playerList)
+            {
+                std::lock_guard<std::mutex> lock(*t->pLock);
+                if(bytes = write(t->socketFD,&b->charTainer,sizeof(LURK_CHARACTER)) < 0){return bytes;}
+                if(bytes =write(t->socketFD,b->desc.c_str() ,b->charTainer.DESC_LENGTH) < 0){return bytes;}
+            }
+        }
+    }
+    return bytes;
+}
+
+ssize_t Room::sendRoomInfo(Player* p)
+{
+    ssize_t bytes = 0;
     {
         std::lock_guard<std::mutex> lock(*p->pLock);
         for(auto t : connectedRooms)
         {
             // write(p->socketFD,&t,sizeof(LURK_CONNECTION));
-            write(p->socketFD,&t->TYPE,sizeof(uint8_t));
-            write(p->socketFD,&t->ROOM_NUMBER,sizeof(uint16_t));
-            write(p->socketFD,t->ROOM_NAME,32);
-            write(p->socketFD,&t->DESC_LENGTH,sizeof(uint16_t));
-            write(p->socketFD,t->DESC,t->DESC_LENGTH);
+            if(write(p->socketFD,&t->TYPE,sizeof(uint8_t)) < 0){return bytes;}
+            if(write(p->socketFD,&t->ROOM_NUMBER,sizeof(uint16_t)) < 0){return bytes;}
+            if(write(p->socketFD,t->ROOM_NAME,32) < 0){return bytes;}
+            if(write(p->socketFD,&t->DESC_LENGTH,sizeof(uint16_t)) < 0){return bytes;}
+            if(write(p->socketFD,t->DESC,t->DESC_LENGTH) < 0){return bytes;}
         }
+        if(write(p->socketFD,&room,sizeof(LURK_ROOM)) < 0){return bytes;}
+        if(write(p->socketFD,roomDesc.c_str(),roomDesc.length()) < 0){return bytes;}
     }
+    return bytes;
 }
 
-void Room::sendBaddieInfo()
+ssize_t Room::sendBaddieInfo()
 {
+    ssize_t bytes = 0;
     {
         std::lock_guard<std::mutex> lock(*rLock);
         for(auto t: playerList)
@@ -95,11 +136,12 @@ void Room::sendBaddieInfo()
             {
                 std::cout << fmt::format("Baddie In Room: {}\n",b.bTainer.CHARACTER_NAME);
                 std::lock_guard<std::mutex> lock(*t->pLock);
-                write(t->socketFD,&b.bTainer,sizeof(LURK_CHARACTER));
-                write(t->socketFD,b.description.c_str(),b.bTainer.DESC_LENGTH);
+                if(write(t->socketFD,&b.bTainer,sizeof(LURK_CHARACTER)) < 0){return bytes;}
+                if(write(t->socketFD,b.description.c_str(),b.bTainer.DESC_LENGTH) < 0){return bytes;}
             }
         }
     }
+    return bytes;
 }
     // std::string a = s.getName();
     // uint8_t b = s.getFlags();

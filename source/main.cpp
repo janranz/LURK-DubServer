@@ -30,7 +30,6 @@ int main(int argc,char** argv)
 
     // check port input
     char *p;
-    int num;
     errno = 0;
     long port = strtol(argv[1], &p, 10);
     if(errno != 0 || *p != '\0' || port > INT_MAX || port < INT_MIN)
@@ -88,13 +87,13 @@ int main(int argc,char** argv)
     for(auto t : fds){delete t;}
     fds.clear();
     // build baddies
-    int roomCount = 100;
-    GM.craftRoomNames(roomCount);
+    // int roomCount = 1000;
+    GM.craftRoomNames();
     GM.estabSizes();
     GM.populateSpawner();
     
     // build rooms [portal + roomCount] 
-    GM.buildRooms(roomCount);
+    GM.buildRooms();
     GM.populateRooms();
 
     //establish connection

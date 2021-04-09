@@ -18,11 +18,13 @@ class Player
     std::string desc;
     std::shared_ptr<std::mutex> pLock;
     int socketFD;
+    bool quitter;
+    bool inMaster;
     Player(int);
     ~Player();
     //read
     //write
-    void writeToMe(LURK_MSG,char*);
+    ssize_t writeToMe(LURK_MSG,char*);
 };
 
 

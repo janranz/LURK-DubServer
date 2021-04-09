@@ -25,6 +25,9 @@ class Gamemaster
         static uint16_t MAX_STAT;
         static int16_t BASE_HEALTH;
         static uint16_t MAX_BADDIES;
+        static uint16_t MAX_ROOMS;
+        static uint16_t MIN_BADDIES_ROOM;
+        static uint16_t MAX_BADDIES_ROOM;
         static uint16_t AWAKEN_VECTOR_SIZE;
         static uint16_t BADDIES_VECTOR_SIZE;
         static uint16_t DANGER_VECTOR_SIZE;
@@ -58,10 +61,10 @@ class Gamemaster
         int fast_rand(void);
         //server innit functions
         bool buildChatter(int,std::vector<std::string>::iterator);
-        void craftRoomNames(int);
+        void craftRoomNames();
         void estabSizes();
         void populateSpawner();
-        void buildRooms(int);
+        void buildRooms();
         void populateRooms();
 
         // network functions

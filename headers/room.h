@@ -31,14 +31,15 @@ class Room
         std::vector<Player*> playerList;
         void setConnectedRooms(LURK_CONNECTION*);
         void injectBaddie(Baddie);
-        void addPlayer(Player*);
+        ssize_t addPlayer(Player*);
         int searchPlayer(std::string const&);
         void removePlayer(Player*);
         void setStressLevel(char);
 
         // writing to client
-        void sendBaddieInfo();
-        void sendRoomInfo(Player*);
+        ssize_t sendBaddieInfo();
+        ssize_t sendRoomInfo(Player*);
+        ssize_t sendFriendInfo();
 };
 
 #endif //ROOM_H

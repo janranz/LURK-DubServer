@@ -4,6 +4,9 @@ unsigned int Gamemaster::g_seed = 0;
 uint16_t Gamemaster::MAX_BADDIES = 1000;
 uint16_t Gamemaster::MAX_STAT = 4000;
 int16_t Gamemaster::BASE_HEALTH = 6000;
+uint16_t Gamemaster::MAX_ROOMS = 4;
+uint16_t Gamemaster::MIN_BADDIES_ROOM = 1;
+uint16_t Gamemaster::MAX_BADDIES_ROOM = 4;
 uint16_t Gamemaster::AWAKEN_VECTOR_SIZE;
 uint16_t Gamemaster::BADDIES_VECTOR_SIZE;
 uint16_t Gamemaster::DANGER_VECTOR_SIZE;
@@ -32,20 +35,34 @@ Gamemaster::Gamemaster()
 Gamemaster::~Gamemaster()
 {
     for(auto p : MasterPlayerList)
-        delete p;
+    {
+        if(p != nullptr)
+            delete p;
+    }
+
     MasterPlayerList.clear();
 
     for(auto p : MasterRoomList)
-        delete p;
+    {
+        if(p != nullptr)
+            delete p;
+    }
+        
     MasterRoomList.clear();
 
     std::cout << "Goodbye, Gamemaster." << std::endl;
 }
 
 void Gamemaster::ragequit(Player* p)
-{// player has ragequit (left ungracefully)
-    // std::string m = ;
-    std::cout << fmt::format("<{0} has ragequit from room: {1}>\n",p->charTainer.CHARACTER_NAME,std::to_string(p->charTainer.CURRENT_ROOM_NUMBER));
+{// player has quit
+    std::cout << fmt::format("<{0} has ragequit from room: {1}>\n",
+        p->charTainer.CHARACTER_NAME,std::to_string(p->charTainer.CURRENT_ROOM_NUMBER));
+    std::string m = fmt::format("Our beloved <{0}> has given up and ragequit!\n She were last seen in Room #<{1}>\n",
+        p->charTainer.CHARACTER_NAME,std::to_string(p->charTainer.CURRENT_ROOM_NUMBER));
+    
+    printf("MasterPlayerSize (pre-removal): %lu\n",MasterPlayerList.size());
+
+    p->quitter = true;
     int i = 0;
     {
         std::lock_guard<std::mutex>lock(GMlock);
@@ -53,13 +70,39 @@ void Gamemaster::ragequit(Player* p)
         {
             if(p->socketFD == t->socketFD)
             {
-                delete t;
                 MasterPlayerList.erase(MasterPlayerList.begin() + i);
+                p->inMaster = false;
+                break;
             }
             i++;
         }
+        
+        for(auto t:MasterRoomList)
+        {
+            i = 0;
+            std::lock_guard<std::mutex>lock(*t->rLock);
+            for(auto b : t->playerList)
+            {
+                if(p->socketFD == b->socketFD)
+                {
+                    t->playerList.erase(t->playerList.begin() + i);
+                    break;
+                }
+                i++;
+            }
+        }
+        if(p != nullptr)
+            delete p;
+        for(auto t:MasterPlayerList)
+        {
+            if(t->inMaster)
+                GMPM(t,m);
+        }
+    }    
         std::cout << fmt::format("Current Player Count: {0}",std::to_string(MasterPlayerList.size()));
-    }
+        printf("MasterPlayerSize (post-removal): %lu\n",MasterPlayerList.size());
+    
+
 }
 
 int Gamemaster::fast_rand(void)
@@ -75,25 +118,25 @@ bool Gamemaster::buildChatter(int i, std::vector<std::string>::iterator m)
     bool checksOut = true;
     switch(i)
     {
-        case 0:{c_m.awaken.push_back(*m);break;}
-        case 1:{c_m.baddies.push_back(*m);break;}
-        case 2:{c_m.danger.push_back(*m);break;}
-        case 3:{c_m.death.push_back(*m);break;}
-        case 4:{c_m.error.push_back(*m);break;}
-        case 5:{c_m.fightHit.push_back(*m);break;}
-        case 6:{c_m.food.push_back(*m);break;}
-        case 7:{c_m.health.push_back(*m);break;}
-        case 8:{c_m.loot.push_back(*m);break;}
-        case 9:{c_m.pvp.push_back(*m);break;}
-        // case 10:{c_m.roomNames.push_back(*m);break;}
-        case 10:{c_m.safeEv.push_back(*m);break;}
-        case 11:{c_m.trans.push_back(*m);break;}
-        case 12:{c_m.weapons.push_back(*m);break;}
-        case 13:{c_m.baddie_desc.push_back(*m);break;}
-        case 14:{c_m.room_desc.push_back(*m);break;}
-        case 15:{c_m.adj.push_back(*m);break;}
-        case 16:{c_m.noun.push_back(*m);break;}
-        case 17:{c_m.roomTainer.push_back(*m);break;}
+        case 0:{c_m.awaken.emplace_back(*m);break;}
+        case 1:{c_m.baddies.emplace_back(*m);break;}
+        case 2:{c_m.danger.emplace_back(*m);break;}
+        case 3:{c_m.death.emplace_back(*m);break;}
+        case 4:{c_m.error.emplace_back(*m);break;}
+        case 5:{c_m.fightHit.emplace_back(*m);break;}
+        case 6:{c_m.food.emplace_back(*m);break;}
+        case 7:{c_m.health.emplace_back(*m);break;}
+        case 8:{c_m.loot.emplace_back(*m);break;}
+        case 9:{c_m.pvp.emplace_back(*m);break;}
+        // case 10:{c_m.roomNames.emplace_back(*m);break;}
+        case 10:{c_m.safeEv.emplace_back(*m);break;}
+        case 11:{c_m.trans.emplace_back(*m);break;}
+        case 12:{c_m.weapons.emplace_back(*m);break;}
+        case 13:{c_m.baddie_desc.emplace_back(*m);break;}
+        case 14:{c_m.room_desc.emplace_back(*m);break;}
+        case 15:{c_m.adj.emplace_back(*m);break;}
+        case 16:{c_m.noun.emplace_back(*m);break;}
+        case 17:{c_m.roomTainer.emplace_back(*m);break;}
         default:{checksOut = false;}
     }
     return checksOut;
@@ -215,19 +258,19 @@ void Gamemaster::populateSpawner()
         uint16_t descLength = descGrab.length();
 
         Baddie p(n,flags,attack,defense,regen,health,gold,0,descLength,descGrab);
-        BDSpawner.push_back(p);
+        BDSpawner.emplace_back(p);
     }
     std::cout << "\nSpawner populated! Size of BDSpawner: " << BDSpawner.size() << std::endl;
 }
 
-void Gamemaster::craftRoomNames(int roomCount)
+void Gamemaster::craftRoomNames()
 {
     std::string finalName;
     int adjSize = c_m.adj.size();
     int nounSize = c_m.noun.size();
     int tainerSize = c_m.roomTainer.size();
     
-    for(int i = 0; i < roomCount; i++)
+    for(int i = 0; i < MAX_ROOMS; i++)
     {
     REROLL:
         int dex1 = (fast_rand() % adjSize);
@@ -238,12 +281,12 @@ void Gamemaster::craftRoomNames(int roomCount)
         if(finalName.length() > 30)
             goto REROLL;
         
-        c_m.roomNames.push_back(finalName);
+        c_m.roomNames.emplace_back(finalName);
     }
     std::cout << "\nRoom names generated! Size of room name names: " << c_m.roomNames.size();
 }
 
-void Gamemaster::buildRooms(int roomCount)
+void Gamemaster::buildRooms()
 {
     
 
@@ -260,7 +303,7 @@ void Gamemaster::buildRooms(int roomCount)
     Room* portal = new Room(roomNumber, roomName, roomDescLength, roomDesc);
     MasterRoomList.emplace_back(portal);
     std::cout << fmt::format("C_M.ROOMNAME SIZE: {}\n",std::to_string(c_m.roomNames.size()));
-    for(int i = 1; i < roomCount; i++)
+    for(int i = 1; i < MAX_ROOMS; i++)
     {
         roomNumber = i;
         roomName = c_m.roomNames.at(i);
@@ -286,7 +329,7 @@ void Gamemaster::buildRooms(int roomCount)
         }
             
     }
-    for(int i = 1; i < MasterRoomList.size(); ++i)
+    for(size_t i = 1; i < MasterRoomList.size(); ++i)
     {
         LURK_CONNECTION* cPast = new LURK_CONNECTION;
         strncpy(cPast->ROOM_NAME,MasterRoomList.at(i-1)->room.ROOM_NAME,32);
@@ -304,62 +347,34 @@ void Gamemaster::buildRooms(int roomCount)
             strncpy(cNext->DESC,MasterRoomList.at(i+1)->roomDesc.c_str(),MasterRoomList.at(i+1)->room.DESC_LENGTH);
             MasterRoomList.at(i)->setConnectedRooms(cNext);
         }
-
+            if(i != MasterRoomList.size() - 1)
+            {
+                std::cout << fmt::format("Sanity Connection Room: {0} connects with {1} and {2}\n",
+                std::to_string(MasterRoomList.at(i)->room.ROOM_NUMBER),
+                std::to_string(MasterRoomList.at(i)->connectedRooms.at(0)->ROOM_NUMBER),
+                std::to_string(MasterRoomList.at(i)->connectedRooms.at(1)->ROOM_NUMBER));
+            } else if(i == MasterRoomList.size() - 1)
+            {
+                std::cout << fmt::format("Sanity Connection Room: {0} connects with {1}\n",
+                std::to_string(MasterRoomList.at(i)->room.ROOM_NUMBER),
+                std::to_string(MasterRoomList.at(i)->connectedRooms.at(0)->ROOM_NUMBER));
+            }else {
+                std::cout << "Error in setting room connections!\n";
+            }
     }
-    // for(std::vector<Room*>::iterator t = MasterRoomList.begin(); t!= MasterRoomList.end(); ++t)
-    // {
-    //     t.
-    //     std::cout << "Hello?: " << (t)->room.ROOM_NUMBER << std::endl;
-    //     std::cout << "test: " << MasterRoomList.back()->room.ROOM_NUMBER << std::endl;
-    //     if((*t)->room.ROOM_NUMBER > 0 && (*t)->room.ROOM_NUMBER < MasterRoomList.back()->room.ROOM_NUMBER)
-    //     {
-    //         std::cout << fmt::format("Broken Room Name: {0}, Broken Room Number: {1}\n",(*t)->room.ROOM_NAME,std::to_string((*t)->room.ROOM_NUMBER));
-            
-    //         std::cout << fmt::format("Broken past Room Name: {0}, Broken Room Number: {1}\n",(*t-1)->room.ROOM_NAME,std::to_string((*t-1)->room.ROOM_NUMBER));
-    //         LURK_CONNECTION* cPast = new LURK_CONNECTION;
-    //         strncpy(cPast->ROOM_NAME,(*t-1)->room.ROOM_NAME,32);
-    //         cPast->ROOM_NUMBER = (*t-1)->room.ROOM_NUMBER;
-            
-    //         cPast->DESC_LENGTH = (*t-1)->room.DESC_LENGTH;
-    //         strncpy(cPast->DESC,(*t-1)->roomDesc.c_str(),(*t-1)->room.DESC_LENGTH + 1);
-    //         std::cout << fmt::format("\nPassssst room connect: {0} {1} {2}\n",cPast->ROOM_NAME,std::to_string(cPast->ROOM_NUMBER),cPast->DESC);
-    //         (*t)->setConnectedRooms(cPast);
 
-            
-    //         LURK_CONNECTION* cNext = new LURK_CONNECTION;
-    //         strncpy(cNext->ROOM_NAME,(*t+1)->room.ROOM_NAME,32);
-    //         cNext->ROOM_NUMBER = (*t+1)->room.ROOM_NUMBER;
-    //         cNext->DESC_LENGTH = (*t+1)->room.DESC_LENGTH;
-    //         strncpy(cNext->DESC,(*t+1)->roomDesc.c_str(),(*t+1)->room.DESC_LENGTH + 1);
-    //         std::cout << fmt::format("\nPassssst room connect: {0}\n{1}\n{2}\n",cNext->ROOM_NAME,std::to_string(cNext->ROOM_NUMBER),cNext->DESC);
-
-    //         (*t)->setConnectedRooms(cNext);
-    //     } else if((*t)->room.ROOM_NUMBER == MasterRoomList.back()->room.ROOM_NUMBER)
-    //     {
-            
-    //         LURK_CONNECTION* cPast = new LURK_CONNECTION;
-    //         strncpy(cPast->ROOM_NAME,(*t-1)->room.ROOM_NAME,32);
-    //         cPast->ROOM_NUMBER = (*t-1)->room.ROOM_NUMBER;
-    //         cPast->DESC_LENGTH = (*t-1)->room.DESC_LENGTH;
-    //         strncpy(cPast->DESC,(*t-1)->roomDesc.c_str(),(*t-1)->room.DESC_LENGTH + 1);
-    //         (*t)->setConnectedRooms(cPast);
-    //     } else {
-    //         std::cout << fmt::format("\nBuildRooms Sanity Check: Room Number (0|99): {0}\n",std::to_string((*t)->room.ROOM_NUMBER));
-    //     }
-        
-    // }
     std::cout << "\nMasterRoomList succeeds! Size: "<< MasterRoomList.size() << std::endl;
 }
 
 void Gamemaster::populateRooms()
 {
-    int roomCount = MasterRoomList.size();
-    int min = 3;
-    int max = 20;
+    
+    
+    
     for(auto t: MasterRoomList)
     {
         
-        int baddieCount = (fast_rand() % (max - min) + min);
+        int baddieCount = (fast_rand() % (MAX_BADDIES_ROOM - MIN_BADDIES_ROOM) + MIN_BADDIES_ROOM);
         for(int i = 0; i < baddieCount; i++)
         {
             Baddie release = BDSpawner.at((fast_rand() % (BDSpawner.size())));
@@ -382,6 +397,7 @@ void Gamemaster::populateRooms()
 void Gamemaster::GMController(int fd)
 {
     Player* p = new Player(fd);
+    
     std::string m;
     int32_t typeCheck = 0;
     LURK_ACCEPT lurk_accept;
@@ -401,17 +417,36 @@ void Gamemaster::GMController(int fd)
     if(write(fd,description.data(),description.length()) == -1){ragequit(p);return;}
 
     // wait for character message. We do this manually here
-    while(bytes = recv(fd, &typeCheck,1,MSG_WAITALL|MSG_PEEK) > 0)
+    bool accepted = false; //user has quit.
+    while((!accepted))
     {// confirm character
+        bytes = recv(fd, &typeCheck,1,MSG_WAITALL|MSG_PEEK);
+        if(bytes < 0)
+        {
+            if(p != nullptr)
+                delete p;
+            return;
+        }
         bool checksOut = false;
         std::cout << "Type: " << typeCheck << std::endl;
         if(typeCheck == 10)
         {
 
-            recv(fd,&p->charTainer,sizeof(LURK_CHARACTER),MSG_WAITALL);
-            
+            bytes = recv(fd,&p->charTainer,sizeof(LURK_CHARACTER),MSG_WAITALL);
+            if(bytes < 0)
+            {
+                if(p != nullptr)
+                delete p;
+                return;
+            }
             char tmp[p->charTainer.DESC_LENGTH];
-            recv(fd,tmp,p->charTainer.DESC_LENGTH,MSG_WAITALL);
+            bytes = recv(fd,tmp,p->charTainer.DESC_LENGTH,MSG_WAITALL);
+            if(bytes < 0)
+            {
+                if(p != nullptr)
+                    delete p;
+                return;
+            }
             tmp[p->charTainer.DESC_LENGTH] = 0;
             p->desc.assign(tmp);
             checksOut = checkStats(p);
@@ -419,7 +454,7 @@ void Gamemaster::GMController(int fd)
             {
                 // std::cout << "Pump n dumpin' data. Bad stats" << std::endl;
                 // memset(dataDump,0,BIG_BUFFER);
-                // recv(fd,dataDump,BIG_BUFFER,MSG_DONTWAIT);
+                // bytes = recv(fd,dataDump,BIG_BUFFER,MSG_DONTWAIT);
                 gatekeeper('d',p,0,4);
                 // m = fmt::format("Whoa let's calm down there with the stats, {0}."
                 // " If you wanted God Mode, all you had to do was ask. [GOD-MODE ACTIVATED]",p->charTainer.CHARACTER_NAME);
@@ -428,80 +463,69 @@ void Gamemaster::GMController(int fd)
             {
                 LURK_ACCEPT acpt;
                 acpt.ACCEPT_TYPE = 10;
-                write(fd,&acpt,sizeof(LURK_ACCEPT));
+                
+                if(write(fd,&acpt,sizeof(LURK_ACCEPT)) == -1){ragequit(p); return;}
                 // gatekeeper('a',p,10,0);
-                break;
+                accepted = true;
             }
         } else {
-        // std::cout << "Pump n dumpin' data. Bad Type: "<< typeCheck << std::endl;
-        // memset(dataDump,0,BIG_BUFFER);
-        // recv(fd,dataDump,BIG_BUFFER,MSG_DONTWAIT);
-        gatekeeper('d',p,0,0);
-        // m = "Hmm... Before we get going, you mind telling me who you are? (Type: 10)";
-        // GMPM(p,m);
+            gatekeeper('d',p,0,0);
         }
-        // TESTING POSSIBLE EXIT ROUTINE:
-        if(bytes <= 0)
-        {
-            ragequit(p);
-        }
-
-
     }
-
-    // wait for start....
-    // std::string name(p->charTainer.CHARACTER_NAME);
-    // m = fmt::format("Welcome to these savage streets, {0}."
-    //                 "There's nothing to be afraid about (yet),"
-    //                 "I just need to know you're ready to START.",name);
-
-    //             GMPM(p,m);
-    while(bytes = recv(fd,&typeCheck,1,MSG_WAITALL|MSG_PEEK) > 0)
+    accepted = false;
+    while(!accepted)
     {// confirm start
+        bytes = recv(fd,&typeCheck,1,MSG_WAITALL|MSG_PEEK);
+        if(bytes < 0)
+        {
+            if(p != nullptr)
+                delete p;
+            return;
+        }
+
         if(typeCheck == 6)
         {
             uint8_t tmp;
-            recv(fd,&tmp,sizeof(uint8_t),MSG_WAITALL);
+            bytes = recv(fd,&tmp,sizeof(uint8_t),MSG_WAITALL);
+            if(bytes < 0)
+            {
+                if(p != nullptr)
+                    delete p;
+                return;
+            }
             std::cout << "User has started!: Type(" << typeCheck << ")" << std::endl;
             LURK_ACCEPT acpt;
             acpt.ACCEPT_TYPE = 6;
-            write(fd,&acpt,sizeof(LURK_ACCEPT));
-            /*TESTING CONCAT */
-            // int dex = (fast_rand() % (c_m.awaken.size()));
-            // m = c_m.awaken.at(dex);
-            // GMPM(p,m);
-            break;
-        }
+            if(write(fd,&acpt,sizeof(LURK_ACCEPT)) == -1){ragequit(p); return;}
+            accepted = true;
+        } else{
             std::cout << "User has NOT started!: Type(" << typeCheck << ")" << std::endl;
-            // m = "Invalid type received!";
-            // GMPM(p,m);
-            // memset(dataDump,0,BIG_BUFFER);
-            // recv(p->socketFD,dataDump,BIG_BUFFER,MSG_DONTWAIT);
             gatekeeper('d',p,0,5);
-            // m = "hmm.. I'm looking for a \"START\" message, " + name
-            //     + " (pssst... It's TYPE 6.)";
-            // GMPM(p,m);
+        }
     }
     // Any new threads should be considered here.
-    
-    // read from client - expect to send a RESPONSE back.
-    // movePlayer(p,'s');
-    // movePlayer(p,'f');
-    // movePlayer(p,'b');
+    // ADD USER TO MASTERPLAYERLIST
     std::cout << p->charTainer.CHARACTER_NAME << " checks out!" << std::endl;
     {
         std::lock_guard<std::mutex> lock(GMlock);
-        MasterPlayerList.push_back(p);
+        MasterPlayerList.emplace_back(p);
+        
     }
-    printf("Player successfully added to Master: %d\n",MasterPlayerList.size());
-    // push them into Portal Room
-    
-    // MasterRoomList.at(0)->addPlayer(p);
-    movePlayer(p,0);
-    std::cout << "Sanity check desc: " << p->desc << std::endl;
+    p->inMaster = true;
+    printf("Player successfully added to Master: %lu\n",MasterPlayerList.size());
 
-    while(bytes = recv(fd,&typeCheck,1,MSG_WAITALL|MSG_PEEK) > 0)
+    // push them into Portal Room
+    movePlayer(p,0);
+
+    // MAIN LISTENING LOOP HERE
+    while(!(p->quitter))
     {
+        bytes = recv(fd,&typeCheck,1,MSG_WAITALL|MSG_PEEK);
+        if(bytes < 0)
+        {
+            ragequit(p);
+            continue;
+        }
         std::cout << "TypeCheck: " << typeCheck << std::endl;
         mailroom(p,fd,typeCheck);
         // update client with all characters (consider noisy)
@@ -509,20 +533,21 @@ void Gamemaster::GMController(int fd)
 
     }
     // client most likely closed the socket or some error occured here.
-    printf("Lost recv() comms with peer socket, bytes: %d\n",bytes);
+    printf("Lost bytes = recv() comms with peer socket, bytes: %lu\n",bytes);
     ragequit(p);
 }
 
 void Gamemaster::census(Player* p)
 {
+
     std::cout << fmt::format("Updating <{0}> with character list\n",p->charTainer.CHARACTER_NAME);
     {
         std::lock_guard<std::mutex> lock(GMlock);
         for(auto t: MasterPlayerList)
         {
             std::lock_guard<std::mutex> lock(*p->pLock);
-            write(p->socketFD,&(t->charTainer),sizeof(LURK_CHARACTER));
-            write(p->socketFD,(t->desc).c_str(),t->charTainer.DESC_LENGTH);
+            if(write(p->socketFD,&(t->charTainer),sizeof(LURK_CHARACTER)) == -1){ragequit(p);return;}
+            if(write(p->socketFD,t->desc.c_str(),t->charTainer.DESC_LENGTH) == -1){ragequit(p);return;}
         }
     }
     
@@ -560,7 +585,7 @@ bool Gamemaster::checkStats(Player* p) //bool Gamemaster::checkStats(Player* p)
         p->charTainer.HEALTH += dif;
     }
     p->charTainer.FLAGS = 0b11001000; // 200
-    p->charTainer.GOLD = (fast_rand() & (4200 - 69) + 69);
+    p->charTainer.GOLD = (fast_rand() & ((4200 - 69) + 69));
     p->charTainer.CURRENT_ROOM_NUMBER = 0;
     std::cout << "Appropriate stats: " << stat << std::endl;
     return true;
@@ -571,12 +596,22 @@ void Gamemaster::GMPM(Player* p, std::string& msg)
 {
     GM_MSG gm;
     gm.MSG_LEN = msg.length();
+    ssize_t bytes = 0;
     strncpy(gm.CEIVER_NAME,p->charTainer.CHARACTER_NAME,32);
-    
     {
         std::lock_guard<std::mutex> lock(*p->pLock);
-        write(p->socketFD,&gm,sizeof(gm));
-        write(p->socketFD,msg.c_str(),gm.MSG_LEN);
+        bytes = write(p->socketFD,&gm,sizeof(gm));
+        if(bytes < 0)
+        {
+            ragequit(p);
+            return;
+        }
+        bytes =write(p->socketFD,msg.c_str(),gm.MSG_LEN);
+        if(bytes < 0)
+        {
+            ragequit(p);
+            return;
+        }
     }
 }
 
@@ -585,43 +620,22 @@ void Gamemaster::movePlayer(Player* p, int newRoom)
     MasterRoomList.at(p->charTainer.CURRENT_ROOM_NUMBER)->removePlayer(p);
     p->charTainer.CURRENT_ROOM_NUMBER = newRoom;
     MasterRoomList.at(p->charTainer.CURRENT_ROOM_NUMBER)->addPlayer(p);
-    // switch(direction)
-    // {
-    //     case 's':
-    //     {   p->charTainer.CURRENT_ROOM_NUMBER = 0;
-    //         MasterRoomList.at(0)->addPlayer(p);
-    //         break;
-    //     }
-    //     case 'f':
-    //     {
-    //         MasterRoomList.at(p->charTainer.CURRENT_ROOM_NUMBER)->removePlayer(p);
-    //         p->charTainer.CURRENT_ROOM_NUMBER += 1;
-    //         MasterRoomList.at(p->charTainer.CURRENT_ROOM_NUMBER)->addPlayer(p);
-    //         break;
-    //     }
-    //     case 'b':
-    //     {
-    //         MasterRoomList.at(p->charTainer.CURRENT_ROOM_NUMBER)->removePlayer(p);
-    //         p->charTainer.CURRENT_ROOM_NUMBER -= 1;
-    //         MasterRoomList.at(p->charTainer.CURRENT_ROOM_NUMBER)->addPlayer(p);
-    //         break;
-    //     }
-    // }
 }
 
 void Gamemaster::mailroom(Player* p,int fd,int32_t type)
 {// process client data (Since mutex is a shared_ptr, try and lock it via MasterPlayerList?)
     // LURK_MSG lurk_msg;
-    // bool hotAccept;
+    ssize_t bytes;
+    uint8_t trashBit;
+    // bool leaver = false;
     switch(type)
     {
         case 1:
         {// MESSAGE (REWORK THIS)
             LURK_MSG lurk_msg;
-
-            recv(fd,&lurk_msg,sizeof(LURK_MSG),MSG_WAITALL);
+           if(bytes = recv(fd,&lurk_msg,sizeof(LURK_MSG),MSG_WAITALL) < 0){ragequit(p);break;}
             char data[lurk_msg.MSG_LEN];
-            recv(fd,data,lurk_msg.MSG_LEN,MSG_WAITALL);
+            if(bytes = recv(fd,data,lurk_msg.MSG_LEN,MSG_WAITALL) < 0){ragequit(p);break;}
             data[lurk_msg.MSG_LEN] = 0;
             postman(p,lurk_msg,data);
             // std::string s(data, lurk_msg.MSG_LEN);
@@ -630,7 +644,7 @@ void Gamemaster::mailroom(Player* p,int fd,int32_t type)
         case 2:
         {// CHANGEROOM
             LURK_CHANGEROOM changeRoom;
-            recv(fd,&changeRoom,sizeof(LURK_CHANGEROOM),MSG_WAITALL);
+            if(bytes = recv(fd,&changeRoom,sizeof(LURK_CHANGEROOM),MSG_WAITALL) < 0){ragequit(p);break;}
             std::cout << fmt::format("Changeroom: {0} | Current: {1}\n",std::to_string(changeRoom.ROOM_NUMBER),std::to_string(p->charTainer.CURRENT_ROOM_NUMBER));
             ;
             for(auto t : MasterRoomList.at(p->charTainer.CURRENT_ROOM_NUMBER)->connectedRooms)
@@ -649,7 +663,7 @@ void Gamemaster::mailroom(Player* p,int fd,int32_t type)
         case 3:
         {// FIGHT
             uint8_t tmp;
-            recv(fd,&tmp,sizeof(uint8_t),MSG_WAITALL);
+            if(bytes = recv(fd,&tmp,sizeof(uint8_t),MSG_WAITALL) < 0){ragequit(p);break;}
             std::cout << p->charTainer.CHARACTER_NAME << " STARTS BEEF" << std::endl;
             gatekeeper('a',p,type,0);
             break;
@@ -657,7 +671,7 @@ void Gamemaster::mailroom(Player* p,int fd,int32_t type)
         case 4:
         {// PVP
             LURK_PVP lurk_pvp;
-            recv(fd,&lurk_pvp,sizeof(LURK_PVP),MSG_WAITALL);
+            if(bytes = recv(fd,&lurk_pvp,sizeof(LURK_PVP),MSG_WAITALL) < 0){ragequit(p);break;}
             std::cout << p->charTainer.CHARACTER_NAME
                       << " WANTS TO FIGHT " << lurk_pvp.TARGET << std::endl;
             gatekeeper('a',p,type,0);
@@ -666,7 +680,7 @@ void Gamemaster::mailroom(Player* p,int fd,int32_t type)
         case 5:
         {// LOOT
             LURK_LOOT lurk_loot;
-            recv(fd,&lurk_loot,sizeof(LURK_LOOT),MSG_WAITALL);
+            if(bytes = recv(fd,&lurk_loot,sizeof(LURK_LOOT),MSG_WAITALL) < 0){ragequit(p);break;}
             std::cout << p->charTainer.CHARACTER_NAME
                       << " WANTS TO LOOT " << lurk_loot.TARGET << std::endl;
             gatekeeper('a',p,type,0);
@@ -675,17 +689,16 @@ void Gamemaster::mailroom(Player* p,int fd,int32_t type)
         case 6:
         {// START
             uint8_t tmp;
-            recv(fd,&tmp,sizeof(uint8_t),MSG_WAITALL);
+            if(bytes = recv(fd,&tmp,sizeof(uint8_t),MSG_WAITALL) < 0){ragequit(p);break;}
             // do something to here to throw user into the game.
-
             std::cout << p->charTainer.CHARACTER_NAME << " requests a start" << std::endl;
             gatekeeper('a',p,type,0);
             break;
         }
-        case 7:
+        case 12:
         {// LEAVE (Consider cleanup!)
             uint8_t tmp;
-            recv(fd,&tmp,sizeof(uint8_t),MSG_WAITALL);
+            if(bytes = recv(fd,&tmp,sizeof(uint8_t),MSG_WAITALL) < 0){ragequit(p);break;}
             std::cout << p->charTainer.CHARACTER_NAME
                       << " User has requested to leave gracefully" << std::endl;
             gatekeeper('a',p,type,0);
@@ -696,7 +709,7 @@ void Gamemaster::mailroom(Player* p,int fd,int32_t type)
         case 10:
         {// CHARACTER (bitset check state of JOIN_BATTLE ONLY)
             LURK_CHARACTER lurk_char;
-            recv(fd,&lurk_char,sizeof(LURK_CHARACTER),MSG_WAITALL);
+            if(bytes = recv(fd,&lurk_char,sizeof(LURK_CHARACTER),MSG_WAITALL) < 0){ragequit(p);break;}
             std::cout << p->charTainer.CHARACTER_NAME
                       << " sends a character message. let's check her flags for JB" << std::endl;
             gatekeeper('a',p,type,0);
@@ -704,6 +717,9 @@ void Gamemaster::mailroom(Player* p,int fd,int32_t type)
         }
         default:
         {
+            uint8_t tossByte;
+            if(bytes = recv(fd,&tossByte,sizeof(uint8_t),MSG_WAITALL) < 0){ragequit(p);break;}
+            std::cout << fmt::format("Received bad Type from: {0} Type: {1}",p->charTainer.CHARACTER_NAME, std::to_string(tossByte));
             gatekeeper('d',p,type,0);
         }
     }
@@ -712,15 +728,19 @@ void Gamemaster::mailroom(Player* p,int fd,int32_t type)
 void Gamemaster::postman(Player* sender,LURK_MSG lurk_msg,char* data)
 {// consider if a lock should be implemented, protecting MastPlayerList from manip
     bool found = false;
-    for(auto t:MasterPlayerList)
+
     {
-        if(strcmp(t->charTainer.CHARACTER_NAME,lurk_msg.CEIVER_NAME) == 0)
+        std::lock_guard<std::mutex> lock(GMlock);
+        for(auto t:MasterPlayerList)
         {
-            t->writeToMe(lurk_msg,data);
-            sender->writeToMe(lurk_msg,data);
-            gatekeeper('a',sender,1,0);
-            found = true;
-            break;
+            if(strcmp(t->charTainer.CHARACTER_NAME,lurk_msg.CEIVER_NAME) == 0)
+            {
+                if(t->writeToMe(lurk_msg,data) < 0){ragequit(t);return;}
+                if(sender->writeToMe(lurk_msg,data) < 0){ragequit(sender);return;}
+                gatekeeper('a',sender,1,0);
+                found = true;
+                break;
+            }
         }
     }
     if(!found){gatekeeper('d',sender,0,6);}
@@ -734,7 +754,7 @@ void Gamemaster::gatekeeper(char ad,Player* t,uint8_t action,uint8_t err)
         la.ACCEPT_TYPE = action;
         {
             std::lock_guard<std::mutex> lock(*t->pLock);
-            write(t->socketFD,&la,sizeof(LURK_ACCEPT));
+            if(write(t->socketFD,&la,sizeof(LURK_ACCEPT)) < 0){ragequit(t);return;}
         }
     } else if(ad == 'd')
     {// action declined
@@ -744,8 +764,8 @@ void Gamemaster::gatekeeper(char ad,Player* t,uint8_t action,uint8_t err)
         le.MSG_LEN = desc.length();
         {
             std::lock_guard<std::mutex> lock(*t->pLock);
-            write(t->socketFD,&le,sizeof(LURK_ERROR));
-            write(t->socketFD,desc.c_str(),le.MSG_LEN);
+            if(write(t->socketFD,&le,sizeof(LURK_ERROR)) < 0){ragequit(t);return;}
+            if(write(t->socketFD,desc.c_str(),le.MSG_LEN) < 0){ragequit(t);return;}
         }
     }
 }
@@ -771,13 +791,13 @@ ERROR CODES:
 
     // while(!softStop)
     // {
-    //     recv(fd,&typeCheck,1,MSG_WAITALL|MSG_PEEK);
+    //     bytes = recv(fd,&typeCheck,1,MSG_WAITALL|MSG_PEEK);
     //     std::cout << "typeCheck: " << typeCheck << std::endl;
     //     if(typeCheck != 10)
     //     {
     //         printf("Invalid type received: %d\n",typeCheck);
     //         memset(dataDump, 0, BIG_BUFFER);
-    //         recv(fd,dataDump,BIG_BUFFER,MSG_DONTWAIT); // DOUBLE CHECK dataDump
+    //         bytes = recv(fd,dataDump,BIG_BUFFER,MSG_DONTWAIT); // DOUBLE CHECK dataDump
     //         std::string errorMsg = "Incorrect Type. Expecting Type: 10";
     //         lurk_error.MSG_LEN = errorMsg.length();
     //         lurk_error.CODE = 0;
@@ -788,13 +808,13 @@ ERROR CODES:
     //     printf("Valid type received: %d\n",typeCheck);
 
     //     //attempt to assemble character.
-    //     recv(fd,&p.charTainer,sizeof(LURK_CHARACTER),MSG_WAITALL);
+    //     bytes = recv(fd,&p.charTainer,sizeof(LURK_CHARACTER),MSG_WAITALL);
 
     //     if(p.charTainer.DESC_LENGTH > 1000)
     //     {
     //         printf("Invalid Description Length (too big): %d\n",p.charTainer.DESC_LENGTH);
     //         memset(dataDump,0,BIG_BUFFER);
-    //         recv(fd,&dataDump,BIG_BUFFER,MSG_DONTWAIT);
+    //         bytes = recv(fd,&dataDump,BIG_BUFFER,MSG_DONTWAIT);
     //         std::string errorMsg = "Please limit description length to 1000 characters. (You psycho.)";
     //         lurk_error.MSG_LEN = errorMsg.length();
     //         lurk_error.CODE = 0;
@@ -805,10 +825,10 @@ ERROR CODES:
     //     }
 
     //     char data[p.charTainer.DESC_LENGTH];
-    //     recv(fd,&data,p.charTainer.DESC_LENGTH,MSG_WAITALL);
+    //     bytes = recv(fd,&data,p.charTainer.DESC_LENGTH,MSG_WAITALL);
     //     data[p.charTainer.DESC_LENGTH] = 0;
         
     //     p.desc.assign(data);
     //     softStop = true;
-    //     MasterPlayerList.push_back(p);
+    //     MasterPlayerList.emplace_back(p);
     // }
