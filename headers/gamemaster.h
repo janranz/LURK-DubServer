@@ -14,6 +14,7 @@
 #include<thread>
 #include<mutex>
 #include<memory>
+#include<limits>
 #include"../headers/fmt/format.h"
 
 
@@ -66,7 +67,7 @@ class Gamemaster
         void populateSpawner();
         void buildRooms();
         void populateRooms();
-
+        void getDex();
         // network functions
         void GMController(int);
         bool checkStats(Player*);
@@ -75,7 +76,9 @@ class Gamemaster
         void GMPM(Player*,std::string&); // personal custom messenger for GM
         void mailroom(Player*,int,int32_t);
         void postman(Player*,LURK_MSG,char*);
-        void gatekeeper(char,Player*,uint8_t,uint8_t); // fast access to accept/deny
+
+        void actionPass(Player*,uint8_t);
+        void actionFail(Player*,uint8_t);
         void census(Player*);
         void movePlayer(Player*,int);
         void ragequit(Player*);

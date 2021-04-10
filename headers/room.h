@@ -26,20 +26,20 @@ class Room
         Room(uint16_t,std::string,uint16_t,std::string);
         ~Room();
         // std::shared_ptr<std::mutex> pLock;
-        std::shared_ptr<std::mutex> rLock;
+        std::mutex rLock;
         std::vector<Baddie> baddieList;
         std::vector<Player*> playerList;
         void setConnectedRooms(LURK_CONNECTION*);
         void injectBaddie(Baddie);
-        ssize_t addPlayer(Player*);
+        void addPlayer(Player*);
         int searchPlayer(std::string const&);
         void removePlayer(Player*);
         void setStressLevel(char);
 
         // writing to client
-        ssize_t sendBaddieInfo();
-        ssize_t sendRoomInfo(Player*);
-        ssize_t sendFriendInfo();
+        void sendBaddieInfo();
+        void sendRoomInfo(Player*);
+        // void sendFriendInfo();
 };
 
 #endif //ROOM_H

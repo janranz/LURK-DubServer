@@ -5,9 +5,11 @@ Player::Player(int s)
 {
     std::cout << "Player created socket: "<< s << std::endl;
     socketFD = s;
-    quitter = false;
+    sktAlive = true;
     inMaster = false;
-    pLock = std::make_shared<std::mutex>();
+    started = false;
+    validToon = false;
+    freshSpawn = false;
 }
 Player::~Player()
 {
@@ -15,19 +17,80 @@ Player::~Player()
     // std::cout << "Player destroyed." << std::endl;
 }
 
+// set states
+void Player::startPlayer()
+{
+    std:: cout << "User has selected to start!" << std::endl;
+    started = true;
+}
+
+// void Player::setMaster()
+// {
+//     inMaster = true;
+// }
+
+void Player::quitPlayer()
+{
+    std::cout << "Connection lost! User staged to quit." << std::endl;
+    sktAlive = false;
+}
+
+void Player::setValid()
+{
+    validToon = true;
+}
+
+void Player::spawn()
+{
+    freshSpawn = true;
+}
+
+void Player::despawn()
+{
+    freshSpawn = false;
+}
+// Bools
+bool Player::isValidToon()
+{
+    return validToon;
+}
+
+bool Player::isSktAlive()
+{
+    return sktAlive;
+}
+
+// bool Player::isInMaster()
+// {
+//     return inMaster;
+// }
+
+bool Player::isStarted()
+{
+    return started;
+}
+
 // write funcs
-ssize_t Player::writeToMe(LURK_MSG lurk_msg,char* data)
+void Player::writeToMe(LURK_MSG lurk_msg,char* data)
 {
     std::cout << "FD: " << socketFD << std::endl;
     std::cout << "DATA: " << data << std::endl;
     ssize_t bytes = 0;
     {
-        std::lock_guard<std::mutex> lock(*pLock);
+        std::lock_guard<std::mutex> lock(pLock);
 
         bytes = write(socketFD,&lurk_msg,sizeof(LURK_MSG));
-        if(bytes < 0){return bytes;}
         bytes = write(socketFD,data,lurk_msg.MSG_LEN);
     }
+    if(bytes < 0){quitPlayer();}
     std::cout << "message sent to: " << charTainer.CHARACTER_NAME << std::endl;
-        return bytes;
+}
+
+void Player::reflection()
+{
+    {
+        std::lock_guard<std::mutex>lock(pLock);
+        write(socketFD,&charTainer,sizeof(LURK_CHARACTER));
+        write(socketFD,desc.c_str(),charTainer.DESC_LENGTH);
+    }
 }

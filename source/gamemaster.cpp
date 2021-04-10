@@ -1,5 +1,7 @@
 #include"../headers/gamemaster.h"
-
+/* TODO:
+    Rewrite gatekeeper()
+ */
 unsigned int Gamemaster::g_seed = 0;
 uint16_t Gamemaster::MAX_BADDIES = 1000;
 uint16_t Gamemaster::MAX_STAT = 4000;
@@ -62,43 +64,48 @@ void Gamemaster::ragequit(Player* p)
     
     printf("MasterPlayerSize (pre-removal): %lu\n",MasterPlayerList.size());
 
-    p->quitter = true;
-    int i = 0;
+    if(p != nullptr)
     {
-        std::lock_guard<std::mutex>lock(GMlock);
-        for(auto t:MasterPlayerList)
+        int i = 0;
+        int tmpFD = 0;
+        int fd = p->getFD();
         {
-            if(p->socketFD == t->socketFD)
+            std::lock_guard<std::mutex>lock(GMlock);
+            for(auto t:MasterPlayerList)
             {
-                MasterPlayerList.erase(MasterPlayerList.begin() + i);
-                p->inMaster = false;
-                break;
-            }
-            i++;
-        }
-        
-        for(auto t:MasterRoomList)
-        {
-            i = 0;
-            std::lock_guard<std::mutex>lock(*t->rLock);
-            for(auto b : t->playerList)
-            {
-                if(p->socketFD == b->socketFD)
+                tmpFD = t->getFD();
+                if(fd == tmpFD)
                 {
-                    t->playerList.erase(t->playerList.begin() + i);
+                    MasterPlayerList.erase(MasterPlayerList.begin() + i);
                     break;
                 }
                 i++;
             }
-        }
-        if(p != nullptr)
+            
+            for(auto t:MasterRoomList)
+            {
+                i = 0;
+                std::lock_guard<std::mutex>lock(t->rLock);
+                for(auto b : t->playerList)
+                {
+                    tmpFD = b->getFD();
+                    if(fd == tmpFD)
+                    {
+                        t->playerList.erase(t->playerList.begin() + i);
+                        // break;
+                    }
+                    i++;
+                }
+            }
             delete p;
-        for(auto t:MasterPlayerList)
-        {
-            if(t->inMaster)
-                GMPM(t,m);
+            for(auto t:MasterPlayerList)
+            {
+                    GMPM(t,m);
+            }
         }
-    }    
+    } else {
+        std::cout << "DEBUG: Player previously deleted!!!\n" << std::endl;
+    }   
         std::cout << fmt::format("Current Player Count: {0}",std::to_string(MasterPlayerList.size()));
         printf("MasterPlayerSize (post-removal): %lu\n",MasterPlayerList.size());
     
@@ -404,133 +411,104 @@ void Gamemaster::GMController(int fd)
     LURK_ERROR lurk_error;
     LURK_GAME lurk_game;
     LURK_VERSION lurk_version;
-    ssize_t bytes; // consider cnd-checking while loops
+    ssize_t bytes = 0;
 
     std::string description = c_m.room_desc.at(0);
     lurk_game.DESC_LENGTH = description.length();
 
     // send initial messages to client
     
-    if(write(fd,&lurk_version,sizeof(LURK_VERSION)) == -1){ragequit(p);return;}
+    bytes = write(fd,&lurk_version,sizeof(LURK_VERSION));
+    bytes = write(fd,&lurk_game,sizeof(LURK_GAME));
+    bytes = write(fd,description.data(),description.length());
 
-    if(write(fd,&lurk_game,sizeof(LURK_GAME)) == -1){ragequit(p);return;}
-    if(write(fd,description.data(),description.length()) == -1){ragequit(p);return;}
-
+    if(bytes < 0){p->quitPlayer();}
     // wait for character message. We do this manually here
-    bool accepted = false; //user has quit.
-    while((!accepted))
+
+    
+    while(!(p->isValidToon()) && p->isSktAlive())
     {// confirm character
         bytes = recv(fd, &typeCheck,1,MSG_WAITALL|MSG_PEEK);
-        if(bytes < 0)
-        {
-            if(p != nullptr)
-                delete p;
-            return;
-        }
+        
+        if(bytes < 0){p->quitPlayer();}
         bool checksOut = false;
+        
         std::cout << "Type: " << typeCheck << std::endl;
         if(typeCheck == 10)
         {
 
             bytes = recv(fd,&p->charTainer,sizeof(LURK_CHARACTER),MSG_WAITALL);
-            if(bytes < 0)
-            {
-                if(p != nullptr)
-                delete p;
-                return;
-            }
+            if(bytes < 0){p->quitPlayer();}
+            
             char tmp[p->charTainer.DESC_LENGTH];
+            
             bytes = recv(fd,tmp,p->charTainer.DESC_LENGTH,MSG_WAITALL);
-            if(bytes < 0)
-            {
-                if(p != nullptr)
-                    delete p;
-                return;
-            }
+            if(bytes < 0){p->quitPlayer();}
+
             tmp[p->charTainer.DESC_LENGTH] = 0;
             p->desc.assign(tmp);
             checksOut = checkStats(p);
+            
+
             if(checksOut == false)
             {
-                // std::cout << "Pump n dumpin' data. Bad stats" << std::endl;
-                // memset(dataDump,0,BIG_BUFFER);
-                // bytes = recv(fd,dataDump,BIG_BUFFER,MSG_DONTWAIT);
                 gatekeeper('d',p,0,4);
-                // m = fmt::format("Whoa let's calm down there with the stats, {0}."
-                // " If you wanted God Mode, all you had to do was ask. [GOD-MODE ACTIVATED]",p->charTainer.CHARACTER_NAME);
-                // GMPM(p,m);
             } else
             {
                 LURK_ACCEPT acpt;
                 acpt.ACCEPT_TYPE = 10;
                 
-                if(write(fd,&acpt,sizeof(LURK_ACCEPT)) == -1){ragequit(p); return;}
+                write(fd,&acpt,sizeof(LURK_ACCEPT));
                 // gatekeeper('a',p,10,0);
-                accepted = true;
+                p->setValid();
             }
         } else {
-            gatekeeper('d',p,0,0);
+                gatekeeper('d',p,0,0);
         }
     }
-    accepted = false;
-    while(!accepted)
+    while(!(p->isStarted()) && p->isSktAlive())
     {// confirm start
         bytes = recv(fd,&typeCheck,1,MSG_WAITALL|MSG_PEEK);
-        if(bytes < 0)
-        {
-            if(p != nullptr)
-                delete p;
-            return;
-        }
+        if(bytes < 0){p->quitPlayer();}
 
-        if(typeCheck == 6)
+        if(typeCheck == 6 && p->isSktAlive())
         {
             uint8_t tmp;
             bytes = recv(fd,&tmp,sizeof(uint8_t),MSG_WAITALL);
-            if(bytes < 0)
-            {
-                if(p != nullptr)
-                    delete p;
-                return;
-            }
-            std::cout << "User has started!: Type(" << typeCheck << ")" << std::endl;
+            if(bytes < 0){p->quitPlayer();}
+
             LURK_ACCEPT acpt;
             acpt.ACCEPT_TYPE = 6;
-            if(write(fd,&acpt,sizeof(LURK_ACCEPT)) == -1){ragequit(p); return;}
-            accepted = true;
+            write(fd,&acpt,sizeof(LURK_ACCEPT));
+            
+            p->startPlayer();
         } else{
-            std::cout << "User has NOT started!: Type(" << typeCheck << ")" << std::endl;
             gatekeeper('d',p,0,5);
         }
     }
     // Any new threads should be considered here.
     // ADD USER TO MASTERPLAYERLIST
-    std::cout << p->charTainer.CHARACTER_NAME << " checks out!" << std::endl;
     {
         std::lock_guard<std::mutex> lock(GMlock);
         MasterPlayerList.emplace_back(p);
         
     }
-    p->inMaster = true;
     printf("Player successfully added to Master: %lu\n",MasterPlayerList.size());
 
-    // push them into Portal Room
+    // push them into Portal Room and send a self character message
+    p->reflection();
     movePlayer(p,0);
-
     // MAIN LISTENING LOOP HERE
-    while(!(p->quitter))
+    while(p->isSktAlive())
     {
         bytes = recv(fd,&typeCheck,1,MSG_WAITALL|MSG_PEEK);
-        if(bytes < 0)
-        {
-            ragequit(p);
-            continue;
-        }
+        if(bytes < 0){p->quitPlayer();}
+
         std::cout << "TypeCheck: " << typeCheck << std::endl;
         mailroom(p,fd,typeCheck);
         // update client with all characters (consider noisy)
-        census(p);
-
+        if(p->isSktAlive()){census(p);}
+        if(p->isSktAlive()){p->reflection();}
     }
     // client most likely closed the socket or some error occured here.
     printf("Lost bytes = recv() comms with peer socket, bytes: %lu\n",bytes);
@@ -539,18 +517,39 @@ void Gamemaster::GMController(int fd)
 
 void Gamemaster::census(Player* p)
 {
-
+    ssize_t bytes = 0;
     std::cout << fmt::format("Updating <{0}> with character list\n",p->charTainer.CHARACTER_NAME);
     {
         std::lock_guard<std::mutex> lock(GMlock);
         for(auto t: MasterPlayerList)
         {
-            std::lock_guard<std::mutex> lock(*p->pLock);
-            if(write(p->socketFD,&(t->charTainer),sizeof(LURK_CHARACTER)) == -1){ragequit(p);return;}
-            if(write(p->socketFD,t->desc.c_str(),t->charTainer.DESC_LENGTH) == -1){ragequit(p);return;}
+            if(p->isSktAlive())
+            {
+                int fd = p->getFD();
+                std::lock_guard<std::mutex> lock(p->pLock);
+                if(strcmp(t->charTainer.CHARACTER_NAME,p->charTainer.CHARACTER_NAME) != 0)
+                {
+                    write(fd,&t->charTainer,sizeof(LURK_CHARACTER));
+                    bytes = write(fd,t->desc.c_str(),t->charTainer.DESC_LENGTH);
+                    if(bytes < 0){p->quitPlayer();}
+                }
+            } else {break;}
+        }
+        for(auto t: MasterPlayerList)
+        {
+            int fd = t->getFD();
+            std::lock_guard<std::mutex> lock(t->pLock);
+            for(auto b: MasterPlayerList)
+            {
+                if(strcmp(t->charTainer.CHARACTER_NAME,b->charTainer.CHARACTER_NAME) != 0)
+                {
+                    write(fd,&b->charTainer,sizeof(LURK_CHARACTER));
+                    bytes = write(fd,b->desc.c_str(),b->charTainer.DESC_LENGTH);
+                    if(bytes < 0 ){t->quitPlayer();}
+                }
+            }
         }
     }
-    
 }
 
 bool Gamemaster::checkStats(Player* p) //bool Gamemaster::checkStats(Player* p)
@@ -571,7 +570,7 @@ bool Gamemaster::checkStats(Player* p) //bool Gamemaster::checkStats(Player* p)
             goto RECHECK;
         }
     }
-    std::cout << p->charTainer.ATTACK << p->charTainer.DEFENSE << p->charTainer.REGEN << std::endl;
+    // std::cout << p->charTainer.ATTACK << p->charTainer.DEFENSE << p->charTainer.REGEN << std::endl;
     uint32_t stat = p->charTainer.ATTACK + p->charTainer.DEFENSE + p->charTainer.REGEN;
     
     p->charTainer.HEALTH = BASE_HEALTH;
@@ -595,29 +594,25 @@ bool Gamemaster::checkStats(Player* p) //bool Gamemaster::checkStats(Player* p)
 void Gamemaster::GMPM(Player* p, std::string& msg)
 {
     GM_MSG gm;
+    int fd = p->getFD();
     gm.MSG_LEN = msg.length();
     ssize_t bytes = 0;
     strncpy(gm.CEIVER_NAME,p->charTainer.CHARACTER_NAME,32);
     {
-        std::lock_guard<std::mutex> lock(*p->pLock);
-        bytes = write(p->socketFD,&gm,sizeof(gm));
-        if(bytes < 0)
-        {
-            ragequit(p);
-            return;
-        }
-        bytes =write(p->socketFD,msg.c_str(),gm.MSG_LEN);
-        if(bytes < 0)
-        {
-            ragequit(p);
-            return;
-        }
+        std::lock_guard<std::mutex> lock(p->pLock);
+        write(fd,&gm,sizeof(GM_MSG));
+        bytes = write(fd,msg.c_str(),gm.MSG_LEN);
+        if(bytes < 0){p->quitPlayer();}
     }
 }
 
 void Gamemaster::movePlayer(Player* p, int newRoom)
 {
-    MasterRoomList.at(p->charTainer.CURRENT_ROOM_NUMBER)->removePlayer(p);
+    if(!(p->isFreshSpawn()))
+    {
+        MasterRoomList.at(p->charTainer.CURRENT_ROOM_NUMBER)->removePlayer(p);
+        p->despawn();
+    }
     p->charTainer.CURRENT_ROOM_NUMBER = newRoom;
     MasterRoomList.at(p->charTainer.CURRENT_ROOM_NUMBER)->addPlayer(p);
 }
@@ -627,18 +622,28 @@ void Gamemaster::mailroom(Player* p,int fd,int32_t type)
     // LURK_MSG lurk_msg;
     ssize_t bytes;
     uint8_t trashBit;
+    char* data;
     // bool leaver = false;
     switch(type)
     {
         case 1:
-        {// MESSAGE (REWORK THIS)
+        {
             LURK_MSG lurk_msg;
-           if(bytes = recv(fd,&lurk_msg,sizeof(LURK_MSG),MSG_WAITALL) < 0){ragequit(p);break;}
-            char data[lurk_msg.MSG_LEN];
-            if(bytes = recv(fd,data,lurk_msg.MSG_LEN,MSG_WAITALL) < 0){ragequit(p);break;}
-            data[lurk_msg.MSG_LEN] = 0;
-            postman(p,lurk_msg,data);
-            // std::string s(data, lurk_msg.MSG_LEN);
+            bytes = recv(fd,&lurk_msg,sizeof(LURK_MSG),MSG_WAITALL);
+            if(bytes < 0)
+            {
+                p->quitPlayer();
+            }else{
+                memset(data,0,lurk_msg.MSG_LEN + 1);
+            }
+
+            bytes = recv(fd,data,lurk_msg.MSG_LEN,MSG_WAITALL);
+            if(bytes < 0)
+            {
+                p->quitPlayer();
+            }else{
+                postman(p,lurk_msg,data);
+            }
             break;
         }
         case 2:
@@ -746,89 +751,140 @@ void Gamemaster::postman(Player* sender,LURK_MSG lurk_msg,char* data)
     if(!found){gatekeeper('d',sender,0,6);}
 }
 
-void Gamemaster::gatekeeper(char ad,Player* t,uint8_t action,uint8_t err)
+void Gamemaster::actionFail(Player* p, uint8_t type)
 {
-    if(ad == 'a')
-    {// action accepted
-        LURK_ACCEPT la;
-        la.ACCEPT_TYPE = action;
-        {
-            std::lock_guard<std::mutex> lock(*t->pLock);
-            if(write(t->socketFD,&la,sizeof(LURK_ACCEPT)) < 0){ragequit(t);return;}
+    uint8_t code;
+    std::string m;
+    ssize_t bytes = 0;
+    LURK_ERROR pkg;
+    switch(type)
+    {
+        case 2:
+        {// failed changeRoom
+            pkg.CODE = 1;
+            int dex = (fast_rand() % c_m.weapons.size());
+            m = fmt::format("\nYou attempt to pass through to the next room, but you trip over a {0} instead!\n",c_m.weapons.at(dex));
+            pkg.MSG_LEN = m.length();
+            {
+                std::lock_guard<std::mutex>lock(p->pLock);
+                write(p->getFD(),&pkg,sizeof(LURK_ERROR));
+                bytes = write(p->getFD(),m.c_str(),pkg.MSG_LEN);
+            }
+            if(bytes < 0){p->quitPlayer();}
+            break;
         }
-    } else if(ad == 'd')
-    {// action declined
-        LURK_ERROR le;
-        le.CODE = err;
-        std::string desc = c_m.error.at(err);
-        le.MSG_LEN = desc.length();
-        {
-            std::lock_guard<std::mutex> lock(*t->pLock);
-            if(write(t->socketFD,&le,sizeof(LURK_ERROR)) < 0){ragequit(t);return;}
-            if(write(t->socketFD,desc.c_str(),le.MSG_LEN) < 0){ragequit(t);return;}
+        case 3:
+        {// failed fight
+            pkg.CODE = 7;
+            int dex = (fast_rand() % c_m.food.size());
+            m = fmt::format("\nYou swing with all your might, but nobody is here! You eat some {0} instead! Tasty.\n",c_m.food.at(dex));
+            pkg.MSG_LEN = m.length();
+            {
+                std::lock_guard<std::mutex>lock(p->pLock);
+                write(p->getFD(), &pkg,sizeof(LURK_ERROR));
+                bytes = write(p->getFD(),m.c_str(),pkg.MSG_LEN);
+            }
+            if(bytes < 0){p->quitPlayer();}
+            break;
         }
+        case 5:
+        {// failed loot monster
+            pkg.CODE = 3;
+            int size = MasterRoomList.at(p->charTainer.CURRENT_ROOM_NUMBER)->baddieList.size();
+            if(p->isStarted() && size != 0)
+            {
+                std::string baddie = MasterRoomList.at(p->charTainer.CURRENT_ROOM_NUMBER)->baddieList
+                    .at(fast_rand() % size)
+                    .bTainer.CHARACTER_NAME;
+                m = fmt::format("\nYou attempt to loot that baddie, but {0} catches you in the act. YIKES!\n",baddie);
+                pkg.MSG_LEN = m.length();
+                {
+                    std::lock_guard<std::mutex>lock(p->pLock);
+                    write(p->getFD(),&pkg,sizeof(LURK_ERROR));
+                    bytes = write(p->getFD(),m.c_str(),pkg.MSG_LEN);
+                }
+                
+            } else {
+                m = fmt::format("\nYou attempt to loot that baddie, but have a change of mind... probably because he isn't there.\n");
+                pkg.MSG_LEN = m.length();
+                {
+                    std::lock_guard<std::mutex>lock(p->pLock);
+                    write(p->getFD(),&pkg,sizeof(LURK_ERROR));
+                    bytes = write(p->getFD(),m.c_str(),pkg.MSG_LEN);
+                }
+            }
+            if(bytes < 0){p->quitPlayer();}
+            break;
+        }
+        case 10:
+        {// failed stat check
+            pkg.CODE = 4;
+            int dexOne = (fast_rand() % c_m.weapons.size());
+            int dexTwo = (fast_rand() % c_m.food.size());
+            m = fmt::format("\nYou successfully get away with inappropriate stats," 
+                "but you trip on a {0} while you gobble down some {1}.. resetting your stats to 0!\n",
+                c_m.weapons.at(dexOne),c_m.food.at(dexTwo));
+            pkg.MSG_LEN = m.length();
+
+            {
+                std::lock_guard<std::mutex>lock(p->pLock);
+                write(p->getFD(),&pkg,sizeof(LURK_ERROR));
+                bytes = write(p->getFD(),m.c_str(),pkg.MSG_LEN);
+            }
+            if(bytes < 0){p->quitPlayer();}
+            break;
+        }
+        case 24:
+        {// failed not ready
+            pkg.CODE = 5;
+            m = fmt::format("\nYou attempt to do something wild, but you're just not ready yet.\n");
+            pkg.MSG_LEN = m.length();
+            {
+                std::lock_guard<std::mutex>lock(p->pLock);
+                write(p->getFD(),&pkg,sizeof(LURK_ERROR));
+                bytes = write(p->getFD(),m.c_str(),pkg.MSG_LEN);
+            }
+            if(bytes < 0){p->quitPlayer();}
+            break;
+        }
+        case 26:
+        {
+            pkg.CODE = 6;
+            m = fmt::format("\nYou try to call out a name, but either you're mistaken... or nobody is here.\n");
+            pkg.MSG_LEN = m.length();
+            {
+                std::lock_guard<std::mutex>lock(p->pLock);
+                write(p->getFD(),&pkg,sizeof(LURK_ERROR));
+                bytes = write(p->getFD(),m.c_str(),pkg.MSG_LEN);
+            }
+            if(bytes < 0){p->quitPlayer();}
+            break;    
+        }
+        default:
+        {
+            pkg.CODE = 0;
+            m = fmt::format("\nYou attempt something silly, and silly you did..."
+                "but checking the protocol, you see the error of your ways <Sent Type: {0}>.\n",std::to_string(type));
+            pkg.MSG_LEN = m.length();
+            {
+                std::lock_guard<std::mutex>lock(p->pLock);
+                write(p->getFD(),&pkg,sizeof(LURK_ERROR));
+                bytes = write(p->getFD(),m.c_str(),pkg.MSG_LEN);
+            }
+            if(bytes < 0){p->quitPlayer();}
+        }
+        
     }
 }
+
+void Gamemaster::actionPass(Player* p, uint8_t type)
+{
+    ssize_t bytes = 0;
+    LURK_ACCEPT pkg;
+    pkg.ACCEPT_TYPE = type;
+    std::lock_guard<std::mutex>lock(p->pLock);
+    write(p->getFD(),&pkg,sizeof(LURK_ACCEPT));
+}
+
 //END network functions ////////
 
-
-/* 
-USEFUL CLIPS:
-std::lock_guard<std::mutex> lock(*t->pLock);
-memset(dataDump, 0, BIG_BUFFER);
-ERROR CODES:
-0	Other (not covered by any below error code)
-1	Bad room
-2	Player Exists
-3	Bad Monster
-4	Stat error
-5	Not Ready
-6	No target
-7	No fight
-8	No player vs. player
-
-*/
-
-    // while(!softStop)
-    // {
-    //     bytes = recv(fd,&typeCheck,1,MSG_WAITALL|MSG_PEEK);
-    //     std::cout << "typeCheck: " << typeCheck << std::endl;
-    //     if(typeCheck != 10)
-    //     {
-    //         printf("Invalid type received: %d\n",typeCheck);
-    //         memset(dataDump, 0, BIG_BUFFER);
-    //         bytes = recv(fd,dataDump,BIG_BUFFER,MSG_DONTWAIT); // DOUBLE CHECK dataDump
-    //         std::string errorMsg = "Incorrect Type. Expecting Type: 10";
-    //         lurk_error.MSG_LEN = errorMsg.length();
-    //         lurk_error.CODE = 0;
-    //         write(fd,&lurk_error,sizeof(LURK_ERROR));
-    //         write(fd,errorMsg.c_str(),lurk_error.MSG_LEN);
-    //         continue;
-    //     }
-    //     printf("Valid type received: %d\n",typeCheck);
-
-    //     //attempt to assemble character.
-    //     bytes = recv(fd,&p.charTainer,sizeof(LURK_CHARACTER),MSG_WAITALL);
-
-    //     if(p.charTainer.DESC_LENGTH > 1000)
-    //     {
-    //         printf("Invalid Description Length (too big): %d\n",p.charTainer.DESC_LENGTH);
-    //         memset(dataDump,0,BIG_BUFFER);
-    //         bytes = recv(fd,&dataDump,BIG_BUFFER,MSG_DONTWAIT);
-    //         std::string errorMsg = "Please limit description length to 1000 characters. (You psycho.)";
-    //         lurk_error.MSG_LEN = errorMsg.length();
-    //         lurk_error.CODE = 0;
-    //         write(fd,&lurk_error,sizeof(LURK_ERROR));
-    //         write(fd,errorMsg.c_str(),lurk_error.MSG_LEN);
-            
-    //         continue;
-    //     }
-
-    //     char data[p.charTainer.DESC_LENGTH];
-    //     bytes = recv(fd,&data,p.charTainer.DESC_LENGTH,MSG_WAITALL);
-    //     data[p.charTainer.DESC_LENGTH] = 0;
-        
-    //     p.desc.assign(data);
-    //     softStop = true;
-    //     MasterPlayerList.emplace_back(p);
-    // }

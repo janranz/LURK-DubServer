@@ -10,21 +10,43 @@
 class Player
 {
     private:
-    
-    
-    
+    int socketFD;
+    bool sktAlive;
+    bool started;
+    bool validToon;
+    // bool inMaster;
+    bool freshSpawn;
+    // SET INITIAL HEALTH STATS ETC
     public:
     LURK_CHARACTER charTainer;
     std::string desc;
-    std::shared_ptr<std::mutex> pLock;
-    int socketFD;
-    bool quitter;
-    bool inMaster;
+    // std::shared_ptr<std::mutex> pLock;
+    std::mutex pLock;
+    
+    
+    
     Player(int);
     ~Player();
+    
+    //states
+    bool isInMaster();
+    bool isSktAlive();
+    bool isStarted();
+    bool isValidToon();
+    bool isFreshSpawn();
+
+    void startPlayer();
+    void quitPlayer();
+    // void setMaster();
+    void setValid();
+    void spawn();
+    void despawn();
+
+    int getFD();
     //read
     //write
-    ssize_t writeToMe(LURK_MSG,char*);
+    void writeToMe(LURK_MSG,char*);
+    void reflection();
 };
 
 
