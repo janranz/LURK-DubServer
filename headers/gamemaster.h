@@ -15,6 +15,8 @@
 #include<mutex>
 #include<memory>
 #include<limits>
+#include<bitset>
+#include<cassert>
 #include"../headers/fmt/format.h"
 
 
@@ -46,7 +48,7 @@ class Gamemaster
         static uint16_t BADDIE_DESC_SIZE;
         static uint16_t ROOM_DESC_SIZE;
         // use dataDump with memset() to attempt to clear client's skt buffer in case of err.
-        char dataDump[BIG_BUFFER];
+        
         chatter_messages c_m;
         std::vector<Baddie> BDSpawner;
         

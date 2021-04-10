@@ -57,11 +57,16 @@ Gamemaster::~Gamemaster()
 
 void Gamemaster::ragequit(Player* p)
 {// player has quit
-    std::cout << fmt::format("<{0} has ragequit from room: {1}>\n",
-        p->charTainer.CHARACTER_NAME,std::to_string(p->charTainer.CURRENT_ROOM_NUMBER));
-    std::string m = fmt::format("Our beloved <{0}> has given up and ragequit!\n She were last seen in Room #<{1}>\n",
-        p->charTainer.CHARACTER_NAME,std::to_string(p->charTainer.CURRENT_ROOM_NUMBER));
-    
+    std::string m;
+    if(p->isStarted())
+    {
+        m = fmt::format("Our beloved {0} has given up!\n They were last seen in Room #{1}\n",
+            p->charTainer.CHARACTER_NAME,std::to_string(p->charTainer.CURRENT_ROOM_NUMBER));
+        std::cout << m << std::endl;
+    } else {
+        m = fmt::format("An unknown player has had a change of mind prior to starting and has given up!\n");
+    }
+
     printf("MasterPlayerSize (pre-removal): %lu\n",MasterPlayerList.size());
 
     if(p != nullptr)
@@ -406,7 +411,7 @@ void Gamemaster::GMController(int fd)
     Player* p = new Player(fd);
     
     std::string m;
-    int32_t typeCheck = 0;
+    uint8_t typeCheck = 0;
     LURK_ACCEPT lurk_accept;
     LURK_ERROR lurk_error;
     LURK_GAME lurk_game;
@@ -418,74 +423,82 @@ void Gamemaster::GMController(int fd)
 
     // send initial messages to client
     
-    bytes = write(fd,&lurk_version,sizeof(LURK_VERSION));
-    bytes = write(fd,&lurk_game,sizeof(LURK_GAME));
+    write(fd,&lurk_version,sizeof(LURK_VERSION));
+    write(fd,&lurk_game,sizeof(LURK_GAME));
     bytes = write(fd,description.data(),description.length());
 
     if(bytes < 0){p->quitPlayer();}
-    // wait for character message. We do this manually here
 
-    
     while(!(p->isValidToon()) && p->isSktAlive())
     {// confirm character
+        char* tmp = NULL;
         bytes = recv(fd, &typeCheck,1,MSG_WAITALL|MSG_PEEK);
-        
         if(bytes < 0){p->quitPlayer();}
+
         bool checksOut = false;
-        
-        std::cout << "Type: " << typeCheck << std::endl;
-        if(typeCheck == 10)
+        if( p->isSktAlive() && typeCheck == 10)
         {
 
             bytes = recv(fd,&p->charTainer,sizeof(LURK_CHARACTER),MSG_WAITALL);
-            if(bytes < 0){p->quitPlayer();}
-            
-            char tmp[p->charTainer.DESC_LENGTH];
-            
-            bytes = recv(fd,tmp,p->charTainer.DESC_LENGTH,MSG_WAITALL);
-            if(bytes < 0){p->quitPlayer();}
+            if(bytes < 0)
+            {
+                p->quitPlayer();
+            }else {
+                memset(tmp,0,p->charTainer.DESC_LENGTH + 1);
+            }
 
-            tmp[p->charTainer.DESC_LENGTH] = 0;
-            p->desc.assign(tmp);
-            checksOut = checkStats(p);
+            bytes = recv(fd,tmp,p->charTainer.DESC_LENGTH,MSG_WAITALL);
+            if(bytes < 0)
+            {
+                p->quitPlayer();
+            }else{
+                p->desc.assign(tmp);
+            }
             
+            checksOut = checkStats(p);
 
             if(checksOut == false)
             {
-                gatekeeper('d',p,0,4);
+                actionFail(p,10);
             } else
             {
-                LURK_ACCEPT acpt;
-                acpt.ACCEPT_TYPE = 10;
-                
-                write(fd,&acpt,sizeof(LURK_ACCEPT));
-                // gatekeeper('a',p,10,0);
+                actionPass(p,10);
                 p->setValid();
+                p->reflection();
             }
         } else {
-                gatekeeper('d',p,0,0);
+                uint8_t trash;
+                bytes = recv(fd,&trash,sizeof(uint8_t),MSG_WAITALL);
+                if(bytes < 0)
+                {
+                    p->quitPlayer();
+                }else{
+                    actionFail(p,trash);
+                }
+                
         }
     }
     while(!(p->isStarted()) && p->isSktAlive())
     {// confirm start
-        bytes = recv(fd,&typeCheck,1,MSG_WAITALL|MSG_PEEK);
+        bytes = recv(fd,&typeCheck,sizeof(typeCheck),MSG_WAITALL|MSG_PEEK);
         if(bytes < 0){p->quitPlayer();}
 
         if(typeCheck == 6 && p->isSktAlive())
         {
             uint8_t tmp;
             bytes = recv(fd,&tmp,sizeof(uint8_t),MSG_WAITALL);
-            if(bytes < 0){p->quitPlayer();}
-
-            LURK_ACCEPT acpt;
-            acpt.ACCEPT_TYPE = 6;
-            write(fd,&acpt,sizeof(LURK_ACCEPT));
-            
+            if(bytes < 0)
+            {
+                p->quitPlayer();
+            }
+            actionPass(p,typeCheck);
+            p->reflection();
             p->startPlayer();
         } else{
-            gatekeeper('d',p,0,5);
+            actionFail(p,24);
         }
     }
+
     // Any new threads should be considered here.
     // ADD USER TO MASTERPLAYERLIST
     {
@@ -496,7 +509,7 @@ void Gamemaster::GMController(int fd)
     printf("Player successfully added to Master: %lu\n",MasterPlayerList.size());
 
     // push them into Portal Room and send a self character message
-    p->reflection();
+    // p->reflection();
     movePlayer(p,0);
     // MAIN LISTENING LOOP HERE
     while(p->isSktAlive())
@@ -554,7 +567,14 @@ void Gamemaster::census(Player* p)
 
 bool Gamemaster::checkStats(Player* p) //bool Gamemaster::checkStats(Player* p)
 {
+    /*
+        Flags: uint8_t [Alive | J_B | Monster | Started | Read | RES | RES | RES]
+        Player (fresh spawn): 0b11001000
+
+    */
     // check name conflicts
+    if(!p->isSktAlive())
+        return false;
     std::cout << "Checking stats" << std::endl;
     RECHECK:
     for(auto t : MasterPlayerList)
@@ -583,7 +603,7 @@ bool Gamemaster::checkStats(Player* p) //bool Gamemaster::checkStats(Player* p)
         uint32_t dif = MAX_STAT - stat;
         p->charTainer.HEALTH += dif;
     }
-    p->charTainer.FLAGS = 0b11001000; // 200
+    p->charTainer.FLAGS = 0b11001000;
     p->charTainer.GOLD = (fast_rand() & ((4200 - 69) + 69));
     p->charTainer.CURRENT_ROOM_NUMBER = 0;
     std::cout << "Appropriate stats: " << stat << std::endl;
@@ -621,8 +641,7 @@ void Gamemaster::mailroom(Player* p,int fd,int32_t type)
 {// process client data (Since mutex is a shared_ptr, try and lock it via MasterPlayerList?)
     // LURK_MSG lurk_msg;
     ssize_t bytes;
-    uint8_t trashBit;
-    char* data;
+    char* data = NULL;
     // bool leaver = false;
     switch(type)
     {
@@ -649,114 +668,253 @@ void Gamemaster::mailroom(Player* p,int fd,int32_t type)
         case 2:
         {// CHANGEROOM
             LURK_CHANGEROOM changeRoom;
-            if(bytes = recv(fd,&changeRoom,sizeof(LURK_CHANGEROOM),MSG_WAITALL) < 0){ragequit(p);break;}
-            std::cout << fmt::format("Changeroom: {0} | Current: {1}\n",std::to_string(changeRoom.ROOM_NUMBER),std::to_string(p->charTainer.CURRENT_ROOM_NUMBER));
-            ;
-            for(auto t : MasterRoomList.at(p->charTainer.CURRENT_ROOM_NUMBER)->connectedRooms)
+            bool found = false;
+            bytes = recv(fd,&changeRoom,sizeof(LURK_CHANGEROOM),MSG_WAITALL);
+            if(bytes < 0)
             {
-                std::cout << fmt::format("Changeroom: {0} | {1}\n",std::to_string(changeRoom.ROOM_NUMBER),std::to_string(t->ROOM_NUMBER));
-                if(t->ROOM_NUMBER == changeRoom.ROOM_NUMBER)
+                p->quitPlayer();
+            }else{
+                std::lock_guard<std::mutex>lock(GMlock);
+                for(auto t : MasterRoomList)
                 {
-                    movePlayer(p,changeRoom.ROOM_NUMBER);
-                    break;
-                } else {
-                    gatekeeper('d',p,type,1);
+                    for(auto b : t->connectedRooms)
+                    {
+                        if(b->ROOM_NUMBER == changeRoom.ROOM_NUMBER)
+                        {
+                            movePlayer(p,b->ROOM_NUMBER);
+                            actionPass(p,type);
+                            found = true;
+                            break;
+                        }
+                    }
+                    if(found)
+                        break;
                 }
+                if(!found)
+                    actionFail(p,type);
             }
             break;
         }
         case 3:
         {// FIGHT
             uint8_t tmp;
-            if(bytes = recv(fd,&tmp,sizeof(uint8_t),MSG_WAITALL) < 0){ragequit(p);break;}
-            std::cout << p->charTainer.CHARACTER_NAME << " STARTS BEEF" << std::endl;
-            gatekeeper('a',p,type,0);
+            bytes = recv(fd,&tmp,sizeof(uint8_t),MSG_WAITALL);
+            if(bytes < 0)
+            {
+                p->quitPlayer();
+            } else {
+                // some fight functionality
+                int rm = p->charTainer.CURRENT_ROOM_NUMBER;
+                int bDex,cDex;
+                std::string m;
+                {
+                    std::lock_guard<std::mutex>lock(MasterRoomList.at(rm)->rLock); // consider where this lock belongs
+
+                    bDex = (fast_rand() % c_m.weapons.size());
+                    cDex = (fast_rand() % c_m.food.size());
+                    if(MasterRoomList.at(rm)->baddieList.size() > 0)
+                    {
+                        actionPass(p,type);
+                        bDex = (fast_rand() % MasterRoomList.at(rm)->baddieList.size());
+                        std::string baddie = MasterRoomList.at(rm)->baddieList.at(bDex).bTainer.CHARACTER_NAME;
+                        m = fmt::format("{0} grabs a {1} and pummels {2} over the head, dealing damage!"
+                        " as the baddie explodes, he drops some {3}\n",
+                        p->charTainer.CHARACTER_NAME, c_m.weapons.at(bDex), c_m.food.at(cDex));
+                    } else{
+                        actionFail(p,type);
+                        m = fmt::format("{0}, starts swinging in a fit of rage, but targets absolutely nothing..."
+                        " How embarrassing! They calm down and snack on some {1} instead\n",
+                        p->charTainer.CHARACTER_NAME,c_m.food.at(cDex));
+                    }
+                    for(auto t : MasterRoomList.at(rm)->playerList)
+                    {
+                        GMPM(t,m);
+                    }
+                }
+                
+            }
             break;
         }
         case 4:
         {// PVP
             LURK_PVP lurk_pvp;
-            if(bytes = recv(fd,&lurk_pvp,sizeof(LURK_PVP),MSG_WAITALL) < 0){ragequit(p);break;}
-            std::cout << p->charTainer.CHARACTER_NAME
-                      << " WANTS TO FIGHT " << lurk_pvp.TARGET << std::endl;
-            gatekeeper('a',p,type,0);
+            std::string m;
+            bytes = recv(fd,&lurk_pvp,sizeof(LURK_PVP), MSG_WAITALL);
+            if(bytes < 0)
+            {
+                p->quitPlayer();
+            }else{
+                int rm = p->charTainer.CURRENT_ROOM_NUMBER;
+                // int aDex, bDex, cDex;
+                bool found = false;
+                {
+                    std::lock_guard<std::mutex>lock(MasterRoomList.at(rm)->rLock);
+                        for(auto t: MasterRoomList.at(rm)->playerList)
+                        {
+                            if(strcmp(t->charTainer.CHARACTER_NAME,lurk_pvp.TARGET) == 0)
+                            { // TARGET AQUIRED
+                                m = fmt::format("{0} bops {1} in the head with a {2}!\n",
+                                p->charTainer.CHARACTER_NAME,t->charTainer.CHARACTER_NAME,
+                                c_m.weapons.at(fast_rand() % c_m.weapons.size()));
+                                found = true;
+                                break;
+                            }
+                        }
+                        if(found)
+                        {
+                            actionPass(p,type);
+                        } else {
+                            actionFail(p,type);
+                            m = fmt::format("{0} swings at absolutely nothing because that player doesn't exist!\n",
+                            p->charTainer.CHARACTER_NAME);
+                        }
+                        for(auto t: MasterRoomList.at(rm)->playerList)
+                        {
+                            GMPM(t,m);
+                        }
+                }
+            }
             break;
         }
         case 5:
-        {// LOOT
+        {// LOOT Player only for now, needs baddies.
             LURK_LOOT lurk_loot;
-            if(bytes = recv(fd,&lurk_loot,sizeof(LURK_LOOT),MSG_WAITALL) < 0){ragequit(p);break;}
-            std::cout << p->charTainer.CHARACTER_NAME
-                      << " WANTS TO LOOT " << lurk_loot.TARGET << std::endl;
-            gatekeeper('a',p,type,0);
+            std::string m;
+            bytes = recv(fd,&lurk_loot,sizeof(LURK_LOOT), MSG_WAITALL);
+            if(bytes < 0)
+            {
+                p->quitPlayer();
+            }else{
+                int rm = p->charTainer.CURRENT_ROOM_NUMBER;
+                // int aDex, bDex, cDex;
+                bool found = false;
+                {
+                    std::lock_guard<std::mutex>lock(MasterRoomList.at(rm)->rLock);
+                        for(auto t: MasterRoomList.at(rm)->playerList)
+                        {
+                            if(strcmp(t->charTainer.CHARACTER_NAME,lurk_loot.TARGET) == 0)
+                            { // TARGET AQUIRED
+                                m = fmt::format("{0} dips their hands into {1}'s pockets! {1} reaches for a {2} and"
+                                " swings at {0}, but misses miserably.\n",
+                                p->charTainer.CHARACTER_NAME,t->charTainer.CHARACTER_NAME,
+                                c_m.weapons.at(fast_rand() % c_m.weapons.size()));
+                                found = true;
+                                break;
+                            }
+                        }
+                        if(found)
+                        {
+                            actionPass(p,type);
+                        } else {
+                            actionFail(p,type);
+                            m = fmt::format("{0} dips their hands into their own pockets as they fail to find {1}!\n",
+                            p->charTainer.CHARACTER_NAME,lurk_loot.TARGET);
+                        }
+                        for(auto t: MasterRoomList.at(rm)->playerList)
+                        {
+                            GMPM(t,m);
+                        }
+                }
+            }
             break;
         }
         case 6:
         {// START
             uint8_t tmp;
-            if(bytes = recv(fd,&tmp,sizeof(uint8_t),MSG_WAITALL) < 0){ragequit(p);break;}
-            // do something to here to throw user into the game.
-            std::cout << p->charTainer.CHARACTER_NAME << " requests a start" << std::endl;
-            gatekeeper('a',p,type,0);
-            break;
-        }
-        case 12:
-        {// LEAVE (Consider cleanup!)
-            uint8_t tmp;
-            if(bytes = recv(fd,&tmp,sizeof(uint8_t),MSG_WAITALL) < 0){ragequit(p);break;}
-            std::cout << p->charTainer.CHARACTER_NAME
-                      << " User has requested to leave gracefully" << std::endl;
-            gatekeeper('a',p,type,0);
-            //clean up... try
-            ragequit(p);
+            bytes = recv(fd,&tmp,sizeof(uint8_t),MSG_WAITALL);
+            if(bytes < 0)
+            {
+                p->quitPlayer();
+            }else{
+                actionPass(p,type);
+                std::string m = fmt::format("You reach into your pocket and pull out a glowy orb...\n"
+                "As you smash it on the ground, a portal opens and you return to the Portal room!\n");
+                GMPM(p,m);
+                movePlayer(p,0);
+            }
             break;
         }
         case 10:
         {// CHARACTER (bitset check state of JOIN_BATTLE ONLY)
             LURK_CHARACTER lurk_char;
-            if(bytes = recv(fd,&lurk_char,sizeof(LURK_CHARACTER),MSG_WAITALL) < 0){ragequit(p);break;}
-            std::cout << p->charTainer.CHARACTER_NAME
-                      << " sends a character message. let's check her flags for JB" << std::endl;
-            gatekeeper('a',p,type,0);
+            bytes = recv(fd,&lurk_char,sizeof(LURK_CHARACTER),MSG_WAITALL);
+            if(bytes < 0)
+            {
+                p->quitPlayer();
+            } else {
+                std::bitset<8>newFlag{lurk_char.FLAGS};
+                std::bitset<8>currFlag{p->charTainer.FLAGS};
+                
+                (newFlag[6]) ? currFlag.set(6,true) : currFlag.set(6,false);
+                
+                std::cout << fmt::format("{0} Is attempting to set their JB flag (before): {1}",
+                p->charTainer.CHARACTER_NAME,p->charTainer.FLAGS);
+                p->charTainer.FLAGS = static_cast<uint8_t>(currFlag.to_ulong());
+                std::cout << fmt::format("{0} Has successfully set their JB Flag: {1}",
+                p->charTainer.CHARACTER_NAME,p->charTainer.FLAGS);
+                actionPass(p,type);
+            }
+            break;
+        }
+        case 12:
+        {// LEAVE (graceful)
+            uint8_t tmp;
+            bytes = recv(fd,&tmp,sizeof(uint8_t),MSG_WAITALL);
+            actionPass(p,type);
+            if(p->isSktAlive())
+            {
+                std::string m = fmt::format("You have chosen to leave gracefully, and as the server owner, I salute you, {0}\n"
+                "A portal opens up, a bright light blasts you in the face, and you make good your escape. Goodbye!\n",
+                p->charTainer.CHARACTER_NAME);
+                GMPM(p,m);
+            }
+            p->quitPlayer();
             break;
         }
         default:
         {
             uint8_t tossByte;
-            if(bytes = recv(fd,&tossByte,sizeof(uint8_t),MSG_WAITALL) < 0){ragequit(p);break;}
-            std::cout << fmt::format("Received bad Type from: {0} Type: {1}",p->charTainer.CHARACTER_NAME, std::to_string(tossByte));
-            gatekeeper('d',p,type,0);
+            bytes = recv(fd,&tossByte,sizeof(uint8_t),MSG_WAITALL);
+            std::cout << fmt::format("{0} sent a bad type: {1}",p->charTainer.CHARACTER_NAME,std::to_string(tossByte));
+            
+            actionFail(p,tossByte);
         }
     }
 }
 
-void Gamemaster::postman(Player* sender,LURK_MSG lurk_msg,char* data)
+void Gamemaster::postman(Player* p,LURK_MSG lurk_msg,char* data)
 {// consider if a lock should be implemented, protecting MastPlayerList from manip
-    bool found = false;
-
+    ssize_t bytes = 0;
     {
         std::lock_guard<std::mutex> lock(GMlock);
         for(auto t:MasterPlayerList)
         {
             if(strcmp(t->charTainer.CHARACTER_NAME,lurk_msg.CEIVER_NAME) == 0)
             {
-                if(t->writeToMe(lurk_msg,data) < 0){ragequit(t);return;}
-                if(sender->writeToMe(lurk_msg,data) < 0){ragequit(sender);return;}
-                gatekeeper('a',sender,1,0);
-                found = true;
+                {
+                    std::lock_guard<std::mutex>lock(t->pLock);
+                    write(t->getFD(),&lurk_msg,sizeof(LURK_MSG));
+                    bytes = write(t->getFD(),data,lurk_msg.MSG_LEN);
+                }
+                actionPass(p,1);
+                if(bytes < 0){t->quitPlayer();}
                 break;
+            } else {
+                actionFail(p,26);
             }
         }
     }
-    if(!found){gatekeeper('d',sender,0,6);}
+    
 }
 
 void Gamemaster::actionFail(Player* p, uint8_t type)
 {
-    uint8_t code;
     std::string m;
     ssize_t bytes = 0;
     LURK_ERROR pkg;
+    if(!p->isSktAlive())
+        return;
+
     switch(type)
     {
         case 2:
@@ -848,7 +1006,7 @@ void Gamemaster::actionFail(Player* p, uint8_t type)
             break;
         }
         case 26:
-        {
+        {// failed player target
             pkg.CODE = 6;
             m = fmt::format("\nYou try to call out a name, but either you're mistaken... or nobody is here.\n");
             pkg.MSG_LEN = m.length();
@@ -879,11 +1037,16 @@ void Gamemaster::actionFail(Player* p, uint8_t type)
 
 void Gamemaster::actionPass(Player* p, uint8_t type)
 {
-    ssize_t bytes = 0;
-    LURK_ACCEPT pkg;
-    pkg.ACCEPT_TYPE = type;
-    std::lock_guard<std::mutex>lock(p->pLock);
-    write(p->getFD(),&pkg,sizeof(LURK_ACCEPT));
+    if(p->isSktAlive())
+    {
+        ssize_t bytes = 0;
+        LURK_ACCEPT pkg;
+        pkg.ACCEPT_TYPE = type;
+        std::lock_guard<std::mutex>lock(p->pLock);
+        bytes = write(p->getFD(),&pkg,sizeof(LURK_ACCEPT));
+        if(bytes < 0){p->quitPlayer();}
+    }
+
 }
 
 //END network functions ////////

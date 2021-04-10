@@ -6,7 +6,6 @@ Player::Player(int s)
     std::cout << "Player created socket: "<< s << std::endl;
     socketFD = s;
     sktAlive = true;
-    inMaster = false;
     started = false;
     validToon = false;
     freshSpawn = false;
@@ -15,6 +14,11 @@ Player::~Player()
 {
     
     // std::cout << "Player destroyed." << std::endl;
+}
+
+int Player::getFD()
+{
+    return socketFD;
 }
 
 // set states
@@ -60,6 +64,11 @@ bool Player::isSktAlive()
     return sktAlive;
 }
 
+bool Player::isFreshSpawn()
+{
+    return freshSpawn;
+}
+
 // bool Player::isInMaster()
 // {
 //     return inMaster;
@@ -73,6 +82,8 @@ bool Player::isStarted()
 // write funcs
 void Player::writeToMe(LURK_MSG lurk_msg,char* data)
 {
+    if(!sktAlive)
+        return;
     std::cout << "FD: " << socketFD << std::endl;
     std::cout << "DATA: " << data << std::endl;
     ssize_t bytes = 0;
@@ -88,6 +99,7 @@ void Player::writeToMe(LURK_MSG lurk_msg,char* data)
 
 void Player::reflection()
 {
+    if(sktAlive)
     {
         std::lock_guard<std::mutex>lock(pLock);
         write(socketFD,&charTainer,sizeof(LURK_CHARACTER));

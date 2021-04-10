@@ -5,8 +5,6 @@
 #include<vector>
 #include<cstdint>
 
-#define BIG_BUFFER 1024*1024
-
 struct chatter_messages
 {
     std::vector<std::string> awaken,baddies,danger,death,error,fightHit,food,health,
