@@ -76,33 +76,40 @@ void Gamemaster::ragequit(Player* p)
         int fd = p->getFD();
         {
             std::lock_guard<std::mutex>lock(GMlock);
-            for(auto t:MasterPlayerList)
+            for(auto t = MasterPlayerList.begin(); t != MasterPlayerList.end(); ++t)
             {
-                tmpFD = t->getFD();
+                tmpFD = (*t)->getFD();
                 if(fd == tmpFD)
                 {
                     MasterPlayerList.erase(MasterPlayerList.begin() + i);
+                    std::cout << "Found maybe!" << std::endl;
                     break;
                 }
                 i++;
             }
             
-            for(auto t:MasterRoomList)
+            for(auto t = MasterRoomList.begin(); t != MasterRoomList.end(); ++t)
             {
                 i = 0;
-                std::lock_guard<std::mutex>lock(t->rLock);
-                for(auto b : t->playerList)
+                std::lock_guard<std::mutex>lock((*t)->rLock);
+                for(auto b = (*t)->playerList.begin(); b != (*t)->playerList.end(); ++b)
                 {
-                    tmpFD = b->getFD();
+                    if((*b) == nullptr)
+                    {
+                        std::cout << "Guess it's null somehow!" << std::endl;
+                    }
+                    tmpFD = (*b)->getFD();
                     if(fd == tmpFD)
                     {
-                        t->playerList.erase(t->playerList.begin() + i);
+                        (*t)->playerList.erase((*t)->playerList.begin() + i);
+                        std::cout << "Oops!!" << std::endl;
                         // break;
                     }
                     i++;
                 }
             }
             delete p;
+            std::cout << "O222ops!!" << std::endl;
             for(auto t:MasterPlayerList)
             {
                     GMPM(t,m);
@@ -431,11 +438,12 @@ void Gamemaster::GMController(int fd)
 
     while(!(p->isValidToon()) && p->isSktAlive())
     {// confirm character
-        char* tmp = NULL;
+        char tmp[sizeof(uint64_t) * 2];
         bytes = recv(fd, &typeCheck,1,MSG_WAITALL|MSG_PEEK);
         if(bytes < 0){p->quitPlayer();}
 
         bool checksOut = false;
+        
         if( p->isSktAlive() && typeCheck == 10)
         {
 
@@ -444,24 +452,29 @@ void Gamemaster::GMController(int fd)
             {
                 p->quitPlayer();
             }else {
-                memset(tmp,0,p->charTainer.DESC_LENGTH + 1);
+                // memset(tmp,0,p->charTainer.DESC_LENGTH + 1);
             }
-
             bytes = recv(fd,tmp,p->charTainer.DESC_LENGTH,MSG_WAITALL);
+            std::cout << fmt::format("Uhh, bytes?: {0}\n",bytes);
             if(bytes < 0)
             {
+                std::cout << "wtf!" << std::endl;
                 p->quitPlayer();
             }else{
+                std::cout << "wtf2!" << std::endl;
                 p->desc.assign(tmp);
+                std::cout << "wtf3!" << std::endl;
             }
-            
+            std::cout << "Checking here!" << std::endl;
             checksOut = checkStats(p);
-
+            // std::cout << "Stats Check Out: " << checksOut << std::endl;
             if(checksOut == false)
             {
+                std::cout << "Stats Check Out: " << checksOut << std::endl;
                 actionFail(p,10);
             } else
             {
+                // std::cout << "Stats Check Out: " << checksOut << std::endl;
                 actionPass(p,10);
                 p->setValid();
                 p->reflection();
@@ -478,7 +491,7 @@ void Gamemaster::GMController(int fd)
                 
         }
     }
-    while(!(p->isStarted()) && p->isSktAlive())
+    while(!(p->isStarted()))
     {// confirm start
         bytes = recv(fd,&typeCheck,sizeof(typeCheck),MSG_WAITALL|MSG_PEEK);
         if(bytes < 0){p->quitPlayer();}
@@ -524,7 +537,7 @@ void Gamemaster::GMController(int fd)
         if(p->isSktAlive()){p->reflection();}
     }
     // client most likely closed the socket or some error occured here.
-    printf("Lost bytes = recv() comms with peer socket, bytes: %lu\n",bytes);
+    std::cout<<fmt::format("Lost bytes = recv() comms with peer socket, bytes: {0}\n",std::to_string(bytes));
     ragequit(p);
 }
 
@@ -574,7 +587,9 @@ bool Gamemaster::checkStats(Player* p) //bool Gamemaster::checkStats(Player* p)
     */
     // check name conflicts
     if(!p->isSktAlive())
+    {
         return false;
+    }
     std::cout << "Checking stats" << std::endl;
     RECHECK:
     for(auto t : MasterPlayerList)
@@ -628,7 +643,7 @@ void Gamemaster::GMPM(Player* p, std::string& msg)
 
 void Gamemaster::movePlayer(Player* p, int newRoom)
 {
-    if(!(p->isFreshSpawn()))
+    if((p->isFreshSpawn()))
     {
         MasterRoomList.at(p->charTainer.CURRENT_ROOM_NUMBER)->removePlayer(p);
         p->despawn();
@@ -641,7 +656,7 @@ void Gamemaster::mailroom(Player* p,int fd,int32_t type)
 {// process client data (Since mutex is a shared_ptr, try and lock it via MasterPlayerList?)
     // LURK_MSG lurk_msg;
     ssize_t bytes;
-    char* data = NULL;
+    char data[sizeof(uint64_t) * 2];
     // bool leaver = false;
     switch(type)
     {

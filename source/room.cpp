@@ -109,11 +109,11 @@ void Room::sendRoomInfo(Player* p)
         std::lock_guard<std::mutex> lock(p->pLock);
         for(auto t : connectedRooms)
         {
-            std::cout << fmt::format("DEBUG: Connected Room Name: {0} {1}",t->ROOM_NAME,std::to_string(t->ROOM_NUMBER));
+            std::cout << fmt::format("DEBUG: Connected Room Name: {0} {1}\n",t->ROOM_NAME,std::to_string(t->ROOM_NUMBER));
             write(fd,&t->TYPE,sizeof(uint8_t));
             write(fd,&t->ROOM_NUMBER,sizeof(uint16_t));
             write(fd,&t->ROOM_NAME,32);
-            write(fd,&t->DESC_LENGTH,32);
+            write(fd,&t->DESC_LENGTH,sizeof(uint16_t));
             bytes = write(fd,t->DESC,t->DESC_LENGTH);
             if(bytes < 0){p->quitPlayer();break;}
         }
@@ -131,16 +131,16 @@ void Room::sendBaddieInfo()
     ssize_t bytes = 0;
     {
         std::lock_guard<std::mutex> lock(rLock);
-        for(auto t: playerList)
+        for(auto t = playerList.begin(); t != playerList.end(); ++t)
         {
             for(auto b: baddieList)
             {
-                int fd = t->getFD();
+                int fd = (*t)->getFD();
                 std::cout << fmt::format("Baddie In Room: {}\n",b.bTainer.CHARACTER_NAME);
-                std::lock_guard<std::mutex> lock(t->pLock);
+                std::lock_guard<std::mutex> lock((*t)->pLock);
                 write(fd,&b.bTainer,sizeof(LURK_CHARACTER));
                 bytes = write(fd,b.description.c_str(),b.bTainer.DESC_LENGTH);
-                if(bytes < 0){t->quitPlayer();}
+                if(bytes < 0){(*t)->quitPlayer();}
             }
         }
     }

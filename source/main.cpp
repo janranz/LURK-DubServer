@@ -99,6 +99,7 @@ int main(int argc,char** argv)
     //establish connection
     // signal(SIGINT, sigint_handler);
     signal(SIGPIPE, SIG_IGN);
+    // sigaction(SIGPIPE,&(struct sigaction){SIG_IGN},NULL);
 
     struct sockaddr_in sai;
     sai.sin_family = AF_INET;
