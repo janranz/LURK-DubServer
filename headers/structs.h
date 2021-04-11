@@ -4,7 +4,7 @@
 #include<cstring>
 #include<vector>
 #include<cstdint>
-
+#define BIG_SIZE 1024 * 1024
 struct chatter_messages
 {
     std::vector<std::string> awaken,baddies,danger,death,error,fightHit,food,health,
@@ -98,7 +98,7 @@ struct LURK_CONNECTION
     uint16_t ROOM_NUMBER;
     char ROOM_NAME[32];
     uint16_t DESC_LENGTH;
-    char DESC[1024];
+    char DESC[BIG_SIZE];
 }__attribute__((packed));
 
 struct LURK_VERSION

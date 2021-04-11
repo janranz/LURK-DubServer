@@ -40,7 +40,7 @@ int main(int argc,char** argv)
 
 
     std::ifstream fileNames;
-    fileNames.open("../chatter/00fileNames.txt", std::ios::in);
+    fileNames.open("./chatter/00fileNames.txt", std::ios::in);
     if(!fileNames.is_open())
     {
         std::cout << "Could not find 00fileNames.txt" << std::endl;
@@ -59,7 +59,7 @@ int main(int argc,char** argv)
     {
         std::cout << "Filename: " << *t << std::endl;
         std::ifstream *fd = new std::ifstream;
-        std::string buildStr = "../chatter/" + *t;
+        std::string buildStr = "./chatter/" + *t;
         fd->open(buildStr, std::fstream::in);
         fds.push_back(fd);
     }
@@ -114,7 +114,8 @@ int main(int argc,char** argv)
     struct sockaddr_in client_addr;
     socklen_t address_size = sizeof(struct sockaddr_in);
 
-    while(!(GM.GMKILL))
+    // while(!(GM.GMKILL))
+    while(1)
     {
         std::cout << "Listening..." << std::endl;
         player_fd = accept(dubSkt, (struct sockaddr*)(&client_addr), &address_size);

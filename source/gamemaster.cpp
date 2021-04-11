@@ -1,12 +1,12 @@
 #include"../headers/gamemaster.h"
 /* TODO:
-    Rewrite Vectors
+    Figure out how to alert others of others. Think... when people join send all. but just keep it to rooms.
  */
 unsigned int Gamemaster::g_seed = 0;
 uint16_t Gamemaster::MAX_BADDIES = 1000;
 uint16_t Gamemaster::MAX_STAT = 4000;
 int16_t Gamemaster::BASE_HEALTH = 6000;
-uint16_t Gamemaster::MAX_ROOMS = 4;
+uint16_t Gamemaster::MAX_ROOMS = 100;
 uint16_t Gamemaster::MIN_BADDIES_ROOM = 1;
 uint16_t Gamemaster::MAX_BADDIES_ROOM = 4;
 uint16_t Gamemaster::AWAKEN_VECTOR_SIZE;
@@ -31,7 +31,6 @@ Gamemaster::Gamemaster()
     std::cout << "Hello Gamemaster." << std::endl;
     Gamemaster::g_seed = static_cast<unsigned int>(std::time(NULL));
     std::cout << "Gamemaster: your g_seed: " << g_seed << std::endl;
-    GMKILL = false;
 }
 
 // destruction handling ////////
@@ -351,7 +350,7 @@ void Gamemaster::buildRooms()
         }
             
     }
-    for(size_t i = 1; i < MasterRoomList.size(); ++i)
+    for(size_t i = 1; i < MasterRoomList.size(); i++)
     {
         LURK_CONNECTION* cPast = new LURK_CONNECTION;
         strncpy(cPast->ROOM_NAME,MasterRoomList.at(i-1)->room.ROOM_NAME,32);
@@ -359,6 +358,13 @@ void Gamemaster::buildRooms()
         cPast->DESC_LENGTH = MasterRoomList.at(i-1)->room.DESC_LENGTH;
         strncpy(cPast->DESC,MasterRoomList.at(i-1)->roomDesc.c_str(),MasterRoomList.at(i-1)->room.DESC_LENGTH);
         MasterRoomList.at(i)->setConnectedRooms(cPast);
+
+        // LURK_CONNECTION* cPast = new LURK_CONNECTION;
+        // strncpy(cPast->ROOM_NAME,MasterRoomList.at(i-1)->room.ROOM_NAME,32);
+        // cPast->ROOM_NUMBER = MasterRoomList.at(i-1)->room.ROOM_NUMBER;
+        // cPast->DESC_LENGTH = MasterRoomList.at(i-1)->room.DESC_LENGTH;
+        // strncpy(cPast->DESC,MasterRoomList.at(i-1)->roomDesc.c_str(),MasterRoomList.at(i-1)->room.DESC_LENGTH);
+        // MasterRoomList.at(i)->setConnectedRooms(cPast);
 
         if(i != MasterRoomList.size()-1)
         {
@@ -369,20 +375,20 @@ void Gamemaster::buildRooms()
             strncpy(cNext->DESC,MasterRoomList.at(i+1)->roomDesc.c_str(),MasterRoomList.at(i+1)->room.DESC_LENGTH);
             MasterRoomList.at(i)->setConnectedRooms(cNext);
         }
-            if(i != MasterRoomList.size() - 1)
-            {
-                std::cout << fmt::format("Sanity Connection Room: {0} connects with {1} and {2}\n",
-                std::to_string(MasterRoomList.at(i)->room.ROOM_NUMBER),
-                std::to_string(MasterRoomList.at(i)->connectedRooms.at(0)->ROOM_NUMBER),
-                std::to_string(MasterRoomList.at(i)->connectedRooms.at(1)->ROOM_NUMBER));
-            } else if(i == MasterRoomList.size() - 1)
-            {
-                std::cout << fmt::format("Sanity Connection Room: {0} connects with {1}\n",
-                std::to_string(MasterRoomList.at(i)->room.ROOM_NUMBER),
-                std::to_string(MasterRoomList.at(i)->connectedRooms.at(0)->ROOM_NUMBER));
-            }else {
-                std::cout << "Error in setting room connections!\n";
-            }
+            // if(i != MasterRoomList.size() - 1)
+            // {
+            //     std::cout << fmt::format("Sanity Connection Room: {0} connects with {1} and {2}\n",
+            //     std::to_string(MasterRoomList.at(i)->room.ROOM_NUMBER),
+            //     std::to_string(MasterRoomList.at(i)->connectedRooms.at(0)->ROOM_NUMBER),
+            //     std::to_string(MasterRoomList.at(i)->connectedRooms.at(1)->ROOM_NUMBER));
+            // } else if(i == MasterRoomList.size() - 1)
+            // {
+            //     std::cout << fmt::format("Sanity Connection Room: {0} connects with {1}\n",
+            //     std::to_string(MasterRoomList.at(i)->room.ROOM_NUMBER),
+            //     std::to_string(MasterRoomList.at(i)->connectedRooms.at(0)->ROOM_NUMBER));
+            // }else {
+            //     std::cout << "Error in setting room connections!\n";
+            // }
     }
 
     std::cout << "\nMasterRoomList succeeds! Size: "<< MasterRoomList.size() << std::endl;
@@ -440,7 +446,7 @@ void Gamemaster::GMController(int fd)
 
     while(!(p->isValidToon()) && p->isSktAlive())
     {// confirm character
-        char tmp[sizeof(uint64_t) * 2];
+        char tmp[BIG_SIZE];
         bytes = recv(fd, &typeCheck,1,MSG_WAITALL|MSG_PEEK);
         if(bytes < 0){p->quitPlayer();}
 
@@ -527,28 +533,22 @@ void Gamemaster::GMController(int fd)
     // MAIN LISTENING LOOP HERE
     while(p->isSktAlive())
     {
-        std::cout << fmt::format("Returned {0}'s to Main Listening Loop!\n",p->charTainer.CHARACTER_NAME);
         bytes = recv(fd,&typeCheck,1,MSG_WAITALL|MSG_PEEK);
         if(bytes < 0){p->quitPlayer();}
-
-        std::cout << "TypeCheck: " << typeCheck << std::endl;
         mailroom(p,fd,typeCheck);
         // update client with all characters (consider noisy)
-        if(p->isSktAlive()){census(p);}
-        if(p->isSktAlive()){p->reflection();}
-        std::cout << fmt::format("End of {0}'s Main Listening Loop!\n",p->charTainer.CHARACTER_NAME);
+        census(p);
+        p->reflection();
     }
     // client most likely closed the socket or some error occured here.
     std::cout<<fmt::format("Lost bytes = recv() comms with peer socket, bytes: {0}\n",std::to_string(bytes));
     ragequit(p);
-    GMKILL = true;
-}
 
+}
+// consider how often we alert people of stuff. might be clogging us up.
 void Gamemaster::census(Player* p)
 {
     ssize_t bytes = 0;
-    std::cout << fmt::format("Updating <{0}> with character list\n",p->charTainer.CHARACTER_NAME);
-    
     {
         std::lock_guard<std::mutex> lock(GMlock);
         for(auto t = MasterPlayerList.begin(); t != MasterPlayerList.end(); ++t)
@@ -594,8 +594,6 @@ bool Gamemaster::checkStats(Player* p) //bool Gamemaster::checkStats(Player* p)
     {
         return false;
     }
-    std::cout << fmt::format("Player Requested name: {0}\n",p->charTainer.CHARACTER_NAME);
-    
     {
         std::lock_guard<std::mutex>lock(GMlock);
         for(auto t = MasterPlayerList.begin(); t != MasterPlayerList.end(); ++t)
@@ -669,7 +667,7 @@ void Gamemaster::mailroom(Player* p,int fd,int32_t type)
 {// process client data (Since mutex is a shared_ptr, try and lock it via MasterPlayerList?)
     // LURK_MSG lurk_msg;
     ssize_t bytes;
-    char data[sizeof(uint64_t) * 2];
+    char data[BIG_SIZE];
     // bool leaver = false;
     switch(type)
     {
@@ -681,7 +679,7 @@ void Gamemaster::mailroom(Player* p,int fd,int32_t type)
             {
                 p->quitPlayer();
             }else{
-                memset(data,0,lurk_msg.MSG_LEN + 1);
+                memset(data,0,lurk_msg.MSG_LEN);
             }
 
             bytes = recv(fd,data,lurk_msg.MSG_LEN,MSG_WAITALL);
@@ -702,29 +700,44 @@ void Gamemaster::mailroom(Player* p,int fd,int32_t type)
             {
                 p->quitPlayer();
             }else{
-                std::lock_guard<std::mutex>lock(GMlock);
-                for(auto t = MasterRoomList.begin(); t != MasterRoomList.end(); ++t)
+                for(auto t = MasterRoomList.at(p->charTainer.CURRENT_ROOM_NUMBER)->connectedRooms.begin();
+                    t != MasterRoomList.at(p->charTainer.CURRENT_ROOM_NUMBER)->connectedRooms.end(); ++t)
                 {
-                    for(auto b = (*t)->connectedRooms.begin(); b != (*t)->connectedRooms.end(); ++b)
+                    if((*t)->ROOM_NUMBER == changeRoom.ROOM_NUMBER)
                     {
-                        if((*b)->ROOM_NUMBER == changeRoom.ROOM_NUMBER)
-                        {
-                            movePlayer(p,(*b)->ROOM_NUMBER);
-                            found = true;
-                            b = ((*t)->connectedRooms.end() - 1);
-                        }
+                        actionPass(p,type);
+                        movePlayer(p,changeRoom.ROOM_NUMBER);
+                        found = true;
+                        t = (MasterRoomList.at(p->charTainer.CURRENT_ROOM_NUMBER)->connectedRooms.end() - 1);
                     }
-                    if(found)
-                        t = (MasterRoomList.end() - 1);
                 }
+                if(!found)
+                {
+                    actionFail(p,type);
+                }
+                break;
             }
-            if(found)
-            {
-                actionPass(p,type);
-            }else{
-                actionFail(p,type);
-            }
-            break;
+                // std::lock_guard<std::mutex>lock(GMlock);
+
+            //     for(auto t = MasterRoomList.begin(); t != MasterRoomList.end(); ++t)
+            //     {
+            //         for(auto b = (*t)->connectedRooms.begin(); b != (*t)->connectedRooms.end(); ++b)
+            //         {
+            //             if((*b)->ROOM_NUMBER == changeRoom.ROOM_NUMBER)
+            //             {
+            //                 actionPass(p,type);
+            //                 movePlayer(p,(*b)->ROOM_NUMBER);
+            //                 found = true;
+            //                 b = ((*t)->connectedRooms.end() - 1);
+            //             }
+            //         }
+            //         if(found)
+            //             t = (MasterRoomList.end() - 1);
+            //     }
+            // }
+            // if(!found){actionFail(p,type);}
+        //     break;
+        // }
         }
         case 3:
         {// FIGHT
@@ -750,7 +763,7 @@ void Gamemaster::mailroom(Player* p,int fd,int32_t type)
                         std::string baddie = MasterRoomList.at(rm)->baddieList.at(bDex).bTainer.CHARACTER_NAME;
                         m = fmt::format("{0} grabs a {1} and pummels {2} over the head, dealing damage!"
                         " as the baddie explodes, he drops some {3}\n",
-                        p->charTainer.CHARACTER_NAME, c_m.weapons.at(bDex), c_m.food.at(cDex));
+                        p->charTainer.CHARACTER_NAME,baddie ,c_m.weapons.at(bDex), c_m.food.at(cDex));
                     } else{
                         actionFail(p,type);
                         m = fmt::format("{0}, starts swinging in a fit of rage, but targets absolutely nothing..."

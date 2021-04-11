@@ -40,7 +40,7 @@ void Room::addPlayer(Player* p)
 {
     
     playerList.emplace_back(p);
-    std::cout << fmt::format("<{0}> has joined {1}\n",p->charTainer.CHARACTER_NAME,room.ROOM_NAME);
+    //std::cout << fmt::format("<{0}> has joined {1}\n",p->charTainer.CHARACTER_NAME,room.ROOM_NAME);
     
     sendRoomInfo(p);
     if(p->isSktAlive())
@@ -62,7 +62,7 @@ void Room::removePlayer(Player* p)
         
         if(strcmp(p->charTainer.CHARACTER_NAME,(*t)->charTainer.CHARACTER_NAME) == 0)
         {
-            std::cout << fmt::format("<{0}> has left {1}\n",p->charTainer.CHARACTER_NAME,room.ROOM_NAME);
+            //std::cout << fmt::format("<{0}> has left {1}\n",p->charTainer.CHARACTER_NAME,room.ROOM_NAME);
             t = playerList.erase(t);
             --t;
         }
@@ -99,15 +99,19 @@ void Room::sendRoomInfo(Player* p)
     int fd = p->getFD();
     {
         std::lock_guard<std::mutex> lock(p->pLock);
-        for(auto t : connectedRooms)
+        for(auto t = connectedRooms.begin(); t != connectedRooms.end(); ++t)
         {
-            std::cout << fmt::format("DEBUG: Connected Room Name: {0} {1}\n",t->ROOM_NAME,std::to_string(t->ROOM_NUMBER));
-            write(fd,&t->TYPE,sizeof(uint8_t));
-            write(fd,&t->ROOM_NUMBER,sizeof(uint16_t));
-            write(fd,&t->ROOM_NAME,32);
-            write(fd,&t->DESC_LENGTH,sizeof(uint16_t));
-            bytes = write(fd,t->DESC,t->DESC_LENGTH);
-            if(bytes < 0){p->quitPlayer();break;}
+            //std::cout << fmt::format("DEBUG: Connected Room Name: {0} {1}\n",t->ROOM_NAME,std::to_string(t->ROOM_NUMBER));
+            write(fd,&(*t)->TYPE,sizeof(uint8_t));
+            write(fd,&(*t)->ROOM_NUMBER,sizeof(uint16_t));
+            write(fd,&(*t)->ROOM_NAME,32);
+            write(fd,&(*t)->DESC_LENGTH,sizeof(uint16_t));
+            bytes = write(fd,(*t)->DESC,(*t)->DESC_LENGTH);
+            if(bytes < 0)
+            {
+                p->quitPlayer();
+                t = (connectedRooms.end() - 1);
+            }
         }
         if(p->isSktAlive())
         {
@@ -123,13 +127,13 @@ void Room::sendBaddieInfo()
     ssize_t bytes = 0;
     for(auto t = playerList.begin(); t != playerList.end(); ++t)
     {
-        for(auto b: baddieList)
+        for(auto b = baddieList.begin(); b != baddieList.end(); ++b)
         {
             int fd = (*t)->getFD();
-            std::cout << fmt::format("Baddie In Room: {}\n",b.bTainer.CHARACTER_NAME);
+            //std::cout << fmt::format("Baddie In Room: {}\n",b.bTainer.CHARACTER_NAME);
             std::lock_guard<std::mutex> lock((*t)->pLock);
-            write(fd,&b.bTainer,sizeof(LURK_CHARACTER));
-            bytes = write(fd,b.description.c_str(),b.bTainer.DESC_LENGTH);
+            write(fd,&(*b).bTainer,sizeof(LURK_CHARACTER));
+            bytes = write(fd,(*b).description.c_str(),(*b).bTainer.DESC_LENGTH);
             if(bytes < 0){(*t)->quitPlayer();}
         }
     }
