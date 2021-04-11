@@ -114,7 +114,7 @@ int main(int argc,char** argv)
     struct sockaddr_in client_addr;
     socklen_t address_size = sizeof(struct sockaddr_in);
 
-    while(1)
+    while(!(GM.GMKILL))
     {
         std::cout << "Listening..." << std::endl;
         player_fd = accept(dubSkt, (struct sockaddr*)(&client_addr), &address_size);

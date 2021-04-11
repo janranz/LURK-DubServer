@@ -38,10 +38,8 @@ void Room::injectBaddie(Baddie s)
 
 void Room::addPlayer(Player* p)
 {
-    {
-        std::lock_guard<std::mutex> lock(rLock);
-        playerList.emplace_back(p);
-    }
+    
+    playerList.emplace_back(p);
     std::cout << fmt::format("<{0}> has joined {1}\n",p->charTainer.CHARACTER_NAME,room.ROOM_NAME);
     
     sendRoomInfo(p);
@@ -59,27 +57,21 @@ void Room::removePlayer(Player* p)
     GM_MSG pkg;
     pkg.MSG_LEN = m.length();
 
+    for(auto t = playerList.begin(); t != playerList.end(); ++t)
     {
-        std::lock_guard<std::mutex> lock(rLock);
-        int i = 0;
-        for(auto t: playerList)
+        
+        if(strcmp(p->charTainer.CHARACTER_NAME,(*t)->charTainer.CHARACTER_NAME) == 0)
         {
-            
-            if(strcmp(p->charTainer.CHARACTER_NAME,t->charTainer.CHARACTER_NAME) == 0)
-            {
-                std::cout << fmt::format("<{0}> has left {1}\n",p->charTainer.CHARACTER_NAME,room.ROOM_NAME);
-                playerList.erase(playerList.begin() + i);
-            }
-            
-            strncpy(pkg.CEIVER_NAME,t->charTainer.CHARACTER_NAME,32);
-            {
-                int fd = t->getFD();
-                std::lock_guard<std::mutex> lock(t->pLock);
-                write(fd,&pkg,sizeof(GM_MSG));
-                bytes = write(fd,m.c_str(),pkg.MSG_LEN);
-                if(bytes < 0){t->quitPlayer();}
-            }
-            i++;
+            std::cout << fmt::format("<{0}> has left {1}\n",p->charTainer.CHARACTER_NAME,room.ROOM_NAME);
+            t = playerList.erase(t);
+            --t;
+        }
+        strncpy(pkg.CEIVER_NAME,(*t)->charTainer.CHARACTER_NAME,32);
+        {
+            std::lock_guard<std::mutex> lock((*t)->pLock);
+            write((*t)->getFD(),&pkg,sizeof(GM_MSG));
+            bytes = write((*t)->getFD(),m.c_str(),pkg.MSG_LEN);
+            if(bytes < 0){(*t)->quitPlayer();}
         }
     }
 }
@@ -129,19 +121,16 @@ void Room::sendRoomInfo(Player* p)
 void Room::sendBaddieInfo()
 {
     ssize_t bytes = 0;
+    for(auto t = playerList.begin(); t != playerList.end(); ++t)
     {
-        std::lock_guard<std::mutex> lock(rLock);
-        for(auto t = playerList.begin(); t != playerList.end(); ++t)
+        for(auto b: baddieList)
         {
-            for(auto b: baddieList)
-            {
-                int fd = (*t)->getFD();
-                std::cout << fmt::format("Baddie In Room: {}\n",b.bTainer.CHARACTER_NAME);
-                std::lock_guard<std::mutex> lock((*t)->pLock);
-                write(fd,&b.bTainer,sizeof(LURK_CHARACTER));
-                bytes = write(fd,b.description.c_str(),b.bTainer.DESC_LENGTH);
-                if(bytes < 0){(*t)->quitPlayer();}
-            }
+            int fd = (*t)->getFD();
+            std::cout << fmt::format("Baddie In Room: {}\n",b.bTainer.CHARACTER_NAME);
+            std::lock_guard<std::mutex> lock((*t)->pLock);
+            write(fd,&b.bTainer,sizeof(LURK_CHARACTER));
+            bytes = write(fd,b.description.c_str(),b.bTainer.DESC_LENGTH);
+            if(bytes < 0){(*t)->quitPlayer();}
         }
     }
 }

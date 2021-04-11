@@ -1,6 +1,6 @@
 #include"../headers/gamemaster.h"
 /* TODO:
-    Rewrite gatekeeper()
+    Rewrite Vectors
  */
 unsigned int Gamemaster::g_seed = 0;
 uint16_t Gamemaster::MAX_BADDIES = 1000;
@@ -31,25 +31,42 @@ Gamemaster::Gamemaster()
     std::cout << "Hello Gamemaster." << std::endl;
     Gamemaster::g_seed = static_cast<unsigned int>(std::time(NULL));
     std::cout << "Gamemaster: your g_seed: " << g_seed << std::endl;
+    GMKILL = false;
 }
 
 // destruction handling ////////
 Gamemaster::~Gamemaster()
 {
-    for(auto p : MasterPlayerList)
+    for(auto p = MasterPlayerList.begin(); p != MasterPlayerList.end(); ++p)
     {
-        if(p != nullptr)
-            delete p;
+            std::cout << fmt::format("Deleting: {0}\n",(*p)->charTainer.CHARACTER_NAME);
+            delete (*p);
     }
 
     MasterPlayerList.clear();
 
-    for(auto p : MasterRoomList)
+    // for(auto p = MasterRoomList.rbegin(); p != MasterRoomList.rend(); ++p)
+    for(Room* p : MasterRoomList)
     {
-        if(p != nullptr)
-            delete p;
+        for(LURK_CONNECTION* b : p->connectedRooms)
+        {
+            delete b;
+        }
+        p->connectedRooms.clear();
+        // for(auto b = (*p)->connectedRooms.rbegin(); b != (*p)->connectedRooms.rend(); ++b)
+        // {
+        //     // std::cout << fmt::format("In Room {0}, deleting connected room: {1}\n",
+        //     //     std::to_string((*p)->room.ROOM_NUMBER),std::to_string((*b)->ROOM_NUMBER));
+        //     delete *b;
+        //     (*p)->connectedRooms.erase((++b.base()));
+        // }
+        delete p;
     }
-        
+    MasterRoomList.clear();
+    for( auto t = MasterRoomList.begin(); t != MasterRoomList.end(); ++t)
+    {
+        (*t)->connectedRooms.clear();
+    }
     MasterRoomList.clear();
 
     std::cout << "Goodbye, Gamemaster." << std::endl;
@@ -67,59 +84,46 @@ void Gamemaster::ragequit(Player* p)
         m = fmt::format("An unknown player has had a change of mind prior to starting and has given up!\n");
     }
 
-    printf("MasterPlayerSize (pre-removal): %lu\n",MasterPlayerList.size());
+    std::cout << fmt::format("Pre Deletion Current Player Count: {0}\n",std::to_string(MasterPlayerList.size()));
 
-    if(p != nullptr)
+
+    int fd = p->getFD();
     {
-        int i = 0;
-        int tmpFD = 0;
-        int fd = p->getFD();
+        std::lock_guard<std::mutex>lock(GMlock);
+        for(auto t = MasterPlayerList.begin(); t != MasterPlayerList.end(); ++t)
         {
-            std::lock_guard<std::mutex>lock(GMlock);
-            for(auto t = MasterPlayerList.begin(); t != MasterPlayerList.end(); ++t)
+            if((*t)->getFD() == fd)
             {
-                tmpFD = (*t)->getFD();
-                if(fd == tmpFD)
-                {
-                    MasterPlayerList.erase(MasterPlayerList.begin() + i);
-                    std::cout << "Found maybe!" << std::endl;
-                    break;
-                }
-                i++;
-            }
-            
-            for(auto t = MasterRoomList.begin(); t != MasterRoomList.end(); ++t)
-            {
-                i = 0;
-                std::lock_guard<std::mutex>lock((*t)->rLock);
-                for(auto b = (*t)->playerList.begin(); b != (*t)->playerList.end(); ++b)
-                {
-                    if((*b) == nullptr)
-                    {
-                        std::cout << "Guess it's null somehow!" << std::endl;
-                    }
-                    tmpFD = (*b)->getFD();
-                    if(fd == tmpFD)
-                    {
-                        (*t)->playerList.erase((*t)->playerList.begin() + i);
-                        std::cout << "Oops!!" << std::endl;
-                        // break;
-                    }
-                    i++;
-                }
-            }
-            delete p;
-            std::cout << "O222ops!!" << std::endl;
-            for(auto t:MasterPlayerList)
-            {
-                    GMPM(t,m);
+                t = MasterPlayerList.erase(t);
+                --t;
             }
         }
-    } else {
-        std::cout << "DEBUG: Player previously deleted!!!\n" << std::endl;
-    }   
-        std::cout << fmt::format("Current Player Count: {0}",std::to_string(MasterPlayerList.size()));
-        printf("MasterPlayerSize (post-removal): %lu\n",MasterPlayerList.size());
+        
+        for(auto t = MasterRoomList.begin(); t != MasterRoomList.end(); ++t)
+        {
+            std::lock_guard<std::mutex>lock((*t)->rLock);
+            for(auto b = (*t)->playerList.begin(); b != (*t)->playerList.end(); ++b)
+            {
+                if((*b)->getFD() == fd)
+                {
+                    b = (*t)->playerList.erase(b);
+                    --b;
+                }
+            }
+        }
+        if(p != nullptr)
+        {
+            delete p;
+            std::cout << "Player pointer successfully deleted!\n" << std::endl;
+        }
+
+        for(auto t = MasterPlayerList.begin(); t != MasterPlayerList.end(); ++t)
+        {
+                GMPM((*t),m);
+        }
+    }
+    std::cout << fmt::format("Post Deletion Current Player Count: {0}\n",std::to_string(MasterPlayerList.size()));
+        
     
 
 }
@@ -334,16 +338,15 @@ void Gamemaster::buildRooms()
         MasterRoomList.emplace_back(r);
     }
     // set connections
-    for(auto t : MasterRoomList)
+    for(auto t = MasterRoomList.begin(); t != MasterRoomList.end(); ++t)
     {
-        if(t->room.ROOM_NUMBER != 0)
+        if((*t)->room.ROOM_NUMBER != 0)
         {
             LURK_CONNECTION* lc = new LURK_CONNECTION;
-            strncpy(lc->ROOM_NAME,t->room.ROOM_NAME,32);
-            lc->ROOM_NUMBER = t->room.ROOM_NUMBER;
-            lc->DESC_LENGTH = t->room.DESC_LENGTH;
-            strncpy(lc->DESC,t->roomDesc.c_str(),t->room.DESC_LENGTH + 1);
-
+            strncpy(lc->ROOM_NAME,(*t)->room.ROOM_NAME,32);
+            lc->ROOM_NUMBER = (*t)->room.ROOM_NUMBER;
+            lc->DESC_LENGTH = (*t)->room.DESC_LENGTH;
+            strncpy(lc->DESC,(*t)->roomDesc.c_str(),(*t)->room.DESC_LENGTH); // CHECK HERE IF +1 IS BENEFICIAL
             MasterRoomList.at(0)->setConnectedRooms(lc);
         }
             
@@ -390,15 +393,14 @@ void Gamemaster::populateRooms()
     
     
     
-    for(auto t: MasterRoomList)
+    for(auto t = MasterRoomList.begin(); t != MasterRoomList.end(); ++t)
     {
-        
         int baddieCount = (fast_rand() % (MAX_BADDIES_ROOM - MIN_BADDIES_ROOM) + MIN_BADDIES_ROOM);
         for(int i = 0; i < baddieCount; i++)
         {
             Baddie release = BDSpawner.at((fast_rand() % (BDSpawner.size())));
-            release.bTainer.CURRENT_ROOM_NUMBER = t->room.ROOM_NUMBER;
-            t->injectBaddie(release);
+            release.bTainer.CURRENT_ROOM_NUMBER = (*t)->room.ROOM_NUMBER;
+            (*t)->injectBaddie(release);
         }
     }
 
@@ -455,22 +457,19 @@ void Gamemaster::GMController(int fd)
                 // memset(tmp,0,p->charTainer.DESC_LENGTH + 1);
             }
             bytes = recv(fd,tmp,p->charTainer.DESC_LENGTH,MSG_WAITALL);
-            std::cout << fmt::format("Uhh, bytes?: {0}\n",bytes);
+            
             if(bytes < 0)
             {
-                std::cout << "wtf!" << std::endl;
+                
                 p->quitPlayer();
             }else{
-                std::cout << "wtf2!" << std::endl;
+                
                 p->desc.assign(tmp);
-                std::cout << "wtf3!" << std::endl;
+                
             }
-            std::cout << "Checking here!" << std::endl;
             checksOut = checkStats(p);
-            // std::cout << "Stats Check Out: " << checksOut << std::endl;
             if(checksOut == false)
             {
-                std::cout << "Stats Check Out: " << checksOut << std::endl;
                 actionFail(p,10);
             } else
             {
@@ -519,7 +518,8 @@ void Gamemaster::GMController(int fd)
         MasterPlayerList.emplace_back(p);
         
     }
-    printf("Player successfully added to Master: %lu\n",MasterPlayerList.size());
+    std::cout << fmt::format("{0} successfully added to MasterPlayerList: {1}\n",
+        p->charTainer.CHARACTER_NAME,std::to_string(MasterPlayerList.size()));
 
     // push them into Portal Room and send a self character message
     // p->reflection();
@@ -527,6 +527,7 @@ void Gamemaster::GMController(int fd)
     // MAIN LISTENING LOOP HERE
     while(p->isSktAlive())
     {
+        std::cout << fmt::format("Returned {0}'s to Main Listening Loop!\n",p->charTainer.CHARACTER_NAME);
         bytes = recv(fd,&typeCheck,1,MSG_WAITALL|MSG_PEEK);
         if(bytes < 0){p->quitPlayer();}
 
@@ -535,43 +536,46 @@ void Gamemaster::GMController(int fd)
         // update client with all characters (consider noisy)
         if(p->isSktAlive()){census(p);}
         if(p->isSktAlive()){p->reflection();}
+        std::cout << fmt::format("End of {0}'s Main Listening Loop!\n",p->charTainer.CHARACTER_NAME);
     }
     // client most likely closed the socket or some error occured here.
     std::cout<<fmt::format("Lost bytes = recv() comms with peer socket, bytes: {0}\n",std::to_string(bytes));
     ragequit(p);
+    GMKILL = true;
 }
 
 void Gamemaster::census(Player* p)
 {
     ssize_t bytes = 0;
     std::cout << fmt::format("Updating <{0}> with character list\n",p->charTainer.CHARACTER_NAME);
+    
     {
         std::lock_guard<std::mutex> lock(GMlock);
-        for(auto t: MasterPlayerList)
+        for(auto t = MasterPlayerList.begin(); t != MasterPlayerList.end(); ++t)
         {
             if(p->isSktAlive())
             {
                 int fd = p->getFD();
                 std::lock_guard<std::mutex> lock(p->pLock);
-                if(strcmp(t->charTainer.CHARACTER_NAME,p->charTainer.CHARACTER_NAME) != 0)
+                if(strcmp((*t)->charTainer.CHARACTER_NAME,p->charTainer.CHARACTER_NAME) != 0)
                 {
-                    write(fd,&t->charTainer,sizeof(LURK_CHARACTER));
-                    bytes = write(fd,t->desc.c_str(),t->charTainer.DESC_LENGTH);
+                    write(fd,&(*t)->charTainer,sizeof(LURK_CHARACTER));
+                    bytes = write(fd,(*t)->desc.c_str(),(*t)->charTainer.DESC_LENGTH);
                     if(bytes < 0){p->quitPlayer();}
                 }
             } else {break;}
         }
-        for(auto t: MasterPlayerList)
+        for(auto t = MasterPlayerList.begin(); t != MasterPlayerList.end(); ++t)
         {
-            int fd = t->getFD();
-            std::lock_guard<std::mutex> lock(t->pLock);
-            for(auto b: MasterPlayerList)
+            int fd = (*t)->getFD();
+            std::lock_guard<std::mutex> lock((*t)->pLock);
+            for(auto b = MasterPlayerList.begin(); b != MasterPlayerList.end(); ++b)
             {
-                if(strcmp(t->charTainer.CHARACTER_NAME,b->charTainer.CHARACTER_NAME) != 0)
+                if(strcmp((*t)->charTainer.CHARACTER_NAME,(*b)->charTainer.CHARACTER_NAME) != 0)
                 {
-                    write(fd,&b->charTainer,sizeof(LURK_CHARACTER));
-                    bytes = write(fd,b->desc.c_str(),b->charTainer.DESC_LENGTH);
-                    if(bytes < 0 ){t->quitPlayer();}
+                    write(fd,&(*b)->charTainer,sizeof(LURK_CHARACTER));
+                    bytes = write(fd,(*b)->desc.c_str(),(*b)->charTainer.DESC_LENGTH);
+                    if(bytes < 0 ){(*b)->quitPlayer();}
                 }
             }
         }
@@ -590,19 +594,22 @@ bool Gamemaster::checkStats(Player* p) //bool Gamemaster::checkStats(Player* p)
     {
         return false;
     }
-    std::cout << "Checking stats" << std::endl;
-    RECHECK:
-    for(auto t : MasterPlayerList)
+    std::cout << fmt::format("Player Requested name: {0}\n",p->charTainer.CHARACTER_NAME);
+    
     {
-        if(strcmp(t->charTainer.CHARACTER_NAME,p->charTainer.CHARACTER_NAME) == 0)
+        std::lock_guard<std::mutex>lock(GMlock);
+        for(auto t = MasterPlayerList.begin(); t != MasterPlayerList.end(); ++t)
         {
-            // p.charTainer.CHARACTER_NAME[32] = 0;
-            std::string base(p->charTainer.CHARACTER_NAME);
-            std::string suff= std::to_string(((fast_rand() % 4000)));
-            std::string full = base + suff;
-            strncpy(p->charTainer.CHARACTER_NAME,full.c_str(),32);
-            std::cout << "Name changed to: " << p->charTainer.CHARACTER_NAME << std::endl;
-            goto RECHECK;
+            if(strcmp((*t)->charTainer.CHARACTER_NAME,p->charTainer.CHARACTER_NAME) == 0)
+            {
+                // p.charTainer.CHARACTER_NAME[32] = 0;
+                std::string base(p->charTainer.CHARACTER_NAME);
+                std::string suff= std::to_string(((fast_rand() % 4000)));
+                std::string full = base + suff;
+                strncpy(p->charTainer.CHARACTER_NAME,full.c_str(),32);
+                std::cout << "Name changed to: " << p->charTainer.CHARACTER_NAME << std::endl;
+                t = MasterPlayerList.begin();
+            }
         }
     }
     // std::cout << p->charTainer.ATTACK << p->charTainer.DEFENSE << p->charTainer.REGEN << std::endl;
@@ -645,11 +652,17 @@ void Gamemaster::movePlayer(Player* p, int newRoom)
 {
     if((p->isFreshSpawn()))
     {
-        MasterRoomList.at(p->charTainer.CURRENT_ROOM_NUMBER)->removePlayer(p);
+        {
+            std::lock_guard<std::mutex>lock(MasterRoomList.at(p->charTainer.CURRENT_ROOM_NUMBER)->rLock);
+            MasterRoomList.at(p->charTainer.CURRENT_ROOM_NUMBER)->removePlayer(p);
+        }
         p->despawn();
     }
     p->charTainer.CURRENT_ROOM_NUMBER = newRoom;
-    MasterRoomList.at(p->charTainer.CURRENT_ROOM_NUMBER)->addPlayer(p);
+    {
+        std::lock_guard<std::mutex>lock(MasterRoomList.at(p->charTainer.CURRENT_ROOM_NUMBER)->rLock);
+        MasterRoomList.at(p->charTainer.CURRENT_ROOM_NUMBER)->addPlayer(p);
+    }
 }
 
 void Gamemaster::mailroom(Player* p,int fd,int32_t type)
@@ -690,23 +703,26 @@ void Gamemaster::mailroom(Player* p,int fd,int32_t type)
                 p->quitPlayer();
             }else{
                 std::lock_guard<std::mutex>lock(GMlock);
-                for(auto t : MasterRoomList)
+                for(auto t = MasterRoomList.begin(); t != MasterRoomList.end(); ++t)
                 {
-                    for(auto b : t->connectedRooms)
+                    for(auto b = (*t)->connectedRooms.begin(); b != (*t)->connectedRooms.end(); ++b)
                     {
-                        if(b->ROOM_NUMBER == changeRoom.ROOM_NUMBER)
+                        if((*b)->ROOM_NUMBER == changeRoom.ROOM_NUMBER)
                         {
-                            movePlayer(p,b->ROOM_NUMBER);
-                            actionPass(p,type);
+                            movePlayer(p,(*b)->ROOM_NUMBER);
                             found = true;
-                            break;
+                            b = ((*t)->connectedRooms.end() - 1);
                         }
                     }
                     if(found)
-                        break;
+                        t = (MasterRoomList.end() - 1);
                 }
-                if(!found)
-                    actionFail(p,type);
+            }
+            if(found)
+            {
+                actionPass(p,type);
+            }else{
+                actionFail(p,type);
             }
             break;
         }
@@ -741,9 +757,9 @@ void Gamemaster::mailroom(Player* p,int fd,int32_t type)
                         " How embarrassing! They calm down and snack on some {1} instead\n",
                         p->charTainer.CHARACTER_NAME,c_m.food.at(cDex));
                     }
-                    for(auto t : MasterRoomList.at(rm)->playerList)
+                    for(auto t = MasterRoomList.at(rm)->playerList.begin(); t != MasterRoomList.at(rm)->playerList.end(); ++t)
                     {
-                        GMPM(t,m);
+                        GMPM((*t),m);
                     }
                 }
                 
@@ -764,12 +780,12 @@ void Gamemaster::mailroom(Player* p,int fd,int32_t type)
                 bool found = false;
                 {
                     std::lock_guard<std::mutex>lock(MasterRoomList.at(rm)->rLock);
-                        for(auto t: MasterRoomList.at(rm)->playerList)
+                        for(auto t = MasterRoomList.at(rm)->playerList.begin(); t != MasterRoomList.at(rm)->playerList.end(); ++t)
                         {
-                            if(strcmp(t->charTainer.CHARACTER_NAME,lurk_pvp.TARGET) == 0)
+                            if(strcmp((*t)->charTainer.CHARACTER_NAME,lurk_pvp.TARGET) == 0)
                             { // TARGET AQUIRED
                                 m = fmt::format("{0} bops {1} in the head with a {2}!\n",
-                                p->charTainer.CHARACTER_NAME,t->charTainer.CHARACTER_NAME,
+                                p->charTainer.CHARACTER_NAME,(*t)->charTainer.CHARACTER_NAME,
                                 c_m.weapons.at(fast_rand() % c_m.weapons.size()));
                                 found = true;
                                 break;
@@ -783,9 +799,9 @@ void Gamemaster::mailroom(Player* p,int fd,int32_t type)
                             m = fmt::format("{0} swings at absolutely nothing because that player doesn't exist!\n",
                             p->charTainer.CHARACTER_NAME);
                         }
-                        for(auto t: MasterRoomList.at(rm)->playerList)
+                        for(auto t = MasterRoomList.at(rm)->playerList.begin(); t != MasterRoomList.at(rm)->playerList.end(); ++t)
                         {
-                            GMPM(t,m);
+                            GMPM((*t),m);
                         }
                 }
             }
@@ -805,16 +821,16 @@ void Gamemaster::mailroom(Player* p,int fd,int32_t type)
                 bool found = false;
                 {
                     std::lock_guard<std::mutex>lock(MasterRoomList.at(rm)->rLock);
-                        for(auto t: MasterRoomList.at(rm)->playerList)
+                        for(auto t =  MasterRoomList.at(rm)->playerList.begin(); t != MasterRoomList.at(rm)->playerList.end(); ++t)
                         {
-                            if(strcmp(t->charTainer.CHARACTER_NAME,lurk_loot.TARGET) == 0)
+                            if(strcmp((*t)->charTainer.CHARACTER_NAME,lurk_loot.TARGET) == 0)
                             { // TARGET AQUIRED
                                 m = fmt::format("{0} dips their hands into {1}'s pockets! {1} reaches for a {2} and"
                                 " swings at {0}, but misses miserably.\n",
-                                p->charTainer.CHARACTER_NAME,t->charTainer.CHARACTER_NAME,
+                                p->charTainer.CHARACTER_NAME,(*t)->charTainer.CHARACTER_NAME,
                                 c_m.weapons.at(fast_rand() % c_m.weapons.size()));
                                 found = true;
-                                break;
+                                t = (MasterRoomList.at(rm)->playerList.end() - 1);
                             }
                         }
                         if(found)
@@ -825,9 +841,9 @@ void Gamemaster::mailroom(Player* p,int fd,int32_t type)
                             m = fmt::format("{0} dips their hands into their own pockets as they fail to find {1}!\n",
                             p->charTainer.CHARACTER_NAME,lurk_loot.TARGET);
                         }
-                        for(auto t: MasterRoomList.at(rm)->playerList)
+                        for(auto t = MasterRoomList.at(rm)->playerList.begin(); t != MasterRoomList.at(rm)->playerList.end(); ++t)
                         {
-                            GMPM(t,m);
+                            GMPM((*t),m);
                         }
                 }
             }
@@ -902,18 +918,18 @@ void Gamemaster::postman(Player* p,LURK_MSG lurk_msg,char* data)
     ssize_t bytes = 0;
     {
         std::lock_guard<std::mutex> lock(GMlock);
-        for(auto t:MasterPlayerList)
+        for(auto t = MasterPlayerList.begin(); t != MasterPlayerList.end(); ++t)
         {
-            if(strcmp(t->charTainer.CHARACTER_NAME,lurk_msg.CEIVER_NAME) == 0)
+            if(strcmp((*t)->charTainer.CHARACTER_NAME,lurk_msg.CEIVER_NAME) == 0)
             {
                 {
-                    std::lock_guard<std::mutex>lock(t->pLock);
-                    write(t->getFD(),&lurk_msg,sizeof(LURK_MSG));
-                    bytes = write(t->getFD(),data,lurk_msg.MSG_LEN);
+                    std::lock_guard<std::mutex>lock((*t)->pLock);
+                    write((*t)->getFD(),&lurk_msg,sizeof(LURK_MSG));
+                    bytes = write((*t)->getFD(),data,lurk_msg.MSG_LEN);
                 }
                 actionPass(p,1);
-                if(bytes < 0){t->quitPlayer();}
-                break;
+                if(bytes < 0){(*t)->quitPlayer();}
+                t = (MasterPlayerList.end() - 1);
             } else {
                 actionFail(p,26);
             }
@@ -963,7 +979,7 @@ void Gamemaster::actionFail(Player* p, uint8_t type)
         case 5:
         {// failed loot monster
             pkg.CODE = 3;
-            int size = MasterRoomList.at(p->charTainer.CURRENT_ROOM_NUMBER)->baddieList.size();
+            int size = MasterRoomList.at(p->charTainer.CURRENT_ROOM_NUMBER)->baddieList.size(); // will need lock if spawning
             if(p->isStarted() && size != 0)
             {
                 std::string baddie = MasterRoomList.at(p->charTainer.CURRENT_ROOM_NUMBER)->baddieList

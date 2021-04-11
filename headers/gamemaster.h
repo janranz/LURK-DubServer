@@ -59,6 +59,7 @@ class Gamemaster
 
     public:
         std::mutex GMlock;
+        bool GMKILL;
         Gamemaster();
         ~Gamemaster();
         int fast_rand(void);
