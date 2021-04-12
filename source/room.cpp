@@ -99,6 +99,10 @@ void Room::sendRoomInfo(Player* p)
     int fd = p->getFD();
     {
         std::lock_guard<std::mutex> lock(p->pLock);
+            write(fd,&room,sizeof(LURK_ROOM));
+            bytes = write(fd,roomDesc.c_str(),room.DESC_LENGTH);
+            if(bytes < 0){p->quitPlayer();}
+
         for(auto t = connectedRooms.begin(); t != connectedRooms.end(); ++t)
         {
             //std::cout << fmt::format("DEBUG: Connected Room Name: {0} {1}\n",t->ROOM_NAME,std::to_string(t->ROOM_NUMBER));
@@ -112,12 +116,6 @@ void Room::sendRoomInfo(Player* p)
                 p->quitPlayer();
                 t = (connectedRooms.end() - 1);
             }
-        }
-        if(p->isSktAlive())
-        {
-            write(fd,&room,sizeof(LURK_ROOM));
-            bytes = write(fd,roomDesc.c_str(),room.DESC_LENGTH);
-            if(bytes < 0){p->quitPlayer();}
         }
     }
 }

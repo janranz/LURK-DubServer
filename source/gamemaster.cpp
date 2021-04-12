@@ -6,7 +6,7 @@ unsigned int Gamemaster::g_seed = 0;
 uint16_t Gamemaster::MAX_BADDIES = 1000;
 uint16_t Gamemaster::MAX_STAT = 4000;
 int16_t Gamemaster::BASE_HEALTH = 6000;
-uint16_t Gamemaster::MAX_ROOMS = 100;
+uint16_t Gamemaster::MAX_ROOMS = 29;
 uint16_t Gamemaster::MIN_BADDIES_ROOM = 1;
 uint16_t Gamemaster::MAX_BADDIES_ROOM = 4;
 uint16_t Gamemaster::AWAKEN_VECTOR_SIZE;
@@ -763,7 +763,7 @@ void Gamemaster::mailroom(Player* p,int fd,int32_t type)
                         std::string baddie = MasterRoomList.at(rm)->baddieList.at(bDex).bTainer.CHARACTER_NAME;
                         m = fmt::format("{0} grabs a {1} and pummels {2} over the head, dealing damage!"
                         " as the baddie explodes, he drops some {3}\n",
-                        p->charTainer.CHARACTER_NAME,baddie ,c_m.weapons.at(bDex), c_m.food.at(cDex));
+                        p->charTainer.CHARACTER_NAME ,c_m.weapons.at(bDex),baddie, c_m.food.at(cDex));
                     } else{
                         actionFail(p,type);
                         m = fmt::format("{0}, starts swinging in a fit of rage, but targets absolutely nothing..."
