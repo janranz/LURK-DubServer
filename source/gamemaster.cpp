@@ -1,6 +1,7 @@
 #include"../headers/gamemaster.h"
 /* TODO:
     Figure out how to alert others of others. Think... when people join send all. but just keep it to rooms.
+    Remove renaming as it's unreliable for client writers.
  */
 unsigned int Gamemaster::g_seed = 0;
 uint16_t Gamemaster::MAX_BADDIES = 1000;
@@ -41,10 +42,8 @@ Gamemaster::~Gamemaster()
             std::cout << fmt::format("Deleting: {0}\n",(*p)->charTainer.CHARACTER_NAME);
             delete (*p);
     }
-
     MasterPlayerList.clear();
 
-    // for(auto p = MasterRoomList.rbegin(); p != MasterRoomList.rend(); ++p)
     for(Room* p : MasterRoomList)
     {
         for(LURK_CONNECTION* b : p->connectedRooms)
@@ -52,13 +51,6 @@ Gamemaster::~Gamemaster()
             delete b;
         }
         p->connectedRooms.clear();
-        // for(auto b = (*p)->connectedRooms.rbegin(); b != (*p)->connectedRooms.rend(); ++b)
-        // {
-        //     // std::cout << fmt::format("In Room {0}, deleting connected room: {1}\n",
-        //     //     std::to_string((*p)->room.ROOM_NUMBER),std::to_string((*b)->ROOM_NUMBER));
-        //     delete *b;
-        //     (*p)->connectedRooms.erase((++b.base()));
-        // }
         delete p;
     }
     MasterRoomList.clear();
@@ -74,6 +66,8 @@ Gamemaster::~Gamemaster()
 void Gamemaster::ragequit(Player* p)
 {// player has quit
     std::string m;
+    char msg[REASONABLE];
+
     if(p->isStarted())
     {
         m = fmt::format("Our beloved {0} has given up!\n They were last seen in Room #{1}\n",
@@ -115,16 +109,15 @@ void Gamemaster::ragequit(Player* p)
             delete p;
             std::cout << "Player pointer successfully deleted!\n" << std::endl;
         }
-
+        strncpy(msg,m.c_str(),m.length());
+        msg[m.length()] = 0;
         for(auto t = MasterPlayerList.begin(); t != MasterPlayerList.end(); ++t)
         {
-                GMPM((*t),m);
+
+            GMPM((*t),msg);
         }
     }
     std::cout << fmt::format("Post Deletion Current Player Count: {0}\n",std::to_string(MasterPlayerList.size()));
-        
-    
-
 }
 
 int Gamemaster::fast_rand(void)
@@ -337,21 +330,26 @@ void Gamemaster::buildRooms()
         MasterRoomList.emplace_back(r);
     }
     // set connections
+    char tmp[REASONABLE];
     for(auto t = MasterRoomList.begin(); t != MasterRoomList.end(); ++t)
     {
         if((*t)->room.ROOM_NUMBER != 0)
         {
             LURK_CONNECTION* lc = new LURK_CONNECTION;
-            strncpy(lc->ROOM_NAME,(*t)->room.ROOM_NAME,32);
+            strncpy(lc->ROOM_NAME,(*t)->room.ROOM_NAME,strlen((*t)->room.ROOM_NAME));
+            lc->ROOM_NAME[32] = 0;
             lc->ROOM_NUMBER = (*t)->room.ROOM_NUMBER;
             lc->DESC_LENGTH = (*t)->room.DESC_LENGTH;
-            strncpy(lc->DESC,(*t)->roomDesc.c_str(),(*t)->room.DESC_LENGTH); // CHECK HERE IF +1 IS BENEFICIAL
+            strncpy(lc->DESC,(*t)->roomDesc.c_str(),(*t)->room.DESC_LENGTH);
+            tmp[(*t)->room.DESC_LENGTH] = 0;
             MasterRoomList.at(0)->setConnectedRooms(lc);
         }
             
     }
-    for(size_t i = 1; i < MasterRoomList.size(); i++)
-    {
+    int i = 0;
+    for(auto t = MasterRoomList.begin(); t != MasterRoomList.end(); ++t)
+    {//LEFT OFF HERE RETURN HERE
+        ++i;
         LURK_CONNECTION* cPast = new LURK_CONNECTION;
         strncpy(cPast->ROOM_NAME,MasterRoomList.at(i-1)->room.ROOM_NAME,32);
         cPast->ROOM_NUMBER = MasterRoomList.at(i-1)->room.ROOM_NUMBER;
@@ -359,14 +357,7 @@ void Gamemaster::buildRooms()
         strncpy(cPast->DESC,MasterRoomList.at(i-1)->roomDesc.c_str(),MasterRoomList.at(i-1)->room.DESC_LENGTH);
         MasterRoomList.at(i)->setConnectedRooms(cPast);
 
-        // LURK_CONNECTION* cPast = new LURK_CONNECTION;
-        // strncpy(cPast->ROOM_NAME,MasterRoomList.at(i-1)->room.ROOM_NAME,32);
-        // cPast->ROOM_NUMBER = MasterRoomList.at(i-1)->room.ROOM_NUMBER;
-        // cPast->DESC_LENGTH = MasterRoomList.at(i-1)->room.DESC_LENGTH;
-        // strncpy(cPast->DESC,MasterRoomList.at(i-1)->roomDesc.c_str(),MasterRoomList.at(i-1)->room.DESC_LENGTH);
-        // MasterRoomList.at(i)->setConnectedRooms(cPast);
-
-        if(i != MasterRoomList.size()-1)
+        if(i < MasterRoomList.size()-1)
         {
             LURK_CONNECTION* cNext = new LURK_CONNECTION;
             strncpy(cNext->ROOM_NAME,MasterRoomList.at(i+1)->room.ROOM_NAME,32);
@@ -600,48 +591,52 @@ bool Gamemaster::checkStats(Player* p) //bool Gamemaster::checkStats(Player* p)
         {
             if(strcmp((*t)->charTainer.CHARACTER_NAME,p->charTainer.CHARACTER_NAME) == 0)
             {
-                // p.charTainer.CHARACTER_NAME[32] = 0;
-                std::string base(p->charTainer.CHARACTER_NAME);
-                std::string suff= std::to_string(((fast_rand() % 4000)));
-                std::string full = base + suff;
-                strncpy(p->charTainer.CHARACTER_NAME,full.c_str(),32);
-                std::cout << "Name changed to: " << p->charTainer.CHARACTER_NAME << std::endl;
                 t = MasterPlayerList.begin();
+                std::cout << fmt::format("Naming conflict: {}\n",p->charTainer.CHARACTER_NAME);
+                return false;
             }
         }
     }
-    // std::cout << p->charTainer.ATTACK << p->charTainer.DEFENSE << p->charTainer.REGEN << std::endl;
     uint32_t stat = p->charTainer.ATTACK + p->charTainer.DEFENSE + p->charTainer.REGEN;
-    
+    uint16_t a = p->charTainer.ATTACK;
+    uint16_t d = p->charTainer.DEFENSE;
+    uint16_t r = p->charTainer.REGEN;
+
     p->charTainer.HEALTH = BASE_HEALTH;
+    uint16_t dif = MAX_STAT - stat;
     if((stat > MAX_STAT))
     {
-        std::cout << "Inappropriate stats: " << stat << std::endl;
+        std::cout << fmt::format("Inappropriate stat: {}\n",stat);
         return false;
-    } else if(stat < MAX_STAT)
+    }else if((a < MAX_STAT) && ((a <= d) && (a <= r)))
     {
-        uint32_t dif = MAX_STAT - stat;
-        p->charTainer.HEALTH += dif;
+        a = dif;
+    }else if((a < MAX_STAT) && ((d <= a) && (d <= r)))
+    {
+        d = dif;
     }
+    else{
+        r = dif;
+    }
+
     p->charTainer.FLAGS = 0b11001000;
     p->charTainer.GOLD = (fast_rand() & ((4200 - 69) + 69));
     p->charTainer.CURRENT_ROOM_NUMBER = 0;
-    std::cout << "Appropriate stats: " << stat << std::endl;
     return true;
 
 }
 
-void Gamemaster::GMPM(Player* p, std::string& msg)
+void Gamemaster::GMPM(Player* p, char* m)
 {
     GM_MSG gm;
     int fd = p->getFD();
-    gm.MSG_LEN = msg.length();
+    gm.MSG_LEN = strlen(m);
     ssize_t bytes = 0;
     strncpy(gm.CEIVER_NAME,p->charTainer.CHARACTER_NAME,32);
     {
         std::lock_guard<std::mutex> lock(p->pLock);
         write(fd,&gm,sizeof(GM_MSG));
-        bytes = write(fd,msg.c_str(),gm.MSG_LEN);
+        bytes = write(fd,m,gm.MSG_LEN);
         if(bytes < 0){p->quitPlayer();}
     }
 }

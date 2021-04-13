@@ -10,6 +10,11 @@
 #include<mutex>
 #include"structs.h"
 
+/*TODO:
+    Consider if we should update players in a room w/ new char msg.
+    //LEFT OFF HERE RETURN HERE << find this
+ */
+
 class Baddie
 {
     // private:

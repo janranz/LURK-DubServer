@@ -6,7 +6,8 @@ Room::Room(uint16_t num,std::string name ,uint16_t roomDescLen ,std::string room
     stress_level = 0;
     // rLock = std::make_shared<std::mutex>();
     // strncpy(room.ROOM_NAME,name.c_str(),sizeof(room.ROOM_NAME));
-    strncpy(room.ROOM_NAME,name.c_str(),32);
+    strncpy(room.ROOM_NAME,name.c_str(),room.DESC_LENGTH);
+    room.ROOM_NAME[room.DESC_LENGTH] = 0;
     room.ROOM_NUMBER = num;
     room.DESC_LENGTH = roomDescLen;
     roomDesc = roomD;
@@ -51,11 +52,12 @@ void Room::addPlayer(Player* p)
 void Room::removePlayer(Player* p)
 {
     ssize_t bytes = 0;
-    
+    char msg[REASONABLE];
     std::string m = fmt::format("A bright light flashes as {0} has stepped into a portal left the room..\nWill you follow them?\n",p->charTainer.CHARACTER_NAME);
-
-    GM_MSG pkg;
+    strncpy(msg,m.c_str(),m.length());
     pkg.MSG_LEN = m.length();
+    msg[pkg.MSG_LEN] = 0;
+    GM_MSG pkg;
 
     for(auto t = playerList.begin(); t != playerList.end(); ++t)
     {
@@ -70,7 +72,7 @@ void Room::removePlayer(Player* p)
         {
             std::lock_guard<std::mutex> lock((*t)->pLock);
             write((*t)->getFD(),&pkg,sizeof(GM_MSG));
-            bytes = write((*t)->getFD(),m.c_str(),pkg.MSG_LEN);
+            bytes = write((*t)->getFD(),msg,pkg.MSG_LEN);
             if(bytes < 0){(*t)->quitPlayer();}
         }
     }
@@ -98,9 +100,12 @@ void Room::sendRoomInfo(Player* p)
     ssize_t bytes = 0;
     int fd = p->getFD();
     {
+            char msg[REASONABLE];
+            strncpy(msg,roomDesc.c_str(),room.DESC_LENGTH);
+            msg[room.DESC_LENGTH] = 0;
         std::lock_guard<std::mutex> lock(p->pLock);
             write(fd,&room,sizeof(LURK_ROOM));
-            bytes = write(fd,roomDesc.c_str(),room.DESC_LENGTH);
+            bytes = write(fd,msg,room.DESC_LENGTH);
             if(bytes < 0){p->quitPlayer();}
 
         for(auto t = connectedRooms.begin(); t != connectedRooms.end(); ++t)

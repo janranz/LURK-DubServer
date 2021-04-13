@@ -5,7 +5,8 @@
 Baddie::Baddie(std::string n,uint8_t f,uint16_t a,uint16_t d,uint16_t r,int16_t h,
                 uint16_t g,uint16_t rm,uint16_t l,std::string desc)
 {
-    strncpy(bTainer.CHARACTER_NAME,n.c_str(),32);
+    strncpy(bTainer.CHARACTER_NAME,n.c_str(),n.length());
+    bTainer.CHARACTER_NAME[32] = 0;
     bTainer.FLAGS = f;
     bTainer.ATTACK = a;
     bTainer.DEFENSE = d;

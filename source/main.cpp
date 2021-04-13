@@ -76,7 +76,7 @@ int main(int argc,char** argv)
             parsed.insert(parsed.end(),pr.begin(),pr.end());
         }
         t->close();
-        for(std::vector<std::string>::iterator m = parsed.begin(); m != (parsed.end()); m++)
+        for(std::vector<std::string>::iterator m = parsed.begin(); m != (parsed.end()); ++m)
         {
             bool checksOut = GM.buildChatter(i,m);
             if(!checksOut)

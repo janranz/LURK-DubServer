@@ -76,7 +76,7 @@ class Gamemaster
         bool checkStats(Player*);
         // bool checkStats(std::unique_ptr<Player>);
 
-        void GMPM(Player*,std::string&); // personal custom messenger for GM
+        void GMPM(Player*,char*); // personal custom messenger for GM
         void mailroom(Player*,int,int32_t);
         void postman(Player*,LURK_MSG,char*);
 
