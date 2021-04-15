@@ -3,6 +3,6 @@
 #include<vector>
 #include<string>
 
-std::vector<std::string> splitter(std::string s, std::string delimiter);
+std::vector<std::string> splitter(std::string, std::string);
 
-#endif // SPLITTER_H
+#endif //SPLITTER_H
