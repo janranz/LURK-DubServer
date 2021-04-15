@@ -17,6 +17,7 @@
 #include<limits>
 #include<bitset>
 #include<cassert>
+#include<condition_variable>
 #include"../headers/fmt/format.h"
 
 
@@ -73,6 +74,7 @@ class Gamemaster
         void getDex();
         // network functions
         void GMController(int);
+        void 
         bool checkStats(Player*);
         // bool checkStats(std::unique_ptr<Player>);
 

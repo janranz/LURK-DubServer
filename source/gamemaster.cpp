@@ -351,7 +351,8 @@ void Gamemaster::buildRooms()
     {//LEFT OFF HERE RETURN HERE
         ++i;
         LURK_CONNECTION* cPast = new LURK_CONNECTION;
-        strncpy(cPast->ROOM_NAME,MasterRoomList.at(i-1)->room.ROOM_NAME,32);
+        strncpy(cPast->ROOM_NAME,MasterRoomList.at(i-1)->room.ROOM_NAME,strlen(MasterRoomList.at(i-1)->room.ROOM_NAME));
+        cPast->ROOM_NAME[32] = 0;
         cPast->ROOM_NUMBER = MasterRoomList.at(i-1)->room.ROOM_NUMBER;
         cPast->DESC_LENGTH = MasterRoomList.at(i-1)->room.DESC_LENGTH;
         strncpy(cPast->DESC,MasterRoomList.at(i-1)->roomDesc.c_str(),MasterRoomList.at(i-1)->room.DESC_LENGTH);
@@ -360,10 +361,12 @@ void Gamemaster::buildRooms()
         if(i < MasterRoomList.size()-1)
         {
             LURK_CONNECTION* cNext = new LURK_CONNECTION;
-            strncpy(cNext->ROOM_NAME,MasterRoomList.at(i+1)->room.ROOM_NAME,32);
+            strncpy(cNext->ROOM_NAME,MasterRoomList.at(i+1)->room.ROOM_NAME,strlen(MasterRoomList.at(i+1)->room.ROOM_NAME));
+            cNext->ROOM_NAME[32] = 0;
             cNext->ROOM_NUMBER = MasterRoomList.at(i+1)->room.ROOM_NUMBER;
             cNext->DESC_LENGTH = MasterRoomList.at(i+1)->room.DESC_LENGTH;
             strncpy(cNext->DESC,MasterRoomList.at(i+1)->roomDesc.c_str(),MasterRoomList.at(i+1)->room.DESC_LENGTH);
+            cNext->DESC[MasterRoomList.at(i+1)->room.DESC_LENGTH] = 0;
             MasterRoomList.at(i)->setConnectedRooms(cNext);
         }
             // if(i != MasterRoomList.size() - 1)
@@ -536,14 +539,14 @@ void Gamemaster::GMController(int fd)
     ragequit(p);
 
 }
-// consider how often we alert people of stuff. might be clogging us up.
+// consider how often we alert people of stuff. might be too noisy.
 void Gamemaster::census(Player* p)
 {
     ssize_t bytes = 0;
     {
         std::lock_guard<std::mutex> lock(GMlock);
         for(auto t = MasterPlayerList.begin(); t != MasterPlayerList.end(); ++t)
-        {
+        {// update our player who called
             if(p->isSktAlive())
             {
                 int fd = p->getFD();
@@ -557,7 +560,7 @@ void Gamemaster::census(Player* p)
             } else {break;}
         }
         for(auto t = MasterPlayerList.begin(); t != MasterPlayerList.end(); ++t)
-        {
+        {// update everyone else of everyone else.
             int fd = (*t)->getFD();
             std::lock_guard<std::mutex> lock((*t)->pLock);
             for(auto b = MasterPlayerList.begin(); b != MasterPlayerList.end(); ++b)
