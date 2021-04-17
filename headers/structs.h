@@ -15,6 +15,9 @@ struct serverStats
 {
     static uint16_t MAX_STAT;
     static int16_t BASE_HEALTH;
+    static uint8_t BASE_FLAGS;
+    static uint8_t START_FLAGS;
+    static uint8_t BADDIE_FLAGS;
     static uint16_t MAX_BADDIES;
     static uint16_t MAX_ROOMS;
     static uint16_t MIN_BADDIES_PER_ROOM;
@@ -129,7 +132,6 @@ struct LURK_CONNECTION
     uint16_t ROOM_NUMBER;
     char ROOM_NAME[32];
     uint16_t DESC_LENGTH;
-    char DESC[];
 }__attribute__((packed));
 
 struct LURK_VERSION
