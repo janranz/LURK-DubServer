@@ -126,13 +126,13 @@ struct LURK_GAME
     uint16_t DESC_LENGTH;
 }__attribute__((packed));
 
-struct LURK_CONNECTION
-{
-    // uint8_t TYPE = 13;
-    uint16_t ROOM_NUMBER;
-    char ROOM_NAME[32];
-    uint16_t DESC_LENGTH;
-}__attribute__((packed));
+// struct LURK_CONNECTION
+// {
+//     // uint8_t TYPE = 13;
+//     uint16_t ROOM_NUMBER;
+//     char ROOM_NAME[32];
+//     uint16_t DESC_LENGTH;
+// }__attribute__((packed));
 
 struct LURK_VERSION
 {
