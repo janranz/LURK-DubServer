@@ -3,6 +3,7 @@
 Player::Player(int fd)
 {
     socketFD = fd;
+    bytes = 0;
     sktAlive = true;
     started = false;
     validToon = false;
@@ -65,3 +66,20 @@ int Player::getFD()
 {
     return socketFD;
 }
+
+//writer
+void Player::write_msg(LURK_MSG pkg, char* msg)
+{
+    uint8_t = 
+    {
+        std::lock_guard<std::mutex> lock(pLock);
+        write(socketFD,)
+        write(socketFD, &pkg, sizeof(LURK_MSG));
+        bytes = write(socketFD,msg, pkg.MSG_LEN);
+        if(bytes < 0)
+        {
+            quitPlayer();
+        }
+    }
+}
+

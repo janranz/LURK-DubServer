@@ -25,6 +25,24 @@ struct serverStats
     static uint16_t BUFF_SIZE;
 };
 
+struct LURK_TYPES
+{
+    static uint8_t TYPE_MSG;
+    static uint8_t TYPE_CHANGEROOM;
+    static uint8_t TYPE_FIGHT;
+    static uint8_t TYPE_PVP;
+    static uint8_t TYPE_LOOT;
+    static uint8_t TYPE_START;
+    static uint8_t TYPE_ERROR;
+    static uint8_t TYPE_ACCEPT;
+    static uint8_t TYPE_ROOM;
+    static uint8_t TYPE_CHARACTER;
+    static uint8_t TYPE_GAME;
+    static uint8_t TYPE_LEAVE;
+    static uint8_t TYPE_CONNECTION;
+    static uint8_t TYPE_VERSION;
+}
+
 struct cmSizes
 {
     uint16_t awaken_VSize;
@@ -54,7 +72,6 @@ struct LURK_MSG
     uint16_t MSG_LEN;
     char CEIVER_NAME[32];
     char SENDER_NAME[32];
-    char *msg;
 }__attribute__((packed));
 
 struct GM_MSG

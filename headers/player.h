@@ -5,6 +5,7 @@
 #include"../headers/fmt/format.h"
 #include<mutex>
 #include<iostream>
+#include<unistd.h>
 
 class Player
 {
@@ -14,6 +15,7 @@ class Player
         bool started;
         bool validToon;
         bool freshSpawn;
+        ssize_t bytes;
     
     public:
         LURK_CHARACTER charTainer;
@@ -37,6 +39,17 @@ class Player
 
         //getter
         int getFD();
+
+        //writer
+        void write_msg(LURK_MSG, char*);
+        void write_error();
+        void write_accept();
+        void write_room();
+        void write_character();
+        void write_game();
+        void write_leave();
+        void write_connection();
+        void write_version();
 };
 
 #endif // PLAYER_H
