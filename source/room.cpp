@@ -1,5 +1,12 @@
 #include"../headers/room.h"
 
+Room::Room(std::string name,std::string desc,uint16_t num)
+{
+    strncpy(roomTainer.ROOM_NAME,name.c_str(),32);
+    // roomTainer.ROOM_NAME[32] = 0;
+    roomDesc = desc;
+    roomTainer.ROOM_NUMBER = num;
+}
 
 void Room::emplace_connection(std::shared_ptr<Room> r)
 {
@@ -75,4 +82,10 @@ void Room::inform_baddies(std::shared_ptr<Player> p)
         std::lock_guard<std::mutex> lock((*t).bLock);
         p.get()->write_character((*t).bTainer,(*t).desc);
     }
+}
+
+//debug
+size_t Room::room_connection_size()
+{
+    return room_connections.size();
 }

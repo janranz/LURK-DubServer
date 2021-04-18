@@ -19,7 +19,8 @@ class Room
         LURK_ROOM roomTainer;
         std::string roomDesc;
         std::mutex rLock;
-
+        
+        Room(std::string,std::string,uint16_t);
         void emplace_connection(std::shared_ptr<Room>);
         void emplace_player(std::shared_ptr<Player>);
         void remove_player(std::shared_ptr<Player>);
@@ -27,6 +28,8 @@ class Room
         void inform_players_friendly();  // everyone for everyone
         void inform_baddies(std::shared_ptr<Player>); // "static"
 
+        //debug
+        size_t room_connection_size();
         // fight logic separate threads here!
 };
 

@@ -27,6 +27,8 @@ class Gamemaster
         Gamemaster();
         void build_chatter(int, std::vector<std::string>::iterator);
         void size_vectors();
+        void craft_room_names();
+        void build_rooms();
 };
 
 #endif //GM_H

@@ -79,6 +79,60 @@ void Gamemaster::size_vectors()
               << "roomType: "   << vsize.roomType_VSize    << std::endl;
     */
 }
+void Gamemaster::craft_room_names()
+{
+    std::string finalName;
+    int dex1,dex2,dex3;
+    for(int i = 0; i < serverStats::MAX_ROOMS; i++)
+    {
+        REROLL:
+            dex1 = (fast_rand() % vsize.adj_VSize);
+            dex2 = (fast_rand() % vsize.noun_VSize);
+            dex3 = (fast_rand() % vsize.roomType_VSize);
+
+            finalName = c_m.adj.at(dex1) + " "
+                      + c_m.noun.at(dex2) + " "
+                      + c_m.roomType.at(dex3);
+        
+        if(finalName.length() > 30)
+            goto REROLL;
+        c_m.roomNames.emplace_back(finalName);
+    }
+}
+void Gamemaster::build_rooms()
+{
+    uint16_t roomNumber;
+    std::string roomName,roomDesc;
+    //build Portal Room
+    roomName = "The Portal Room";
+    roomDesc = c_m.room_desc.at(0);
+    roomNumber = 0;
+    master_room_list.emplace_back(std::make_shared<Room>(roomName,roomDesc,roomNumber));
+    for(int i = 1; i < serverStats::MAX_ROOMS; i++)
+    {
+        roomName = c_m.roomNames.at(i);
+        roomDesc = c_m.room_desc.at(i);
+        roomNumber = i;
+        master_room_list.emplace_back(std::make_shared<Room>(roomName,roomDesc,roomNumber));
+    }
+    // build connections
+    for(auto t = master_room_list.begin(); t != master_room_list.end(); ++t)
+    {
+        if(t == master_room_list.begin())
+        {// portal room
+            for(auto b = master_room_list.begin() + 1; b != master_room_list.end(); ++b)
+            {
+                (*t).get()->emplace_connection(*b);
+            }
+        }else if( t+1 != master_room_list.end())
+        {
+            (*t).get()->emplace_connection(*(t-1));
+            (*t).get()->emplace_connection(*(t+1));
+        }else{
+            (*t).get()->emplace_connection(*(t-1));
+        }
+    }
+}
 //events
 int Gamemaster::fast_rand()
 {

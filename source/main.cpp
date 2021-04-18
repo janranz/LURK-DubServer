@@ -70,7 +70,8 @@ int main(int argc, char** argv)
     for(auto t : fds){delete t;}
     fds.clear();
     GM.size_vectors();
-
+    GM.craft_room_names();
+    GM.build_rooms();
 
     return 0;
 }
