@@ -3,8 +3,8 @@
 
 Gamemaster::Gamemaster()
 {
-    gmInfo.INITIAL_POINTS = serverStats::INIT_POINTS;
-    gmInfo.STAT_LIMIT = serverStats::MAX_STAT;
+    gmInfo.INITIAL_POINTS = serverStats::PLAYER_INIT_POINTS;
+    gmInfo.STAT_LIMIT = serverStats::PLAYER_MAX_STAT;
     gmInfo.DESC_LENGTH = serverStats::GAME_GREETING.length();
 
 
@@ -85,7 +85,7 @@ void Gamemaster::craft_room_names()
     int dex1,dex2,dex3;
     for(int i = 0; i < serverStats::MAX_ROOMS; i++)
     {
-        REROLL:
+        do{
             dex1 = (fast_rand() % vsize.adj_VSize);
             dex2 = (fast_rand() % vsize.noun_VSize);
             dex3 = (fast_rand() % vsize.roomType_VSize);
@@ -93,9 +93,8 @@ void Gamemaster::craft_room_names()
             finalName = c_m.adj.at(dex1) + " "
                       + c_m.noun.at(dex2) + " "
                       + c_m.roomType.at(dex3);
-        
-        if(finalName.length() > 30)
-            goto REROLL;
+        }while(finalName.length() > 30);
+
         c_m.roomNames.emplace_back(finalName);
     }
 }
@@ -133,6 +132,97 @@ void Gamemaster::build_rooms()
         }
     }
 }
+std::shared_ptr<Baddie> Gamemaster::build_a_baddie(uint16_t roomNumber)
+{
+    auto b = std::make_shared<Baddie>();
+    std::string name;
+    int dex;
+    do{
+        dex = (fast_rand() % c_m.baddies.size());
+        name = c_m.baddies.at(dex);
+    }while(name.length() > 30);
+    strncpy(b.get()->bTainer.CHARACTER_NAME,name.c_str(),32);
+
+    dex = (fast_rand() % c_m.baddie_desc.size());
+    b.get()->desc = c_m.baddie_desc.at(dex);
+
+    b.get()->bTainer.FLAGS = serverStats::BADDIE_AFLAGS;
+    b.get()->bTainer.CURRENT_ROOM_NUMBER = roomNumber;
+    b.get()->bTainer.DESC_LENGTH = b.get()->desc.length();
+
+    b.get()->bTainer.GOLD = (fast_rand() %
+        (serverStats::BADDIE_MAX_GOLD - serverStats::BADDIE_MIN_GOLD)
+        + serverStats::BADDIE_MIN_GOLD);
+
+    b.get()->bTainer.HEALTH = (fast_rand() %
+        (serverStats::BADDIE_MAX_HEALTH - serverStats::BADDIE_MIN_HEALTH)
+        + serverStats::BADDIE_MIN_HEALTH);
+    
+    // stat roll
+    int remaining = serverStats::PLAYER_INIT_POINTS;
+    uint16_t attack = 0;
+    uint16_t defense = 0;
+    uint16_t regen = 0;
+    int roll;
+    int i = 0;
+    while(remaining != 0)
+    {
+        switch(i % 3)
+        {
+            case 0:
+            {
+                roll = (fast_rand() % (remaining) + 1);
+                attack += roll;
+                remaining -= roll;
+                break;                
+            }
+            case 1:
+            {
+                roll = (fast_rand() % (remaining) + 1);
+                defense += roll;
+                remaining -= roll;
+                break;
+            }
+            case 2:
+            {
+                roll = (fast_rand() % (remaining) + 1);
+                regen += roll;
+                remaining -= roll;
+                break;
+            }
+        }
+        i++;
+    }
+    b.get()->bTainer.ATTACK = attack;
+    b.get()->bTainer.DEFENSE = defense;
+    b.get()->bTainer.REGEN = regen;
+    // std::cout << fmt::format("Monster Name: {0}\nAttack: {1}\nDefense: {2}\nRegen: {3}\n"
+    //     "Health: {4}\nGold: {5}\n", b.get()->bTainer.CHARACTER_NAME,
+    //     std::to_string(b.get()->bTainer.ATTACK),std::to_string(b.get()->bTainer.DEFENSE),
+    //     std::to_string(b.get()->bTainer.REGEN),std::to_string(b.get()->bTainer.HEALTH),
+    //     std::to_string(b.get()->bTainer.GOLD));
+    return b;
+}
+
+void Gamemaster::populate_rooms()
+{
+    for(auto t = master_room_list.begin(); t != master_room_list.end(); ++t)
+    {
+        int roomNumber = (*t).get()->roomTainer.ROOM_NUMBER;
+        int baddie_count = (fast_rand() %
+            (serverStats::MAX_BADDIES_PER_ROOM - serverStats::MIN_BADDIES_PER_ROOM)
+            + serverStats::MIN_BADDIES_PER_ROOM);
+        
+        for(int i = 0; i < baddie_count; i++)
+            (*t).get()->emplace_baddie(build_a_baddie(roomNumber));
+    // std::cout << fmt::format("{0} has {1} baddies.\n",
+    //     (*t).get()->roomTainer.ROOM_NAME, std::to_string((*t).get()->baddie_list_size()));
+    }
+    
+    
+}
+
+
 //events
 int Gamemaster::fast_rand()
 {

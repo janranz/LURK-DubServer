@@ -13,6 +13,7 @@ void Room::emplace_connection(std::shared_ptr<Room> r)
     std::lock_guard<std::mutex> lock(rLock);
     room_connections.emplace_back(r);
 }
+
 void Room::emplace_player(std::shared_ptr<Player>p)
 {// consider if we need to make a copy
  // std::shared_ptr<Player> tmp = std::make_shared<Player>(p);
@@ -25,6 +26,15 @@ void Room::emplace_player(std::shared_ptr<Player>p)
     inform_players_friendly();
 
 }
+
+void Room::emplace_baddie(std::shared_ptr<Baddie> b)
+{
+    {
+        std::lock_guard<std::mutex> lock(rLock);
+        baddie_list.emplace_back(b);
+    }
+}
+
 void Room::remove_player(std::shared_ptr<Player>p)
 {
     int pfd = p.get()->getFD();
@@ -79,8 +89,8 @@ void Room::inform_baddies(std::shared_ptr<Player> p)
 
     for(auto t = baddie_list.begin(); t != baddie_list.end(); ++t)
     {
-        std::lock_guard<std::mutex> lock((*t).bLock);
-        p.get()->write_character((*t).bTainer,(*t).desc);
+        std::lock_guard<std::mutex> lock((*t)->bLock);
+        p.get()->write_character((*t)->bTainer,(*t)->desc);
     }
 }
 
@@ -88,4 +98,8 @@ void Room::inform_baddies(std::shared_ptr<Player> p)
 size_t Room::room_connection_size()
 {
     return room_connections.size();
+}
+size_t Room::baddie_list_size()
+{
+    return baddie_list.size();
 }

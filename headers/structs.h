@@ -17,14 +17,20 @@ struct chatter_messages
 struct serverStats
 {
     static std::string GAME_GREETING;
-    static uint16_t INIT_POINTS;
-    static uint16_t MAX_STAT;
-    static int16_t BASE_HEALTH;
+    static uint16_t PLAYER_INIT_POINTS;
+    static uint16_t PLAYER_MAX_STAT;
+    static int16_t PLAYER_BASE_HEALTH;
     static uint8_t BASE_FLAGS;
     static uint8_t PLAYER_AFLAGS;
     static uint8_t PLAYER_DFLAGS;
     static uint8_t BADDIE_AFLAGS;
     static uint8_t BADDIE_DFLAGS;
+    static int16_t BADDIE_MIN_HEALTH;
+    static int16_t BADDIE_MAX_HEALTH;
+    static uint16_t BADDIE_MIN_GOLD;
+    static uint16_t BADDIE_MAX_GOLD;
+    static uint16_t BADDIE_MIN_STAT;
+    static uint16_t BADDIE_MAX_STAT;
     static uint16_t MAX_BADDIES;
     static uint16_t MAX_ROOMS;
     static uint16_t MIN_BADDIES_PER_ROOM;

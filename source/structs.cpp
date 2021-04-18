@@ -3,18 +3,27 @@
 std::string serverStats::GAME_GREETING = "Welcome to the portal room.."
     " the source of all great things!\n"
     "Go wherever your heart desires, or start off from the beginning.\n";
-uint16_t serverStats::INIT_POINTS   = 6000;
-uint16_t serverStats::MAX_STAT      = std::numeric_limits<unsigned short>::max();
-uint8_t serverStats::BASE_FLAGS     = 0b11000000;
-uint8_t serverStats::PLAYER_AFLAGS  = 0b11011000; // force join battle only for now
-uint8_t serverStats::PLAYER_DFLAGS  = 0b01011000; // force join battle only for now
-uint8_t serverStats::BADDIE_AFLAGS  = 0b11111000;
-uint8_t serverStats::BADDIE_DFLAGS  = 0b01111000;
-int16_t serverStats::BASE_HEALTH    = 12000;
-uint16_t serverStats::MAX_BADDIES   = 1000;
-uint16_t serverStats::MAX_ROOMS     = 10;
+
+uint16_t serverStats::PLAYER_INIT_POINTS = 6000;
+uint16_t serverStats::PLAYER_MAX_STAT    = std::numeric_limits<unsigned short>::max();
+uint8_t serverStats::BASE_FLAGS          = 0b11000000;
+uint8_t serverStats::PLAYER_AFLAGS       = 0b11011000; // force join battle only for now
+uint8_t serverStats::PLAYER_DFLAGS       = 0b01011000; // force join battle only for now
+int16_t serverStats::PLAYER_BASE_HEALTH  = 12000;
+
+uint8_t serverStats::BADDIE_AFLAGS         = 0b11111000;
+uint8_t serverStats::BADDIE_DFLAGS         = 0b01111000;
+int16_t serverStats::BADDIE_MIN_HEALTH     = 100;
+int16_t serverStats::BADDIE_MAX_HEALTH     = 24000;
+uint16_t serverStats::BADDIE_MIN_GOLD      = 120;
+uint16_t serverStats::BADDIE_MAX_GOLD      = 4000;
+uint16_t serverStats::BADDIE_MIN_STAT      = 400;
+uint16_t serverStats::BADDIE_MAX_STAT      = 8000;
+uint16_t serverStats::MAX_BADDIES          = 1000;
 uint16_t serverStats::MIN_BADDIES_PER_ROOM = 2;
 uint16_t serverStats::MAX_BADDIES_PER_ROOM = 5;
+
+uint16_t serverStats::MAX_ROOMS = 10;
 uint16_t serverStats::BUFF_SIZE = std::numeric_limits<unsigned short>::max();
 
 uint8_t LURK_TYPES::TYPE_MSG        = 1;

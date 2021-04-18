@@ -8,7 +8,7 @@ Player::Player(int fd)
     started = false;
     validToon = false;
     freshSpawn = true;
-    charTainer.HEALTH = serverStats::BASE_HEALTH;
+    charTainer.HEALTH = serverStats::PLAYER_BASE_HEALTH;
     charTainer.FLAGS = serverStats::BASE_FLAGS;
     desc = "";
 }

@@ -72,6 +72,7 @@ int main(int argc, char** argv)
     GM.size_vectors();
     GM.craft_room_names();
     GM.build_rooms();
-
+    GM.populate_rooms();
+    
     return 0;
 }

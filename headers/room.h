@@ -12,7 +12,7 @@ class Room
     private:
         char stress_level;
         std::vector<std::shared_ptr<Room>> room_connections;
-        std::vector<Baddie> baddie_list;
+        std::vector<std::shared_ptr<Baddie>> baddie_list;
         std::vector<std::shared_ptr<Player>> player_list;
         ssize_t bytes;
     public:
@@ -22,6 +22,7 @@ class Room
         
         Room(std::string,std::string,uint16_t);
         void emplace_connection(std::shared_ptr<Room>);
+        void emplace_baddie(std::shared_ptr<Baddie>);
         void emplace_player(std::shared_ptr<Player>);
         void remove_player(std::shared_ptr<Player>);
         void inform_connections(std::shared_ptr<Player>);    // "static"
@@ -30,6 +31,7 @@ class Room
 
         //debug
         size_t room_connection_size();
+        size_t baddie_list_size();
         // fight logic separate threads here!
 };
 

@@ -29,6 +29,9 @@ class Gamemaster
         void size_vectors();
         void craft_room_names();
         void build_rooms();
+        std::shared_ptr<Baddie> build_a_baddie(uint16_t);
+        void populate_rooms();
+        
 };
 
 #endif //GM_H
