@@ -58,7 +58,7 @@ void Gamemaster::size_vectors()
     vsize.noun_VSize        = c_m.noun.size();
     vsize.roomType_VSize    = c_m.roomType.size();
 
-    //debug
+    /*debug
     std::cout << "Awaken: "     << vsize.awaken_VSize      << std::endl
               << "Baddie: "     << vsize.baddies_VSize     << std::endl
               << "Danger: "     << vsize.danger_VSize      << std::endl
@@ -77,6 +77,7 @@ void Gamemaster::size_vectors()
               << "adj: "        << vsize.adj_VSize         << std::endl
               << "noun: "       << vsize.noun_VSize        << std::endl
               << "roomType: "   << vsize.roomType_VSize    << std::endl;
+    */
 }
 //events
 int Gamemaster::fast_rand()

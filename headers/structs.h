@@ -75,13 +75,6 @@ struct cm_sizes
     uint16_t roomType_VSize;
 };
 
-struct Baddie
-{
-    LURK_CHARACTER bTainer;
-    std::string desc;
-    std::mutex bLock;
-};
-
 // LURK Tainers
 struct LURK_MSG
 {
@@ -176,6 +169,12 @@ struct LURK_VERSION
     uint16_t EXTENS_SIZE;
 }__attribute__((packed));
 
+struct Baddie
+{
+    LURK_CHARACTER bTainer;
+    std::string desc;
+    std::mutex bLock;
+};
 
 #endif // STRUCTS_H
 

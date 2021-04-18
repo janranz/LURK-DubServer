@@ -45,7 +45,7 @@ int main(int argc, char** argv)
     for(std::vector<std::string>::iterator t = parsed.begin(); t != parsed.end(); ++t)
     {
         std::ifstream* fd = new std::ifstream;
-        std::string buildStr = "../chatter" + *t;
+        std::string buildStr = "../chatter/" + *t;
         fd->open(buildStr, std::fstream::in);
         fds.emplace_back(fd);
     }
@@ -55,8 +55,6 @@ int main(int argc, char** argv)
     for(auto &t : fds)
     {
         parsed.clear();
-        std::cout << fmt::format("Building object number: {}\n",std::to_string(i + 1));
-        
         while(getline(*t,line))
         {
             std::vector<std::string> pr = splitter(line, "\n");
