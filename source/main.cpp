@@ -2,10 +2,16 @@
 #include"../headers/splitter.h"
 #include"../headers/gamemaster.h"
 #include"../headers/structs.h"
+#include"../headers/fmt/format.h"
 #include<iostream>
 #include<fstream>
 #include<vector>
 #include<string>
+#include<signal.h>
+#include<sys/socket.h>
+#include<netinet/in.h>
+#include<arpa/inet.h>
+#include<thread>
 
 int main(int argc, char** argv)
 {
@@ -73,6 +79,33 @@ int main(int argc, char** argv)
     GM.craft_room_names();
     GM.build_rooms();
     GM.populate_rooms();
+
+    //establish connection
+    signal(SIGPIPE, SIG_IGN);
     
+    struct sockaddr_in sai;
+    sai.sin_family = AF_INET;
+    sai.sin_addr.s_addr = INADDR_ANY;
+    sai.sin_port = htons(port);
+
+    int dubSkt = socket(AF_INET,SOCK_STREAM, 0);
+    bind(dubSkt, (struct sockaddr *)(&sai),sizeof(struct sockaddr_in));
+    listen(dubSkt,32);
+
+    int player_fd;
+    struct sockaddr_in client_addr;
+    socklen_t address_size = sizeof(struct sockaddr_in);
+
+    //listener loop.
+    while(1)
+    {
+        std::cout << "Listening..." << std::endl;
+        player_fd = accept(dubSkt, (struct sockaddr*)(&client_addr), &address_size);
+        std::cout << fmt::format("Connection established from {0}\n",inet_ntoa(client_addr.sin_addr));
+
+        std::thread t1(&Gamemaster::GMController,&GM,player_fd);
+
+        t1.detach();
+    }
     return 0;
 }

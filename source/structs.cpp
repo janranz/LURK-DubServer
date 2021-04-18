@@ -4,12 +4,16 @@ std::string serverStats::GAME_GREETING = "Welcome to the portal room.."
     " the source of all great things!\n"
     "Go wherever your heart desires, or start off from the beginning.\n";
 
+std::string serverStats::GM_NAME = "| Gamemaster Dubs (Server) |";
 uint16_t serverStats::PLAYER_INIT_POINTS = 6000;
 uint16_t serverStats::PLAYER_MAX_STAT    = std::numeric_limits<unsigned short>::max();
+int16_t serverStats::PLAYER_S_MAX_STAT   = std::numeric_limits<short>::max();
 uint8_t serverStats::BASE_FLAGS          = 0b11000000;
 uint8_t serverStats::PLAYER_AFLAGS       = 0b11011000; // force join battle only for now
 uint8_t serverStats::PLAYER_DFLAGS       = 0b01011000; // force join battle only for now
 int16_t serverStats::PLAYER_BASE_HEALTH  = 12000;
+uint16_t serverStats::PLAYER_MIN_GOLD    = 200;
+uint16_t serverStats::PLAYER_MAX_GOLD    = 4000;
 
 uint8_t serverStats::BADDIE_AFLAGS         = 0b11111000;
 uint8_t serverStats::BADDIE_DFLAGS         = 0b01111000;

@@ -6,8 +6,16 @@ Gamemaster::Gamemaster()
     gmInfo.INITIAL_POINTS = serverStats::PLAYER_INIT_POINTS;
     gmInfo.STAT_LIMIT = serverStats::PLAYER_MAX_STAT;
     gmInfo.DESC_LENGTH = serverStats::GAME_GREETING.length();
+    strncpy(gmpm.SENDER_NAME,serverStats::GM_NAME.c_str(),32);
 
 
+}
+
+//events
+int Gamemaster::fast_rand()
+{
+    g_seed = (214013*g_seed+2531011);
+    return (g_seed>>16)&0x7FFF;
 }
 
 // initializers
@@ -218,14 +226,133 @@ void Gamemaster::populate_rooms()
     // std::cout << fmt::format("{0} has {1} baddies.\n",
     //     (*t).get()->roomTainer.ROOM_NAME, std::to_string((*t).get()->baddie_list_size()));
     }
-    
-    
+
+}
+//cleanup
+void Gamemaster::ragequit(std::shared_ptr<Player> p)
+{
+    std::cout << fmt::format("{} has ragequit.\n",p.get()->charTainer.CHARACTER_NAME);
+}
+//network
+void Gamemaster::GMController(int fd)
+{
+    auto p = std::make_shared<Player>(fd);
+    p.get()->write_version(vers);
+    p.get()->write_game(gmInfo,serverStats::GAME_GREETING);
+
+    while(p.get()->isSktAlive() && !(p.get()->isValidToon()))
+    {
+        uint8_t type = listener(p);
+        if(type == LURK_TYPES::TYPE_CHARACTER)
+        {
+            proc_character(p);
+        }else{
+            error_character(p);
+        }
+    }
+
+    //connection lost.
+    ragequit(p);
 }
 
-
-//events
-int Gamemaster::fast_rand()
+uint8_t Gamemaster::listener(std::shared_ptr<Player> p)
 {
-    g_seed = (214013*g_seed+2531011);
-    return (g_seed>>16)&0x7FFF;
+    ssize_t bytes;
+    uint8_t dipByte;
+    bytes = recv(p.get()->getFD(), &dipByte,sizeof(uint8_t),MSG_WAITALL);
+
+    if(bytes < 0)
+    {
+        p.get()->quitPlayer();
+        dipByte = 0;
+    }
+    return dipByte;
+}
+
+//type processing
+void Gamemaster::proc_character(std::shared_ptr<Player> p)
+{
+    ssize_t bytes;
+    recv(p.get()->getFD(), &p.get()->charTainer, sizeof(LURK_CHARACTER),MSG_WAITALL);
+    
+    uint16_t len = p.get()->charTainer.DESC_LENGTH;
+    char desc[len];
+    bytes = recv(p.get()->getFD(),desc,len,MSG_WAITALL);
+    desc[len] = 0;
+    p.get()->desc = std::string(desc);
+
+    if(bytes < 0)
+    {
+        p.get()->quitPlayer();
+        return;
+    }
+    bool checks = false;
+    checks = check_name(p);
+    checks = check_stat(p);
+
+    if(checks)
+    {
+        p.get()->isValidToon();
+        p.get()->write_accept(LURK_TYPES::TYPE_CHARACTER);
+        p.get()->write_character(p.get()->charTainer,p.get()->desc);
+    }else{
+        error_character(p);
+    }
+
+}
+
+//error handling
+void Gamemaster::error_character(std::shared_ptr<Player> p)
+{
+    LURK_ERROR pkg;
+    pkg.CODE = 4;
+    std::string m;
+    if(p.get()->isStarted())
+    {
+        m = fmt::format("{}: Join battle is always on"
+            "and is not a choice (yet).\n",serverStats::GM_NAME);
+    }else if(!(p.get()->isValidToon()))
+    {
+        m = fmt::format("{}: You attempt to set invalid stats.\n",serverStats::GM_NAME);
+
+    }else {
+        m = fmt::format("{}: You shouldn't see this. (DEBUG: error_character())\n",serverStats::GM_NAME);
+    }
+    pkg.MSG_LEN = m.length();
+    p.get()->write_error(pkg,m);
+
+}
+//helper
+bool Gamemaster::check_name(std::shared_ptr<Player> p)
+{
+    bool unique = true;
+    if(!(master_player_list.empty()))
+    {
+        std::lock_guard<std::mutex> lock(GMLock);
+        for(auto t = master_player_list.begin(); t != master_player_list.end(); ++t)
+        {
+            if(strcmp((*t).get()->charTainer.CHARACTER_NAME,
+               p.get()->charTainer.CHARACTER_NAME) == 0)
+            {
+                unique = false;
+                break;
+            }
+        }
+    }
+    return unique;
+}
+bool Gamemaster::check_stat(std::shared_ptr<Player> p)
+{
+    bool good = false;
+    uint16_t stat = p.get()->charTainer.ATTACK + p.get()->charTainer.DEFENSE + p.get()->charTainer.REGEN;
+    p.get()->charTainer.GOLD = (fast_rand() %
+        (serverStats::PLAYER_MAX_GOLD - serverStats::PLAYER_MIN_GOLD) + serverStats::PLAYER_MIN_GOLD);
+    
+    if(stat < serverStats::PLAYER_INIT_POINTS)
+    {
+        uint16_t remaining = serverStats::PLAYER_INIT_POINTS - stat;
+        p.get()->charTainer.HEALTH += remaining;
+        good = true;
+    }
+    return good;
 }

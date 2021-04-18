@@ -94,8 +94,10 @@ void Player::write_error(LURK_ERROR pkg, std::string msg)
         }
     }
 }
-void Player::write_accept(LURK_ACCEPT pkg)
+void Player::write_accept(uint8_t t)
 {
+    LURK_ACCEPT pkg;
+    pkg.ACCEPT_TYPE = t;
     {
         std::lock_guard<std::mutex> lock(pLock);
         write(socketFD, &LURK_TYPES::TYPE_ACCEPT,sizeof(uint8_t));
