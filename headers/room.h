@@ -11,16 +11,23 @@ class Room
 {
     private:
         char stress_level;
-        std::vector<int> connection_dex;
+        std::vector<std::shared_ptr<Room>> room_connections;
+        std::vector<Baddie> baddie_list;
         std::vector<std::shared_ptr<Player>> player_list;
+        ssize_t bytes;
     public:
         LURK_ROOM roomTainer;
         std::string roomDesc;
         std::mutex rLock;
 
-        void emplace_connection(int);
+        void emplace_connection(std::shared_ptr<Room>);
         void emplace_player(std::shared_ptr<Player>);
         void remove_player(std::shared_ptr<Player>);
+        void inform_connections(std::shared_ptr<Player>);    // "static"
+        void inform_players_friendly();  // everyone for everyone
+        void inform_baddies(std::shared_ptr<Player>); // "static"
+
+        // fight logic separate threads here!
 };
 
 #endif //ROOM_H

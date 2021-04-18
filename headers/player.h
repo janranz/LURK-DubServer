@@ -41,15 +41,14 @@ class Player
         int getFD();
 
         //writer
-        void write_msg(LURK_MSG, char*);
-        void write_error();
-        void write_accept();
-        void write_room();
-        void write_character();
-        void write_game();
-        void write_leave();
-        void write_connection();
-        void write_version();
+        void write_msg(LURK_MSG, std::string);
+        void write_error(LURK_ERROR, std::string);
+        void write_accept(LURK_ACCEPT);
+        void write_room(LURK_ROOM,std::string);
+        void write_character(LURK_CHARACTER, std::string);
+        void write_game(LURK_GAME, std::string);
+        void write_connection(LURK_ROOM,std::string);
+        void write_version(LURK_VERSION);
 };
 
 #endif // PLAYER_H

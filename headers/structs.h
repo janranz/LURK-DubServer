@@ -4,6 +4,8 @@
 #include<string>
 #include<cstdint>
 #include<limits>
+#include<mutex>
+
 struct chatter_messages
 {// dialogue storage
     std::vector<std::string> awaken,baddies,danger,death,error,fightHit,food,health,
@@ -11,18 +13,25 @@ struct chatter_messages
                              adj,noun,roomTainer;
 };
 
+
 struct serverStats
 {
+    static std::string GAME_GREETING;
+    static uint16_t INIT_POINTS;
     static uint16_t MAX_STAT;
     static int16_t BASE_HEALTH;
     static uint8_t BASE_FLAGS;
-    static uint8_t START_FLAGS;
-    static uint8_t BADDIE_FLAGS;
+    static uint8_t PLAYER_AFLAGS;
+    static uint8_t PLAYER_DFLAGS;
+    static uint8_t BADDIE_AFLAGS;
+    static uint8_t BADDIE_DFLAGS;
     static uint16_t MAX_BADDIES;
     static uint16_t MAX_ROOMS;
     static uint16_t MIN_BADDIES_PER_ROOM;
     static uint16_t MAX_BADDIES_PER_ROOM;
     static uint16_t BUFF_SIZE;
+    
+    
 };
 
 struct LURK_TYPES
@@ -41,7 +50,7 @@ struct LURK_TYPES
     static uint8_t TYPE_LEAVE;
     static uint8_t TYPE_CONNECTION;
     static uint8_t TYPE_VERSION;
-}
+};
 
 struct cmSizes
 {
@@ -63,6 +72,13 @@ struct cmSizes
     uint16_t adj_VSize;
     uint16_t noun_VSize;
     uint16_t roomTainer_VSize;
+};
+
+struct Baddie
+{
+    LURK_CHARACTER bTainer;
+    std::string desc;
+    std::mutex bLock;
 };
 
 // LURK Tainers

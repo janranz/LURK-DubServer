@@ -1,9 +1,15 @@
 #include"../headers/structs.h"
 
-uint16_t serverStats::MAX_STAT      = 6000;
+std::string serverStats::GAME_GREETING = "Welcome to the portal room.."
+    " the source of all great things!\n"
+    "Go wherever your heart desires, or start off from the beginning.\n";
+uint16_t serverStats::INIT_POINTS   = 6000;
+uint16_t serverStats::MAX_STAT      = std::numeric_limits<unsigned short>::max();
 uint8_t serverStats::BASE_FLAGS     = 0b11000000;
-uint8_t serverStats::START_FLAGS    = 0b11011000; // force join battle only for now
-uint8_t serverStats::BADDIE_FLAGS   = 0b11111000;
+uint8_t serverStats::PLAYER_AFLAGS  = 0b11011000; // force join battle only for now
+uint8_t serverStats::PLAYER_DFLAGS  = 0b01011000; // force join battle only for now
+uint8_t serverStats::BADDIE_AFLAGS  = 0b11111000;
+uint8_t serverStats::BADDIE_DFLAGS  = 0b01111000;
 int16_t serverStats::BASE_HEALTH    = 12000;
 uint16_t serverStats::MAX_BADDIES   = 1000;
 uint16_t serverStats::MAX_ROOMS     = 10;
