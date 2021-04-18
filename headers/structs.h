@@ -10,7 +10,7 @@ struct chatter_messages
 {// dialogue storage
     std::vector<std::string> awaken,baddies,danger,death,error,fightHit,food,health,
                              loot,pvp,roomNames,safeEv,trans,weapons,baddie_desc,room_desc,
-                             adj,noun,roomTainer;
+                             adj,noun,roomType;
 };
 
 
@@ -52,7 +52,7 @@ struct LURK_TYPES
     static uint8_t TYPE_VERSION;
 };
 
-struct cmSizes
+struct cm_sizes
 {
     uint16_t awaken_VSize;
     uint16_t baddies_VSize;
@@ -60,6 +60,7 @@ struct cmSizes
     uint16_t death_VSize;
     uint16_t error_VSize;
     uint16_t fightHit_VSize;
+    uint16_t food_VSize;
     uint16_t health_VSize;
     uint16_t loot_VSize;
     uint16_t pvp_VSize;
@@ -71,7 +72,7 @@ struct cmSizes
     uint16_t room_desc_VSize;
     uint16_t adj_VSize;
     uint16_t noun_VSize;
-    uint16_t roomTainer_VSize;
+    uint16_t roomType_VSize;
 };
 
 struct Baddie

@@ -49,12 +49,29 @@ int main(int argc, char** argv)
         fd->open(buildStr, std::fstream::in);
         fds.emplace_back(fd);
     }
-    int dex = 0;
-    // Gamemaster GM;
-    serverStats test;
-    // std::cout << fmt::format("Test size: {0}",std::to_string(test.MAX_STAT));
-    
-    std::cout << test.BUFF_SIZE << std::endl;
+    int i = 0;
+    Gamemaster GM;
+
+    for(auto &t : fds)
+    {
+        parsed.clear();
+        std::cout << fmt::format("Building object number: {}\n",std::to_string(i + 1));
+        
+        while(getline(*t,line))
+        {
+            std::vector<std::string> pr = splitter(line, "\n");
+            parsed.insert(parsed.end(),pr.begin(),pr.end());
+        }
+        t->close();
+        for(std::vector<std::string>::iterator m = parsed.begin(); m != parsed.end(); ++m)
+        {
+            GM.build_chatter(i,m);
+        }
+        i++;
+    }
+    for(auto t : fds){delete t;}
+    fds.clear();
+    GM.size_vectors();
 
 
     return 0;
