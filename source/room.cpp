@@ -27,6 +27,18 @@ void Room::emplace_player(std::shared_ptr<Player>p)
 
 }
 
+bool Room::isValidConnection(uint16_t r)
+{
+    auto t = std::find_if(room_connections.begin(), room_connections.end(), [&](const Room& rr){return rr.roomTainer.ROOM_NUMBER == r;});
+
+    if(t != room_connections.end())
+    {
+        return true;
+    }else{
+        return false;
+    }
+}
+
 void Room::emplace_baddie(std::shared_ptr<Baddie> b)
 {
     {

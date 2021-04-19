@@ -29,6 +29,8 @@ class Room
         void inform_players_friendly();  // everyone for everyone
         void inform_baddies(std::shared_ptr<Player>); // "static"
 
+        //helper
+        bool isValidConnection(uint16_t);
         //debug
         size_t room_connection_size();
         size_t baddie_list_size();

@@ -35,18 +35,22 @@ class Gamemaster
         
         //cleanup
         void ragequit(std::shared_ptr<Player>);
+        void pump_n_dump(std::shared_ptr<Player>);
         //network
         void GMController(int);
         uint8_t listener(std::shared_ptr<Player>);
 
         // type processing
         void proc_character(std::shared_ptr<Player>);
+        void proc_start(std::shared_ptr<Player>);
 
         //helper
         bool check_name(std::shared_ptr<Player>);
         bool check_stat(std::shared_ptr<Player>);
+        void move_player(std::shared_ptr<Player>,uint16_t);
         // error handling
         void error_character(std::shared_ptr<Player>);
+        void error_start(std::shared_ptr<Player>);
 };
 
 #endif //GM_H

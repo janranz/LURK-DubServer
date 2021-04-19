@@ -8,6 +8,9 @@ Gamemaster::Gamemaster()
     gmInfo.DESC_LENGTH = serverStats::GAME_GREETING.length();
     strncpy(gmpm.SENDER_NAME,serverStats::GM_NAME.c_str(),32);
 
+    vers.MAJOR = serverStats::GAME_VERSION_MAJOR;
+    vers.MINOR = serverStats::GAME_VERSION_MINOR;
+    vers.EXTENS_SIZE = serverStats::GAME_VERSION_EXT;
 
 }
 
@@ -233,7 +236,15 @@ void Gamemaster::ragequit(std::shared_ptr<Player> p)
 {
     std::cout << fmt::format("{} has ragequit.\n",p.get()->charTainer.CHARACTER_NAME);
 }
-//network
+
+void Gamemaster::pump_n_dump(std::shared_ptr<Player>p)
+{// don't check bytes on MSG_DONTWAIT
+    std::vector<char> dump;
+    recv(p.get()->getFD(), dump.data(), sizeof(size_t), MSG_DONTWAIT);
+}
+
+
+//network**********************************************************************************************************
 void Gamemaster::GMController(int fd)
 {
     auto p = std::make_shared<Player>(fd);
@@ -248,12 +259,25 @@ void Gamemaster::GMController(int fd)
             proc_character(p);
         }else{
             error_character(p);
+            pump_n_dump(p);
         }
     }
-
+    while(p.get()->isSktAlive() && !(p.get()->isStarted()))
+    {
+        uint8_t type = listener(p);
+        if(type == LURK_TYPES::TYPE_START)
+        {
+            proc_start(p);
+        }else{
+            error_start(p);
+            pump_n_dump(p);
+        }
+    }
     //connection lost.
     ragequit(p);
 }
+//END network******************************************************************************************************
+
 
 uint8_t Gamemaster::listener(std::shared_ptr<Player> p)
 {
@@ -292,12 +316,27 @@ void Gamemaster::proc_character(std::shared_ptr<Player> p)
 
     if(checks)
     {
-        p.get()->isValidToon();
+        p.get()->setValid();
         p.get()->write_accept(LURK_TYPES::TYPE_CHARACTER);
         p.get()->write_character(p.get()->charTainer,p.get()->desc);
     }else{
         error_character(p);
     }
+
+}
+
+void Gamemaster::proc_start(std::shared_ptr<Player> p)
+{
+    p.get()->startPlayer();
+    {
+        std::lock_guard<std::mutex> lock(GMLock);
+        master_player_list.emplace_back(p);
+    }
+    std::cout << fmt::format("{0} has been added to Master: {1} (size)",
+        p.get()->charTainer.CHARACTER_NAME,master_player_list.size());
+    
+    p.get()->write_accept(LURK_TYPES::TYPE_START);
+    move_player(p,0);
 
 }
 
@@ -322,6 +361,23 @@ void Gamemaster::error_character(std::shared_ptr<Player> p)
     p.get()->write_error(pkg,m);
 
 }
+
+void Gamemaster::error_start(std::shared_ptr<Player> p)
+{
+    LURK_ERROR pkg;
+    pkg.CODE = 1;
+    std::string m;
+    if(p.get()->isStarted())
+    {
+       m = fmt::format("{0}: Dearest {1}, you have already started. I love the passion, though.\n",
+       serverStats::GM_NAME, p.get()->charTainer.CHARACTER_NAME);
+    }else{
+        m = fmt::format("{0}: {1}, Send me a start! (Type 6)\n", serverStats::GM_NAME, p.get()->charTainer.CHARACTER_NAME);
+    }
+    pkg.MSG_LEN = m.length();
+    p.get()->write_error(pkg,m);
+}
+
 //helper
 bool Gamemaster::check_name(std::shared_ptr<Player> p)
 {
@@ -355,4 +411,20 @@ bool Gamemaster::check_stat(std::shared_ptr<Player> p)
         good = true;
     }
     return good;
+}
+
+void Gamemaster::move_player(std::shared_ptr<Player> p, uint16_t room)
+{
+    if(p.get()->isFreshSpawn())
+    {
+        master_room_list.at(0).get()->emplace_player(p);
+        p.get()->despawn();
+    }else{
+        bool found = master_room_list.at(p.get()->charTainer.CURRENT_ROOM_NUMBER).get()->isValidConnection(room);
+
+        if(found)
+        {
+            std::cout << "Room found!\n";
+        }
+    }
 }

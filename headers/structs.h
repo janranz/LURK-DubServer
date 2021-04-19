@@ -16,50 +16,53 @@ struct chatter_messages
 
 struct serverStats
 {
-    static std::string GAME_GREETING;
-    static std::string GM_NAME;
-    static uint16_t PLAYER_INIT_POINTS;
-    static uint16_t PLAYER_MAX_STAT;
-    static int16_t PLAYER_S_MAX_STAT;
-    static int16_t PLAYER_BASE_HEALTH;
-    static uint8_t BASE_FLAGS;
-    static uint8_t PLAYER_AFLAGS;
-    static uint8_t PLAYER_DFLAGS;
-    static uint16_t PLAYER_MIN_GOLD;
-    static uint16_t PLAYER_MAX_GOLD;
-    static uint8_t BADDIE_AFLAGS;
-    static uint8_t BADDIE_DFLAGS;
-    static int16_t BADDIE_MIN_HEALTH;
-    static int16_t BADDIE_MAX_HEALTH;
-    static uint16_t BADDIE_MIN_GOLD;
-    static uint16_t BADDIE_MAX_GOLD;
-    static uint16_t BADDIE_MIN_STAT;
-    static uint16_t BADDIE_MAX_STAT;
-    static uint16_t MAX_BADDIES;
-    static uint16_t MAX_ROOMS;
-    static uint16_t MIN_BADDIES_PER_ROOM;
-    static uint16_t MAX_BADDIES_PER_ROOM;
-    static uint16_t BUFF_SIZE;
+    static const  uint8_t GAME_VERSION_MAJOR;
+    static const  uint8_t GAME_VERSION_MINOR;
+    static const  uint8_t GAME_VERSION_EXT;
+    static const  std::string GAME_GREETING;
+    static const  std::string GM_NAME;
+    static const  uint16_t PLAYER_INIT_POINTS;
+    static const  uint16_t PLAYER_MAX_STAT;
+    static const  int16_t PLAYER_S_MAX_STAT;
+    static const  int16_t PLAYER_BASE_HEALTH;
+    static const  uint8_t BASE_FLAGS;
+    static const  uint8_t PLAYER_AFLAGS;
+    static const  uint8_t PLAYER_DFLAGS;
+    static const  uint16_t PLAYER_MIN_GOLD;
+    static const  uint16_t PLAYER_MAX_GOLD;
+    static const  uint8_t BADDIE_AFLAGS;
+    static const  uint8_t BADDIE_DFLAGS;
+    static const  int16_t BADDIE_MIN_HEALTH;
+    static const  int16_t BADDIE_MAX_HEALTH;
+    static const  uint16_t BADDIE_MIN_GOLD;
+    static const  uint16_t BADDIE_MAX_GOLD;
+    static const  uint16_t BADDIE_MIN_STAT;
+    static const  uint16_t BADDIE_MAX_STAT;
+    static const  uint16_t MAX_BADDIES;
+    static const  uint16_t MAX_ROOMS;
+    static const  uint16_t MIN_BADDIES_PER_ROOM;
+    static const  uint16_t MAX_BADDIES_PER_ROOM;
+    static const  uint16_t BUFF_SIZE;
     
     
 };
 
 struct LURK_TYPES
 {
-    static uint8_t TYPE_MSG;
-    static uint8_t TYPE_CHANGEROOM;
-    static uint8_t TYPE_FIGHT;
-    static uint8_t TYPE_PVP;
-    static uint8_t TYPE_LOOT;
-    static uint8_t TYPE_START;
-    static uint8_t TYPE_ERROR;
-    static uint8_t TYPE_ACCEPT;
-    static uint8_t TYPE_ROOM;
-    static uint8_t TYPE_CHARACTER;
-    static uint8_t TYPE_GAME;
-    static uint8_t TYPE_LEAVE;
-    static uint8_t TYPE_CONNECTION;
-    static uint8_t TYPE_VERSION;
+    static const  uint8_t TYPE_MSG;
+    static const  uint8_t TYPE_CHANGEROOM;
+    static const  uint8_t TYPE_FIGHT;
+    static const  uint8_t TYPE_PVP;
+    static const  uint8_t TYPE_LOOT;
+    static const  uint8_t TYPE_START;
+    static const  uint8_t TYPE_ERROR;
+    static const  uint8_t TYPE_ACCEPT;
+    static const  uint8_t TYPE_ROOM;
+    static const  uint8_t TYPE_CHARACTER;
+    static const  uint8_t TYPE_GAME;
+    static const  uint8_t TYPE_LEAVE;
+    static const  uint8_t TYPE_CONNECTION;
+    static const  uint8_t TYPE_VERSION;
 };
 
 struct cm_sizes

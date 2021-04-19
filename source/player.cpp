@@ -35,6 +35,7 @@ bool Player::isFreshSpawn()
 void Player::startPlayer()
 {
     started = true;
+    charTainer.FLAGS = serverStats::PLAYER_AFLAGS;
 }
 void Player::quitPlayer()
 {
