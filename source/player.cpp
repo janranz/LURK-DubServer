@@ -41,7 +41,7 @@ void Player::quitPlayer()
 {
     sktAlive = false;
     std::string m;
-    if(strlen(charTainer.CHARACTER_NAME) > 0)
+    if(started)
     {
         m = fmt::format("{} has staged to quit!\n",charTainer.CHARACTER_NAME);
     }else{

@@ -3,9 +3,10 @@
 Room::Room(std::string name,std::string desc,uint16_t num)
 {
     strncpy(roomTainer.ROOM_NAME,name.c_str(),32);
-    // roomTainer.ROOM_NAME[32] = 0;
     roomDesc = desc;
     roomTainer.ROOM_NUMBER = num;
+    std::string m = "The Mysterious Butler";
+    strncpy(rmpm.SENDER_NAME,m.c_str(),32);
 }
 
 void Room::emplace_connection(std::shared_ptr<Room> r)
@@ -21,22 +22,37 @@ void Room::emplace_player(std::shared_ptr<Player>p)
         std::lock_guard<std::mutex> lock(rLock);
         player_list.emplace_back(p);
     }
+    p.get()->charTainer.CURRENT_ROOM_NUMBER = roomTainer.ROOM_NUMBER;
     inform_connections(p);
     inform_baddies(p);
     inform_players_friendly();
-
+    
+    std::string m = fmt::format("{} has joined the room to fight by your side!\n"
+        ,p.get()->charTainer.CHARACTER_NAME);
+    
+    int fd = p.get()->getFD();
+    {
+        std::lock_guard<std::mutex> lock(rLock);
+        for(auto t = player_list.begin(); t != player_list.end(); ++t)
+        {
+            if((*t).get()->getFD() != fd)
+            {
+                (*t).get()->write_msg(rmpm,m);
+            }
+        }
+    }
 }
 
 bool Room::isValidConnection(uint16_t r)
 {
-    auto t = std::find_if(room_connections.begin(), room_connections.end(), [&](const Room& rr){return rr.roomTainer.ROOM_NUMBER == r;});
-
-    if(t != room_connections.end())
+    for(auto t = room_connections.begin(); t != room_connections.end(); ++t)
     {
-        return true;
-    }else{
-        return false;
+        if((*t).get()->roomTainer.ROOM_NUMBER == r)
+        {
+            return true;
+        }
     }
+    return false;
 }
 
 void Room::emplace_baddie(std::shared_ptr<Baddie> b)
@@ -64,6 +80,7 @@ void Room::remove_player(std::shared_ptr<Player>p)
             }
         }
     }
+    
     inform_players_friendly();
     if(DEBUG_found)
     {

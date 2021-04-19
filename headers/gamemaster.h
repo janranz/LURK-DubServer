@@ -43,6 +43,7 @@ class Gamemaster
         // type processing
         void proc_character(std::shared_ptr<Player>);
         void proc_start(std::shared_ptr<Player>);
+        void proc_changeroom(std::shared_ptr<Player>);
 
         //helper
         bool check_name(std::shared_ptr<Player>);
@@ -51,6 +52,7 @@ class Gamemaster
         // error handling
         void error_character(std::shared_ptr<Player>);
         void error_start(std::shared_ptr<Player>);
+        void error_changeroom(std::shared_ptr<Player>);
 };
 
 #endif //GM_H

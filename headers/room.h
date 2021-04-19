@@ -16,6 +16,7 @@ class Room
         std::vector<std::shared_ptr<Player>> player_list;
         ssize_t bytes;
     public:
+        LURK_MSG rmpm;
         LURK_ROOM roomTainer;
         std::string roomDesc;
         std::mutex rLock;

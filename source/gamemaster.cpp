@@ -1,8 +1,13 @@
 #include"../headers/gamemaster.h"
+/* 
+    TODO:
+    work on remove_player() in room.cpp
 
+*/
 
 Gamemaster::Gamemaster()
 {
+    g_seed = static_cast<unsigned int>(std::time(NULL));
     gmInfo.INITIAL_POINTS = serverStats::PLAYER_INIT_POINTS;
     gmInfo.STAT_LIMIT = serverStats::PLAYER_MAX_STAT;
     gmInfo.DESC_LENGTH = serverStats::GAME_GREETING.length();
@@ -234,12 +239,34 @@ void Gamemaster::populate_rooms()
 //cleanup
 void Gamemaster::ragequit(std::shared_ptr<Player> p)
 {
-    std::cout << fmt::format("{} has ragequit.\n",p.get()->charTainer.CHARACTER_NAME);
+    if(p.get()->isStarted())
+    {
+        int fd = p.get()->getFD();
+        std::string m = fmt::format("{0} has disconnected from the server!\n",p.get()->charTainer.CHARACTER_NAME);
+        
+        master_room_list.at(p.get()->charTainer.CURRENT_ROOM_NUMBER).get()->remove_player(p);
+        {
+            std::lock_guard<std::mutex>lock(GMLock);
+            for(auto t = master_player_list.begin(); t != master_player_list.end(); ++t)
+            {
+                if(fd == (*t).get()->getFD())
+                {
+                    t = master_player_list.erase(t);
+                    --t;
+                    break;
+                }
+            }
+            for(auto t = master_player_list.begin(); t != master_player_list.end(); ++t)
+            {
+                (*t).get()->write_msg(gmpm,m);
+            }
+        }
+    }
 }
 
 void Gamemaster::pump_n_dump(std::shared_ptr<Player>p)
 {// don't check bytes on MSG_DONTWAIT
-    std::vector<char> dump;
+    std::vector<char> dump(sizeof(size_t));
     recv(p.get()->getFD(), dump.data(), sizeof(size_t), MSG_DONTWAIT);
 }
 
@@ -271,6 +298,14 @@ void Gamemaster::GMController(int fd)
         }else{
             error_start(p);
             pump_n_dump(p);
+        }
+    }
+    while(p.get()->isSktAlive())
+    {
+        uint8_t type = listener(p);
+        if(type == LURK_TYPES::TYPE_CHANGEROOM)
+        {
+
         }
     }
     //connection lost.
@@ -407,8 +442,9 @@ bool Gamemaster::check_stat(std::shared_ptr<Player> p)
     if(stat < serverStats::PLAYER_INIT_POINTS)
     {
         uint16_t remaining = serverStats::PLAYER_INIT_POINTS - stat;
-        p.get()->charTainer.HEALTH += remaining;
+        p.get()->charTainer.HEALTH = (serverStats::PLAYER_BASE_HEALTH + remaining);
         good = true;
+        p.get()->charTainer.CURRENT_ROOM_NUMBER = 0;
     }
     return good;
 }
@@ -424,7 +460,8 @@ void Gamemaster::move_player(std::shared_ptr<Player> p, uint16_t room)
 
         if(found)
         {
-            std::cout << "Room found!\n";
+            master_room_list.at(p.get()->charTainer.CURRENT_ROOM_NUMBER).get()->remove_player(p);
+            master_room_list.at(room).get()->emplace_player(p);
         }
     }
 }
