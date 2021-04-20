@@ -2,11 +2,15 @@
 
 Room::Room(std::string name,std::string desc,uint16_t num)
 {
-    strncpy(roomTainer.ROOM_NAME,name.c_str(),32);
+    strlcpy(roomTainer.ROOM_NAME,name.c_str(),32);
     roomDesc = desc;
     roomTainer.ROOM_NUMBER = num;
+    roomTainer.DESC_LENGTH = desc.length();
     std::string m = "The Mysterious Butler";
-    strncpy(rmpm.SENDER_NAME,m.c_str(),32);
+    std::string n = "Unknown Player";
+
+    strlcpy(rmpm.SENDER_NAME,m.c_str(),32);
+    strlcpy(rmpm.CEIVER_NAME,n.c_str(),32);
 }
 
 void Room::emplace_connection(std::shared_ptr<Room> r)
@@ -23,9 +27,10 @@ void Room::emplace_player(std::shared_ptr<Player>p)
         player_list.emplace_back(p);
     }
     p.get()->charTainer.CURRENT_ROOM_NUMBER = roomTainer.ROOM_NUMBER;
-    inform_connections(p);
+    // inform_connections(p);
     inform_baddies(p);
     inform_players_friendly();
+    inform_connections(p);
     
     std::string m = fmt::format("{} has joined the room to fight by your side!\n"
         ,p.get()->charTainer.CHARACTER_NAME);
@@ -37,6 +42,8 @@ void Room::emplace_player(std::shared_ptr<Player>p)
         {
             if((*t).get()->getFD() != fd)
             {
+                // strncpy(rmpm.CEIVER_NAME,(*t).get()->charTainer.CHARACTER_NAME,32);
+                // rmpm.CEIVER_NAME[32] = 0;
                 (*t).get()->write_msg(rmpm,m);
             }
         }
@@ -80,14 +87,24 @@ void Room::remove_player(std::shared_ptr<Player>p)
             }
         }
     }
-    
+    std::string m = fmt::format("{0} has left the room.\n",p.get()->charTainer.CHARACTER_NAME);
     inform_players_friendly();
+    
+    {
+        std::lock_guard<std::mutex> lock(rLock);
+        for(auto t = player_list.begin(); t != player_list.end(); ++t)
+        {
+            // strncpy(rmpm.CEIVER_NAME,(*t).get()->charTainer.CHARACTER_NAME,32);
+            (*t).get()->write_msg(rmpm, m);
+        }
+    }
     if(DEBUG_found)
     {
         std::cout << fmt::format("{0} was found in room: {1} and removed\n",
             p.get()->charTainer.CHARACTER_NAME,roomTainer.ROOM_NAME);
     }
 }
+
 void Room::inform_connections(std::shared_ptr<Player> p)
 {// static no lock
     // inform room

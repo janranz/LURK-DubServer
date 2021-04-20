@@ -14,7 +14,7 @@ CXX=g++
 RM=rm -f
 CPPFLAGS := -g -Wall -std=c++11 -Iinclude -MMD -MP
 # CFLAGS := -Wall
-LDFLAGS := -Llib -lpthread
+LDFLAGS := -Llib -lbsd -lpthread
 LDLIBS :=-lm
 
 

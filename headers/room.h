@@ -7,6 +7,8 @@
 #include<string.h>
 #include<mutex>
 #include<memory>
+#include<bsd/string.h>
+
 class Room
 {
     private:

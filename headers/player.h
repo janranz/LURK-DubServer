@@ -6,7 +6,7 @@
 #include<mutex>
 #include<iostream>
 #include<unistd.h>
-
+#include<bsd/string.h>
 class Player
 {
     private:
