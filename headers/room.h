@@ -34,6 +34,7 @@ class Room
 
         //helper
         bool isValidConnection(uint16_t);
+        bool seek_remove_player(std::shared_ptr<Player>);
         //debug
         size_t room_connection_size();
         size_t baddie_list_size();

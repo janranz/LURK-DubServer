@@ -1,6 +1,7 @@
 #ifndef GM_H
 #define GM_H
 #include"../headers/structs.h"
+#include"../headers/splitter.h"
 #include"../headers/fmt/format.h"
 #include"../headers/room.h"
 #include"../headers/player.h"
@@ -45,15 +46,20 @@ class Gamemaster
         void proc_character(std::shared_ptr<Player>);
         void proc_start(std::shared_ptr<Player>);
         void proc_changeroom(std::shared_ptr<Player>);
+        void proc_msg(std::shared_ptr<Player>);
+        void proc_leave(std::shared_ptr<Player>);
 
         //helper
         bool check_name(std::shared_ptr<Player>);
         bool check_stat(std::shared_ptr<Player>);
         void move_player(std::shared_ptr<Player>,uint16_t);
+        
+        
         // error handling
         void error_character(std::shared_ptr<Player>);
         void error_start(std::shared_ptr<Player>);
         void error_changeroom(std::shared_ptr<Player>);
+        void error_msg(std::shared_ptr<Player>);
 };
 
 #endif //GM_H

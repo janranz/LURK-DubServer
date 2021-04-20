@@ -245,9 +245,12 @@ void Gamemaster::ragequit(std::shared_ptr<Player> p)
         int fd = p.get()->getFD();
         std::string m = fmt::format("{0} has disconnected from the server!\n",p.get()->charTainer.CHARACTER_NAME);
         
-        master_room_list.at(p.get()->charTainer.CURRENT_ROOM_NUMBER).get()->remove_player(p);
         {
             std::lock_guard<std::mutex>lock(GMLock);
+            for(auto t = master_room_list.begin(); t != master_room_list.end(); ++t)
+            {
+                if((*t).get()->seek_remove_player(p)){break;}
+            }
             for(auto t = master_player_list.begin(); t != master_player_list.end(); ++t)
             {
                 if(fd == (*t).get()->getFD())
@@ -259,8 +262,7 @@ void Gamemaster::ragequit(std::shared_ptr<Player> p)
                 }
             }
             for(auto t = master_player_list.begin(); t != master_player_list.end(); ++t)
-            {//NAME MISTAKES
-                // strncpy(gmpm.CEIVER_NAME,(*t).get()->charTainer.CHARACTER_NAME,32);
+            {
                 (*t).get()->write_msg(gmpm,m);
             }
         }
@@ -308,11 +310,19 @@ void Gamemaster::GMController(int fd)
     while(p.get()->isSktAlive())
     {
         uint8_t type = listener(p);
-        if(type == LURK_TYPES::TYPE_CHANGEROOM)
+        if(type == LURK_TYPES::TYPE_MSG)
         {
-
+            proc_msg(p);
+        }else if(type == LURK_TYPES::TYPE_CHANGEROOM)
+        {
+            proc_changeroom(p);
+        }else if(type == LURK_TYPES::TYPE_LEAVE)
+        {
+            std::string m = fmt::format("Walk in the light, {0}...\n",p.get()->charTainer.CHARACTER_NAME);
+            p.get()->write_msg(gmpm,m);
+            p.get()->quitPlayer();
         }
-        std::cout << "Broke?" << std::endl;
+
     }
     //connection lost.
     ragequit(p);
@@ -336,6 +346,69 @@ uint8_t Gamemaster::listener(std::shared_ptr<Player> p)
 }
 
 //type processing
+
+void Gamemaster::proc_msg(std::shared_ptr<Player> p)
+{
+    ssize_t bytes;
+    int fd = p.get()->getFD();
+    LURK_MSG pkg;
+    std::string m;
+    bool found = true;
+
+    recv(fd, &pkg, sizeof(LURK_MSG),MSG_WAITALL);
+    std::vector<char> message(pkg.MSG_LEN);
+    bytes = recv(fd, message.data(), pkg.MSG_LEN,MSG_WAITALL);
+    m = std::string(message.begin(), message.end());
+    
+    if(bytes < 1)
+    {
+        p.get()->quitPlayer();
+        return;
+    }
+    {
+        std::lock_guard<std::mutex>lock(GMLock);
+        for(auto t = master_player_list.begin(); t != master_player_list.end(); ++t)
+        {
+            if(compare_to_lowers(pkg.CEIVER_NAME,(*t).get()->charTainer.CHARACTER_NAME))
+            {
+                (*t).get()->write_accept(LURK_TYPES::TYPE_MSG);
+                (*t).get()->write_msg(pkg,m);
+                found = true;
+                break;
+            }
+        }
+    }
+    if(!found)
+    {
+        error_msg(p);
+    }
+}
+
+void Gamemaster::proc_changeroom(std::shared_ptr<Player> p)
+{
+    ssize_t bytes;
+    int fd = p.get()->getFD();
+    uint16_t curr = p.get()->charTainer.CURRENT_ROOM_NUMBER;
+    uint16_t next;
+    bytes = recv(fd,&next, sizeof(uint16_t),MSG_WAITALL);
+    if(bytes < 1)
+    {
+        p.get()->quitPlayer();
+        return;
+    }
+    bool c = master_room_list.at(curr).get()->isValidConnection(next);
+    if(c)
+    {
+        p.get()->write_accept(LURK_TYPES::TYPE_CHANGEROOM);
+        p.get()->charTainer.CURRENT_ROOM_NUMBER = next;
+        master_room_list.at(curr).get()->remove_player(p);
+        master_room_list.at(next).get()->emplace_player(p);
+    }else{
+        master_room_list.at(curr).get()->inform_connections(p);
+        error_changeroom(p);
+    }
+}
+
 void Gamemaster::proc_character(std::shared_ptr<Player> p)
 {
     ssize_t bytes;
@@ -383,6 +456,25 @@ void Gamemaster::proc_start(std::shared_ptr<Player> p)
 }
 
 //error handling
+
+void Gamemaster::error_msg(std::shared_ptr<Player> p)
+{
+    LURK_ERROR pkg;
+    pkg.CODE = 6;
+    std::string m = fmt::format("{}: You stick your message in the mailbox, but the mailman gets eaten by a baddie!\n",serverStats::GM_NAME);
+    p.get()->write_error(pkg, m);
+}
+
+void Gamemaster::error_changeroom(std::shared_ptr<Player> p)
+{
+    LURK_ERROR pkg;
+    pkg.CODE = 1;
+    std::string m = fmt::format("{}: You attempt to step through to that room, but you quickly realize that is an error in judgement!\n",
+        serverStats::GM_NAME);
+        pkg.MSG_LEN = m.length();
+        p.get()->write_error(pkg, m);
+}
+
 void Gamemaster::error_character(std::shared_ptr<Player> p)
 {
     LURK_ERROR pkg;
@@ -421,6 +513,9 @@ void Gamemaster::error_start(std::shared_ptr<Player> p)
 }
 
 //helper
+
+
+
 bool Gamemaster::check_name(std::shared_ptr<Player> p)
 {
     bool unique = true;

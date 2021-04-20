@@ -26,11 +26,10 @@ void Room::emplace_player(std::shared_ptr<Player>p)
         std::lock_guard<std::mutex> lock(rLock);
         player_list.emplace_back(p);
     }
-    p.get()->charTainer.CURRENT_ROOM_NUMBER = roomTainer.ROOM_NUMBER;
-    // inform_connections(p);
+    inform_connections(p);
     inform_baddies(p);
     inform_players_friendly();
-    inform_connections(p);
+    // inform_connections(p);
     
     std::string m = fmt::format("{} has joined the room to fight by your side!\n"
         ,p.get()->charTainer.CHARACTER_NAME);
@@ -50,12 +49,15 @@ void Room::emplace_player(std::shared_ptr<Player>p)
     }
 }
 
+
+
 bool Room::isValidConnection(uint16_t r)
 {
     for(auto t = room_connections.begin(); t != room_connections.end(); ++t)
     {
         if((*t).get()->roomTainer.ROOM_NUMBER == r)
         {
+            // std::cout << "Valid connection found!: " << r << std::endl;
             return true;
         }
     }
@@ -70,10 +72,35 @@ void Room::emplace_baddie(std::shared_ptr<Baddie> b)
     }
 }
 
+bool Room::seek_remove_player(std::shared_ptr<Player> p)
+{
+    bool found = false;
+    {
+        std::lock_guard<std::mutex> lock(rLock);
+        for(auto t = player_list.begin(); t != player_list.end(); ++t)
+        {
+            if(strcmp((*t).get()->charTainer.CHARACTER_NAME, p.get()->charTainer.CHARACTER_NAME) == 0)
+            {
+                found = true;
+                break;
+            }
+        }
+
+    }
+    if(found)
+    {
+        p.get()->charTainer.CURRENT_ROOM_NUMBER = 99;
+        remove_player(p);
+        std::cout << fmt::format("{} found and removed.\n",p.get()->charTainer.CHARACTER_NAME);
+    }
+    return found;
+}
+
 void Room::remove_player(std::shared_ptr<Player>p)
 {
     int pfd = p.get()->getFD();
-    bool DEBUG_found = false;
+    inform_players_friendly();
+    // bool DEBUG_found = false;
     {
         std::lock_guard<std::mutex> lock(rLock);
         for(auto t = player_list.begin(); t != player_list.end(); ++t)
@@ -81,15 +108,13 @@ void Room::remove_player(std::shared_ptr<Player>p)
             int tfd = (*t).get()->getFD();
             if(tfd == pfd)
             {
-                DEBUG_found = true;
+                // DEBUG_found = true;
                 t = player_list.erase(t);
                 --t; // save time later by skipping extra loop time after found
             }
         }
     }
     std::string m = fmt::format("{0} has left the room.\n",p.get()->charTainer.CHARACTER_NAME);
-    inform_players_friendly();
-    
     {
         std::lock_guard<std::mutex> lock(rLock);
         for(auto t = player_list.begin(); t != player_list.end(); ++t)
@@ -98,11 +123,20 @@ void Room::remove_player(std::shared_ptr<Player>p)
             (*t).get()->write_msg(rmpm, m);
         }
     }
-    if(DEBUG_found)
-    {
-        std::cout << fmt::format("{0} was found in room: {1} and removed\n",
-            p.get()->charTainer.CHARACTER_NAME,roomTainer.ROOM_NAME);
-    }
+    
+    // if(DEBUG_found)
+    // {
+    //     std::cout << fmt::format("{0} was found in room: {1} and was successfully removed\n",
+    //         p.get()->charTainer.CHARACTER_NAME,roomTainer.ROOM_NAME);
+
+    //     {
+    //         std::lock_guard<std::mutex> lock(rLock);
+    //         for(auto t = player_list.begin(); t != player_list.end(); ++t)
+    //         {
+    //             std::cout << (*t).get()->charTainer.CHARACTER_NAME << std::endl;
+    //         }
+    //     }
+    // }
 }
 
 void Room::inform_connections(std::shared_ptr<Player> p)
