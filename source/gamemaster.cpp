@@ -17,6 +17,9 @@ Gamemaster::Gamemaster()
     vers.MINOR = serverStats::GAME_VERSION_MINOR;
     vers.EXTENS_SIZE = serverStats::GAME_VERSION_EXT;
 
+    master_room_list.reserve(200); // temporary
+    master_player_list.reserve(1000); // temporary
+
 }
 
 //events
@@ -307,6 +310,7 @@ void Gamemaster::GMController(int fd)
             pump_n_dump(p);
         }
     }
+    std::cout << p.get()->desc << std::endl;
     while(p.get()->isSktAlive())
     {
         uint8_t type = listener(p);
@@ -318,8 +322,8 @@ void Gamemaster::GMController(int fd)
             proc_changeroom(p);
         }else if(type == LURK_TYPES::TYPE_LEAVE)
         {
-            std::string m = fmt::format("Walk in the light, {0}...\n",p.get()->charTainer.CHARACTER_NAME);
-            p.get()->write_msg(gmpm,m);
+            // std::string m = fmt::format("Walk in the light, {0}...\n",p.get()->charTainer.CHARACTER_NAME);
+            // p.get()->write_msg(gmpm,m);
             p.get()->quitPlayer();
         }
 
@@ -391,21 +395,24 @@ void Gamemaster::proc_changeroom(std::shared_ptr<Player> p)
     uint16_t curr = p.get()->charTainer.CURRENT_ROOM_NUMBER;
     uint16_t next;
     bytes = recv(fd,&next, sizeof(uint16_t),MSG_WAITALL);
-    if(bytes < 1)
     {
-        p.get()->quitPlayer();
-        return;
-    }
-    bool c = master_room_list.at(curr).get()->isValidConnection(next);
-    if(c)
-    {
-        p.get()->write_accept(LURK_TYPES::TYPE_CHANGEROOM);
-        p.get()->charTainer.CURRENT_ROOM_NUMBER = next;
-        master_room_list.at(curr).get()->remove_player(p);
-        master_room_list.at(next).get()->emplace_player(p);
-    }else{
-        master_room_list.at(curr).get()->inform_connections(p);
-        error_changeroom(p);
+        std::lock_guard<std::mutex> lock(GMLock); // consider more spec lock
+        if(bytes < 1)
+        {
+            p.get()->quitPlayer();
+            return;
+        }
+        bool c = master_room_list.at(curr).get()->isValidConnection(next);
+        if(c)
+        {
+            p.get()->write_accept(LURK_TYPES::TYPE_CHANGEROOM);
+            p.get()->charTainer.CURRENT_ROOM_NUMBER = next;
+            master_room_list.at(curr).get()->remove_player(p);
+            master_room_list.at(next).get()->emplace_player(p);
+        }else{
+            master_room_list.at(curr).get()->inform_connections(p);
+            error_changeroom(p);
+        }
     }
 }
 
@@ -583,17 +590,20 @@ bool Gamemaster::check_stat(std::shared_ptr<Player> p)
 
 void Gamemaster::move_player(std::shared_ptr<Player> p, uint16_t room)
 {
-    if(p.get()->isFreshSpawn())
     {
-        master_room_list.at(0).get()->emplace_player(p);
-        p.get()->despawn();
-    }else{
-        bool found = master_room_list.at(p.get()->charTainer.CURRENT_ROOM_NUMBER).get()->isValidConnection(room);
-
-        if(found)
+        std::lock_guard<std::mutex> lock(GMLock);
+        if(p.get()->isFreshSpawn())
         {
-            master_room_list.at(p.get()->charTainer.CURRENT_ROOM_NUMBER).get()->remove_player(p);
-            master_room_list.at(room).get()->emplace_player(p);
+            master_room_list.at(0).get()->emplace_player(p);
+            p.get()->despawn();
+        }else{
+            bool found = master_room_list.at(p.get()->charTainer.CURRENT_ROOM_NUMBER).get()->isValidConnection(room);
+
+            if(found)
+            {
+                master_room_list.at(p.get()->charTainer.CURRENT_ROOM_NUMBER).get()->remove_player(p);
+                master_room_list.at(room).get()->emplace_player(p);
+            }
         }
     }
 }

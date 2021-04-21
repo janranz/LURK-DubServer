@@ -11,6 +11,10 @@ Room::Room(std::string name,std::string desc,uint16_t num)
 
     strlcpy(rmpm.SENDER_NAME,m.c_str(),32);
     strlcpy(rmpm.CEIVER_NAME,n.c_str(),32);
+
+    room_connections.reserve(100);
+    baddie_list.reserve(100);
+    player_list.reserve(1000);
 }
 
 void Room::emplace_connection(std::shared_ptr<Room> r)
@@ -142,11 +146,14 @@ void Room::remove_player(std::shared_ptr<Player>p)
 void Room::inform_connections(std::shared_ptr<Player> p)
 {// static no lock
     // inform room
-    p.get()->write_room(roomTainer,roomDesc);
-    //inform connections
-    for(auto t = room_connections.begin(); t != room_connections.end(); ++t)
     {
-        p.get()->write_connection((*t).get()->roomTainer,(*t).get()->roomDesc);
+        std::lock_guard<std::mutex> lock(rLock); // TEMPORARY
+        p.get()->write_room(roomTainer,roomDesc);
+        //inform connections
+        for(auto t = room_connections.begin(); t != room_connections.end(); ++t)
+        {
+            p.get()->write_connection((*t).get()->roomTainer,(*t).get()->roomDesc);
+        }
     }
 
 }
@@ -166,11 +173,13 @@ void Room::inform_players_friendly()
 }
 void Room::inform_baddies(std::shared_ptr<Player> p)
 {// static no rLock but baddie lock(bLock)
-
-    for(auto t = baddie_list.begin(); t != baddie_list.end(); ++t)
     {
-        std::lock_guard<std::mutex> lock((*t)->bLock);
-        p.get()->write_character((*t)->bTainer,(*t)->desc);
+        std::lock_guard<std::mutex> lock(rLock); // TEMPORARY
+        for(auto t = baddie_list.begin(); t != baddie_list.end(); ++t)
+        {
+            std::lock_guard<std::mutex> lock((*t)->bLock);
+            p.get()->write_character((*t)->bTainer,(*t)->desc);
+        }
     }
 }
 
