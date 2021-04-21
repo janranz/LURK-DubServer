@@ -89,20 +89,27 @@ struct cm_sizes
 };
 
 // LURK Tainers
+// struct LURK_MSG
+// {
+//     // uint8_t TYPE = 1;
+//     uint16_t MSG_LEN;
+//     char CEIVER_NAME[32];
+//     char SENDER_NAME[32];
+// }__attribute__((packed));
 struct LURK_MSG
 {
     // uint8_t TYPE = 1;
     uint16_t MSG_LEN;
-    char CEIVER_NAME[32];
-    char SENDER_NAME[32];
+    std::vector<unsigned char>CEIVER_NAME;
+    std::vector<unsigned char>SENDER_NAME;
 }__attribute__((packed));
 
 struct GM_MSG
 {
     // uint8_t TYPE = 1;
     uint16_t MSG_LEN;
-    char CEIVER_NAME[32];
-    char SENDER_NAME[32];
+    std::vector<unsigned char>CEIVER_NAME;
+    std::vector<unsigned char>SENDER_NAME;
 }__attribute__((packed));
 
 struct LURK_CHANGEROOM
@@ -114,13 +121,13 @@ struct LURK_CHANGEROOM
 struct LURK_PVP
 {
     // uint8_t TYPE = 4;
-    char TARGET[32];
+    std::vector<unsigned char>TARGET;
 }__attribute__((packed));
 
 struct LURK_LOOT
 {
     // uint8_t TYPE = 5;
-    char TARGET[32];
+    std::vector<unsigned char>TARGET;
 }__attribute__((packed));
 
 struct LURK_ERROR
@@ -140,14 +147,14 @@ struct LURK_ROOM
 {
     // uint8_t TYPE = 9;
     uint16_t ROOM_NUMBER;
-    char ROOM_NAME[32];
+    std::vector<unsigned char>ROOM_NAME;
     uint16_t DESC_LENGTH;
 }__attribute__((packed));
 
 struct LURK_CHARACTER
 {
     // uint8_t TYPE = 10;
-    char CHARACTER_NAME[32];
+    std::vector<unsigned char>CHARACTER_NAME;
     uint8_t FLAGS;
     uint16_t ATTACK;
     uint16_t DEFENSE;

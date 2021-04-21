@@ -10,6 +10,7 @@ Player::Player(int fd)
     freshSpawn = true;
     charTainer.HEALTH = serverStats::PLAYER_BASE_HEALTH;
     charTainer.FLAGS = serverStats::BASE_FLAGS;
+    charTainer.CHARACTER_NAME.reserve(32);
     desc = "";
 }
 
@@ -43,7 +44,7 @@ void Player::quitPlayer()
     std::string m;
     if(started)
     {
-        m = fmt::format("{} has staged to quit!\n",charTainer.CHARACTER_NAME);
+        m = fmt::format("{} has staged to quit!\n",fmt::join(charTainer.CHARACTER_NAME,""));
     }else{
         m = "Unknown player staged to quit!\n";
     }
@@ -71,8 +72,9 @@ int Player::getFD()
 //writer
 void Player::write_msg(LURK_MSG pkg, std::string msg)
 {
-    strlcpy(pkg.CEIVER_NAME,charTainer.CHARACTER_NAME,32);
-    
+    // strlcpy(pkg.CEIVER_NAME,charTainer.CHARACTER_NAME,32);
+    pkg.CEIVER_NAME.assign(msg.begin(),msg.end());
+    pkg.CEIVER_NAME.resize(32,'\0');
     pkg.MSG_LEN = msg.length();
     {
         std::lock_guard<std::mutex> lock(pLock);

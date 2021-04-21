@@ -18,12 +18,12 @@ std::vector<std::string> splitter(std::string s, std::string delimiter)
     return res;
 }
 
-bool compare_to_lowers(char* a,char* b)
+bool compare_to_lowers(const std::vector<unsigned char> &a,const std::vector<unsigned char> &b)
 {
-    if(strlen(a) != strlen(b)){return false;}
+    if(a.size() != b.size()){return false;}
     std::string nameA;
     std::string nameB;
-    size_t len = strlen(a);
+    size_t len = a.size();
 
     for(size_t i = 0; i < len; i++)
     {
@@ -36,3 +36,15 @@ bool compare_to_lowers(char* a,char* b)
     }
     return false;
 }
+
+std::string format_vec(const char* fmt, std::vector<unsigned char> args)
+{
+    return std::accumulate(
+        std::begin(args),
+        std::end(args),
+        std::string(fmt),
+        [](std::string toFmt, unsigned char arg){
+            return fmt::format(toFmt, arg);
+        }
+    );
+};

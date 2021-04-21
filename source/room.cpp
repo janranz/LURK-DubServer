@@ -2,15 +2,23 @@
 
 Room::Room(std::string name,std::string desc,uint16_t num)
 {
-    strlcpy(roomTainer.ROOM_NAME,name.c_str(),32);
+    // strlcpy(roomTainer.ROOM_NAME,name.c_str(),32);
+    roomTainer.ROOM_NAME.assign(name.begin(),name.end());
+    roomTainer.ROOM_NAME.resize(32,'\0');
+
     roomDesc = desc;
     roomTainer.ROOM_NUMBER = num;
     roomTainer.DESC_LENGTH = desc.length();
     std::string m = "The Mysterious Butler";
     std::string n = "Unknown Player";
 
-    strlcpy(rmpm.SENDER_NAME,m.c_str(),32);
-    strlcpy(rmpm.CEIVER_NAME,n.c_str(),32);
+    // strlcpy(rmpm.SENDER_NAME,m.c_str(),32);
+    // strlcpy(rmpm.CEIVER_NAME,n.c_str(),32);
+
+    rmpm.SENDER_NAME.assign(m.begin(),m.end());
+    rmpm.CEIVER_NAME.assign(n.begin(),n.end());
+    rmpm.SENDER_NAME.resize(32,'\0');
+    rmpm.CEIVER_NAME.resize(32,'\0');
 
     room_connections.reserve(100);
     baddie_list.reserve(100);
@@ -36,7 +44,7 @@ void Room::emplace_player(std::shared_ptr<Player>p)
     // inform_connections(p);
     
     std::string m = fmt::format("{} has joined the room to fight by your side!\n"
-        ,p.get()->charTainer.CHARACTER_NAME);
+        ,fmt::join(p.get()->charTainer.CHARACTER_NAME,""));
     
     int fd = p.get()->getFD();
     {
@@ -83,7 +91,7 @@ bool Room::seek_remove_player(std::shared_ptr<Player> p)
         std::lock_guard<std::mutex> lock(rLock);
         for(auto t = player_list.begin(); t != player_list.end(); ++t)
         {
-            if(strcmp((*t).get()->charTainer.CHARACTER_NAME, p.get()->charTainer.CHARACTER_NAME) == 0)
+            if((*t).get()->charTainer.CHARACTER_NAME == p.get()->charTainer.CHARACTER_NAME)
             {
                 found = true;
                 break;
@@ -95,7 +103,6 @@ bool Room::seek_remove_player(std::shared_ptr<Player> p)
     {
         p.get()->charTainer.CURRENT_ROOM_NUMBER = 99;
         remove_player(p);
-        std::cout << fmt::format("{} found and removed.\n",p.get()->charTainer.CHARACTER_NAME);
     }
     return found;
 }
@@ -118,7 +125,7 @@ void Room::remove_player(std::shared_ptr<Player>p)
             }
         }
     }
-    std::string m = fmt::format("{0} has left the room.\n",p.get()->charTainer.CHARACTER_NAME);
+    std::string m = fmt::format("{0} has left the room.\n",fmt::join(p.get()->charTainer.CHARACTER_NAME,""));
     {
         std::lock_guard<std::mutex> lock(rLock);
         for(auto t = player_list.begin(); t != player_list.end(); ++t)

@@ -46,3 +46,5 @@ uint8_t const  LURK_TYPES::TYPE_GAME       = 11;
 uint8_t const  LURK_TYPES::TYPE_LEAVE      = 12;
 uint8_t const  LURK_TYPES::TYPE_CONNECTION = 13;
 uint8_t const  LURK_TYPES::TYPE_VERSION    = 14;
+
+

@@ -11,7 +11,10 @@ Gamemaster::Gamemaster()
     gmInfo.INITIAL_POINTS = serverStats::PLAYER_INIT_POINTS;
     gmInfo.STAT_LIMIT = serverStats::PLAYER_MAX_STAT;
     gmInfo.DESC_LENGTH = serverStats::GAME_GREETING.length();
-    strlcpy(gmpm.SENDER_NAME,serverStats::GM_NAME.c_str(),32);
+
+    gmpm.SENDER_NAME.assign(serverStats::GM_NAME.begin(),serverStats::GM_NAME.end());
+    gmpm.SENDER_NAME.resize(32,'\0');
+    // strlcpy(gmpm.SENDER_NAME,serverStats::GM_NAME.c_str(),32);
 
     vers.MAJOR = serverStats::GAME_VERSION_MAJOR;
     vers.MINOR = serverStats::GAME_VERSION_MINOR;
@@ -161,7 +164,9 @@ std::shared_ptr<Baddie> Gamemaster::build_a_baddie(uint16_t roomNumber)
         dex = (fast_rand() % c_m.baddies.size());
         name = c_m.baddies.at(dex);
     }while(name.length() > 30);
-    strlcpy(b.get()->bTainer.CHARACTER_NAME,name.c_str(),32);
+    // strlcpy(b.get()->bTainer.CHARACTER_NAME,name.c_str(),32);
+    b.get()->bTainer.CHARACTER_NAME.assign(name.begin(),name.end());
+    b.get()->bTainer.CHARACTER_NAME.resize(32,'\0');
 
     dex = (fast_rand() % c_m.baddie_desc.size());
     b.get()->desc = c_m.baddie_desc.at(dex);
@@ -246,7 +251,7 @@ void Gamemaster::ragequit(std::shared_ptr<Player> p)
     if(p.get()->isStarted())
     {
         int fd = p.get()->getFD();
-        std::string m = fmt::format("{0} has disconnected from the server!\n",p.get()->charTainer.CHARACTER_NAME);
+        std::string m = fmt::format("{0} has disconnected from the server!\n",fmt::join(p.get()->charTainer.CHARACTER_NAME,""));
         
         {
             std::lock_guard<std::mutex>lock(GMLock);
@@ -270,13 +275,13 @@ void Gamemaster::ragequit(std::shared_ptr<Player> p)
             }
         }
     }
-    std::cout << fmt::format("{0} has ragequit.\n Masterlist Size: {1}\n"
-        , p.get()->charTainer.CHARACTER_NAME, std::to_string(master_player_list.size()));
+    std::cout << fmt::format("Player has ragequit.\n Masterlist Size: {1}\n"
+        , std::to_string(master_player_list.size()));
 }
 
 void Gamemaster::pump_n_dump(std::shared_ptr<Player>p)
 {// don't check bytes on MSG_DONTWAIT
-    std::vector<char> dump(sizeof(size_t));
+    std::vector<char> dump(1024);
     recv(p.get()->getFD(), dump.data(), sizeof(size_t), MSG_DONTWAIT);
 }
 
@@ -360,8 +365,9 @@ void Gamemaster::proc_msg(std::shared_ptr<Player> p)
     bool found = true;
 
     recv(fd, &pkg, sizeof(LURK_MSG),MSG_WAITALL);
-    std::vector<char> message(pkg.MSG_LEN);
+    std::vector<unsigned char>message(500);
     bytes = recv(fd, message.data(), pkg.MSG_LEN,MSG_WAITALL);
+    message.resize(pkg.MSG_LEN,'\0');
     m = std::string(message.begin(), message.end());
     
     if(bytes < 1)
@@ -420,13 +426,13 @@ void Gamemaster::proc_character(std::shared_ptr<Player> p)
 {
     ssize_t bytes;
     recv(p.get()->getFD(), &p.get()->charTainer, sizeof(LURK_CHARACTER),MSG_WAITALL);
-    
+    p.get()->charTainer.CHARACTER_NAME.resize(32,'\0');
     uint16_t len = p.get()->charTainer.DESC_LENGTH;
     
     // char desc[len];
-    std::vector<unsigned char> desc(len);
+    std::vector<unsigned char> desc(1024);
     bytes = recv(p.get()->getFD(),desc.data(),len,MSG_WAITALL);
-    
+    desc.resize(len,'\0');
     p.get()->desc = std::string(desc.begin(),desc.end());
 
     if(bytes < 1)
@@ -456,8 +462,7 @@ void Gamemaster::proc_start(std::shared_ptr<Player> p)
         std::lock_guard<std::mutex> lock(GMLock);
         master_player_list.emplace_back(p);
     }
-    std::cout << fmt::format("{0} has been added to Master: {1} (size)\n",
-        p.get()->charTainer.CHARACTER_NAME,master_player_list.size());
+    std::cout << fmt::format("Player has been added to Master: {1} (size)\n",master_player_list.size());
     
     p.get()->write_accept(LURK_TYPES::TYPE_START);
     move_player(p,0);
@@ -513,9 +518,9 @@ void Gamemaster::error_start(std::shared_ptr<Player> p)
     if(p.get()->isStarted())
     {
        m = fmt::format("{0}: Dearest {1}, you have already started. I love the passion, though.\n",
-       serverStats::GM_NAME, p.get()->charTainer.CHARACTER_NAME);
+       serverStats::GM_NAME, fmt::join(p.get()->charTainer.CHARACTER_NAME,""));
     }else{
-        m = fmt::format("{0}: {1}, Send me a start! (Type 6)\n", serverStats::GM_NAME, p.get()->charTainer.CHARACTER_NAME);
+        m = fmt::format("{0}: {1}, Send me a start! (Type 6)\n", serverStats::GM_NAME, fmt::join(p.get()->charTainer.CHARACTER_NAME,""));
     }
     pkg.MSG_LEN = m.length();
     p.get()->write_error(pkg,m);
@@ -533,8 +538,7 @@ bool Gamemaster::check_name(std::shared_ptr<Player> p)
         std::lock_guard<std::mutex> lock(GMLock);
         for(auto t = master_player_list.begin(); t != master_player_list.end(); ++t)
         {
-            if(strcmp((*t).get()->charTainer.CHARACTER_NAME,
-               p.get()->charTainer.CHARACTER_NAME) == 0)
+            if((*t).get()->charTainer.CHARACTER_NAME == p.get()->charTainer.CHARACTER_NAME)
             {
                 unique = false;
                 break;
@@ -562,28 +566,39 @@ bool Gamemaster::check_stat(std::shared_ptr<Player> p)
     }
     p.get()->charTainer.DESC_LENGTH = p.get()->desc.length();
     
-    size_t len = strlen(p.get()->charTainer.CHARACTER_NAME);
+    size_t len = p.get()->charTainer.CHARACTER_NAME.size();
 
     {
         std::lock_guard<std::mutex> lock (GMLock);
         for(auto t = master_player_list.begin(); t != master_player_list.end(); ++t)
         {
-            std::string nameA;
-            std::string nameB;
-            for(size_t i = 0; i < len; i++)
-            {
-                nameA += std::tolower((*t).get()->charTainer.CHARACTER_NAME[i]);
-                nameB += std::tolower(p.get()->charTainer.CHARACTER_NAME[i]);
-            }
-            if(nameA.compare(nameB) == 0)
+            if(compare_to_lowers(p.get()->charTainer.CHARACTER_NAME,(*t).get()->charTainer.CHARACTER_NAME))
             {
                 good = false;
-                std::string m = fmt::format("Sorry, {0} is actively playing! Pick a different name and go rough them up in Room #{1}\n"
-                ,(*t).get()->charTainer.CHARACTER_NAME, std::to_string((*t).get()->charTainer.CURRENT_ROOM_NUMBER));
+                std::string m = fmt::format("Sorry, {0 is actively playing! Pick a different name and go rough them up in Room #{1}!\n",
+                fmt::join((*t).get()->charTainer.CHARACTER_NAME,""), std::to_string((*t).get()->charTainer.CURRENT_ROOM_NUMBER));
                 p.get()->write_msg(gmpm,m);
                 break;
             }
         }
+        // for(auto t = master_player_list.begin(); t != master_player_list.end(); ++t)
+        // {
+        //     std::string nameA;
+        //     std::string nameB;
+        //     for(size_t i = 0; i < len; i++)
+        //     {
+        //         nameA += std::tolower((*t).get()->charTainer.CHARACTER_NAME[i]);
+        //         nameB += std::tolower(p.get()->charTainer.CHARACTER_NAME[i]);
+        //     }
+        //     if(nameA.compare(nameB) == 0)
+        //     {
+        //         good = false;
+        //         std::string m = fmt::format("Sorry, {0} is actively playing! Pick a different name and go rough them up in Room #{1}\n"
+        //         ,(*t).get()->charTainer.CHARACTER_NAME, std::to_string((*t).get()->charTainer.CURRENT_ROOM_NUMBER));
+        //         p.get()->write_msg(gmpm,m);
+        //         break;
+        //     }
+        //}
     }
     return good;
 }
