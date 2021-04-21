@@ -5,6 +5,7 @@
 #include<cstdint>
 #include<limits>
 #include<mutex>
+#include<array>
 
 struct chatter_messages
 {// dialogue storage
@@ -100,16 +101,16 @@ struct LURK_MSG
 {
     // uint8_t TYPE = 1;
     uint16_t MSG_LEN;
-    std::vector<unsigned char>CEIVER_NAME;
-    std::vector<unsigned char>SENDER_NAME;
+    std::array<unsigned char,32>CEIVER_NAME;
+    std::array<unsigned char,32>SENDER_NAME;
 }__attribute__((packed));
 
 struct GM_MSG
 {
     // uint8_t TYPE = 1;
     uint16_t MSG_LEN;
-    std::vector<unsigned char>CEIVER_NAME;
-    std::vector<unsigned char>SENDER_NAME;
+    std::array<unsigned char,32>CEIVER_NAME;
+    std::array<unsigned char,32>SENDER_NAME;
 }__attribute__((packed));
 
 struct LURK_CHANGEROOM
@@ -121,13 +122,13 @@ struct LURK_CHANGEROOM
 struct LURK_PVP
 {
     // uint8_t TYPE = 4;
-    std::vector<unsigned char>TARGET;
+    std::array<unsigned char,32>TARGET;
 }__attribute__((packed));
 
 struct LURK_LOOT
 {
     // uint8_t TYPE = 5;
-    std::vector<unsigned char>TARGET;
+    std::array<unsigned char,32>TARGET;
 }__attribute__((packed));
 
 struct LURK_ERROR
@@ -147,14 +148,14 @@ struct LURK_ROOM
 {
     // uint8_t TYPE = 9;
     uint16_t ROOM_NUMBER;
-    std::vector<unsigned char>ROOM_NAME;
+    std::array<unsigned char,32>ROOM_NAME;
     uint16_t DESC_LENGTH;
 }__attribute__((packed));
 
 struct LURK_CHARACTER
 {
     // uint8_t TYPE = 10;
-    std::vector<unsigned char>CHARACTER_NAME;
+    std::array<unsigned char,32>CHARACTER_NAME;
     uint8_t FLAGS;
     uint16_t ATTACK;
     uint16_t DEFENSE;

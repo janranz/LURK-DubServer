@@ -13,7 +13,7 @@ Gamemaster::Gamemaster()
     gmInfo.DESC_LENGTH = serverStats::GAME_GREETING.length();
 
     gmpm.SENDER_NAME.assign(serverStats::GM_NAME.begin(),serverStats::GM_NAME.end());
-    gmpm.SENDER_NAME.resize(32,'\0');
+    gmpm.SENDER_NAME.resize(32);
     // strlcpy(gmpm.SENDER_NAME,serverStats::GM_NAME.c_str(),32);
 
     vers.MAJOR = serverStats::GAME_VERSION_MAJOR;
@@ -462,7 +462,7 @@ void Gamemaster::proc_start(std::shared_ptr<Player> p)
         std::lock_guard<std::mutex> lock(GMLock);
         master_player_list.emplace_back(p);
     }
-    std::cout << fmt::format("Player has been added to Master: {1} (size)\n",master_player_list.size());
+    std::cout << fmt::format("Player has been added to Master: {1} (size)\n",fmt::to_string(master_player_list.size()));
     
     p.get()->write_accept(LURK_TYPES::TYPE_START);
     move_player(p,0);
