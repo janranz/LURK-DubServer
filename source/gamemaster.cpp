@@ -415,10 +415,12 @@ void Gamemaster::proc_character(std::shared_ptr<Player> p)
     recv(p.get()->getFD(), &p.get()->charTainer, sizeof(LURK_CHARACTER),MSG_WAITALL);
     
     uint16_t len = p.get()->charTainer.DESC_LENGTH;
-    char desc[len];
-    bytes = recv(p.get()->getFD(),desc,len,MSG_WAITALL);
-    desc[len] = 0;
-    p.get()->desc = std::string(desc);
+    
+    // char desc[len];
+    std::vector<unsigned char> desc(len);
+    bytes = recv(p.get()->getFD(),desc.data(),len,MSG_WAITALL);
+    
+    p.get()->desc = std::string(desc.begin(),desc.end());
 
     if(bytes < 1)
     {

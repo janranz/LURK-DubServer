@@ -20,7 +20,7 @@ int main(int argc, char** argv)
         std::cout << fmt::format("Invalid number of arguments: {0} [port]\n",argv[0]);
         exit(-1);
     }
-    //check port input
+    //check port input consider if I should set memory
     char *p;
     errno = 0;
     long port = strtol(argv[1], &p, 10);
