@@ -1,5 +1,7 @@
 #include"../headers/structs.h"
 
+std::mutex printLock;
+std::mutex randLock;
 std::string const  serverStats::GAME_GREETING = "Welcome to the portal room.."
     " the source of all great things!\n"
     "Go wherever your heart desires, or start off from the beginning.\n";

@@ -21,7 +21,8 @@ class Room
         LURK_MSG rmpm;
         LURK_ROOM roomTainer;
         std::string roomDesc;
-        std::mutex rLock;
+        // std::mutex rLock;
+        std::recursive_mutex rLock;
         
         Room(std::string,std::string,uint16_t);
         void emplace_connection(std::shared_ptr<Room>);

@@ -25,7 +25,7 @@ Gamemaster::Gamemaster()
 //events
 int Gamemaster::fast_rand()
 {
-    M_lg(randLock);
+    std::lock_guard<std::mutex> lock(randLock);
     g_seed = (214013*g_seed+2531011);
     return (g_seed>>16)&0x7FFF;
 }
@@ -240,7 +240,7 @@ void Gamemaster::populate_rooms()
 void Gamemaster::ragequit(std::shared_ptr<Player> p)
 {
     {
-        M_lg(GMLock);
+        std::lock_guard<std::recursive_mutex> lock(GMLock);
         if(p->isStarted())
         {
             int fd = p->getFD();
@@ -257,17 +257,17 @@ void Gamemaster::ragequit(std::shared_ptr<Player> p)
                     t = master_player_list.erase(t);
                     --t;
                     break;
-                    {M_lg(printLock);std::cout << "Found in master_player list. removed!\n";}
+                    {std::lock_guard<std::mutex> lock(printLock);std::cout << "Found in master_player list. removed!\n";}
                 }
             }
             for(auto t = master_player_list.begin(); t != master_player_list.end(); ++t)
             {
                 (*t)->write_msg(gmpm,m);
             }
-        
-            M_lg(printLock);
+            int size = master_player_list.size();
+            std::lock_guard<std::mutex> lock(printLock);
             std::cout << fmt::format("{0} has ragequit.\n Masterlist Size: {1}\n"
-            ,p->charTainer.CHARACTER_NAME, std::to_string(master_player_list.size()));
+            ,p->charTainer.CHARACTER_NAME, std::to_string(size));
         }
     }
 }
@@ -308,7 +308,7 @@ void Gamemaster::GMController(int fd)
             pump_n_dump(p);
         }
     }
-    {M_lg(printLock);std::cout << p->desc << std::endl;}
+    {std::lock_guard<std::mutex> lock(printLock);std::cout << p->desc << std::endl;}
     while(p->isSktAlive())
     {
         uint8_t type = listener(p);
@@ -366,7 +366,7 @@ void Gamemaster::proc_msg(std::shared_ptr<Player> p)
         return;
     }
     {
-        M_lg(GMLock);
+        std::lock_guard<std::recursive_mutex> lock(GMLock);
         for(auto t = master_player_list.begin(); t != master_player_list.end(); ++t)
         {
             
@@ -394,7 +394,7 @@ void Gamemaster::proc_changeroom(std::shared_ptr<Player> p)
     bytes = recv(fd,&next, sizeof(uint16_t),MSG_WAITALL);
     
     {
-        M_lg(GMLock); // consider more spec lock
+        std::lock_guard<std::recursive_mutex> lock(GMLock); // consider more spec lock
         if(bytes < 1)
         {
             p->quitPlayer();
@@ -450,15 +450,17 @@ void Gamemaster::proc_character(std::shared_ptr<Player> p)
 
 void Gamemaster::proc_start(std::shared_ptr<Player> p)
 {
+    int size = 0;
     p->startPlayer();
     {
-        M_lg(GMLock);
+        std::lock_guard<std::recursive_mutex> lock(GMLock);
         master_player_list.emplace_back(p);
+        size = master_player_list.size();
     }
-    { 
-        M_lg(printLock);
-        M_lg(GMLock);
-        std::cout << fmt::format("Player has been added to Master: {1} (size)\n",fmt::to_string(master_player_list.size()));
+    {
+
+        std::lock_guard<std::mutex> lock(printLock);
+        std::cout << fmt::format("{0} has been added to Master: {1} (size)\n",p->charTainer.CHARACTER_NAME,std::to_string(size));
     }
     
     p->write_accept(LURK_TYPES::TYPE_START);
@@ -492,7 +494,7 @@ void Gamemaster::error_character(std::shared_ptr<Player> p)
     pkg.CODE = 4;
     std::string m;
     {
-        M_lg(GMLock);
+        std::lock_guard<std::recursive_mutex> lock(GMLock);
         if(p->isStarted())
         {
             m = fmt::format("{}: Join battle is always on"
@@ -516,7 +518,7 @@ void Gamemaster::error_start(std::shared_ptr<Player> p)
     pkg.CODE = 1;
     std::string m;
     {
-        M_lg(GMLock);
+        std::lock_guard<std::recursive_mutex> lock(GMLock);
         if(p->isStarted())
         {
         m = fmt::format("{0}: Dearest {1}, you have already started. I love the passion, though.\n",
@@ -535,7 +537,7 @@ void Gamemaster::error_start(std::shared_ptr<Player> p)
 
 bool Gamemaster::check_name(std::shared_ptr<Player> p)
 {
-    M_lg(GMLock);
+    std::lock_guard<std::recursive_mutex> lock(GMLock);
     p->charTainer.CHARACTER_NAME[32] = 0;
     bool unique = true;
     if(!(master_player_list.empty()))
@@ -570,11 +572,9 @@ bool Gamemaster::check_stat(std::shared_ptr<Player> p)
         p->charTainer.CURRENT_ROOM_NUMBER = 0;
     }
     p->charTainer.DESC_LENGTH = p->desc.length();
-    
-    size_t len = strlen(M_ToCP(p->charTainer.CHARACTER_NAME));
 
     {
-        M_lg(GMLock);
+        std::lock_guard<std::recursive_mutex> lock(GMLock);
         for(auto t = master_player_list.begin(); t != master_player_list.end(); ++t)
         {
             if(compare_to_lowers(M_ToCP(p->charTainer.CHARACTER_NAME),M_ToCP((*t)->charTainer.CHARACTER_NAME)))
@@ -611,7 +611,7 @@ bool Gamemaster::check_stat(std::shared_ptr<Player> p)
 void Gamemaster::move_player(std::shared_ptr<Player> p, uint16_t room)
 {
     {
-        M_lg(GMLock);
+        std::lock_guard<std::recursive_mutex> lock(GMLock);
         if(p->isFreshSpawn())
         {
             master_room_list.at(0)->emplace_player(p);

@@ -1,7 +1,6 @@
 #ifndef STRUCTS_H
 #define STRUCTS_H
 #define M_ToCP(p) reinterpret_cast<char*>(p)
-#define M_lg(p) std::lock_guard<std::mutex>lock(p)
 #include<vector>
 #include<string>
 #include<cstdint>

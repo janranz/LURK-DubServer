@@ -17,7 +17,8 @@ class Gamemaster
         LURK_GAME gmInfo;
         LURK_VERSION vers;
         LURK_MSG gmpm;
-        std::mutex GMLock;
+        //std::mutex GMLock;
+        std::recursive_mutex GMLock;
         std::vector<std::shared_ptr<Room>> master_room_list;
         std::vector<std::shared_ptr<Player>> master_player_list;
         chatter_messages c_m;
