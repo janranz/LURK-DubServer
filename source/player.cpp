@@ -82,6 +82,7 @@ void Player::write_msg(LURK_MSG pkg, std::string msg)
         std::lock_guard<std::mutex> lock(pLock);
         memset(pkg.CEIVER_NAME,0,32);
         strncpy(M_ToCP(pkg.CEIVER_NAME),M_ToCP(charTainer.CHARACTER_NAME),32);
+        pkg.CEIVER_NAME[32] = 0;
         pkg.MSG_LEN = msg.length();
 
         write(socketFD,&LURK_TYPES::TYPE_MSG,sizeof(uint8_t));
@@ -114,7 +115,7 @@ void Player::write_accept(uint8_t t)
         pkg.ACCEPT_TYPE = t;
 
         write(socketFD, &LURK_TYPES::TYPE_ACCEPT,sizeof(uint8_t));
-        bytes = write(socketFD,&pkg,sizeof(LURK_ACCEPT));
+        bytes = write(socketFD,&pkg.ACCEPT_TYPE,sizeof(uint8_t));
         if(bytes < 1)
         {
             quitPlayer();

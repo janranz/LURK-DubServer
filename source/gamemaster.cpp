@@ -337,6 +337,7 @@ uint8_t Gamemaster::listener(std::shared_ptr<Player> p)
     ssize_t bytes;
     uint8_t dipByte;
     bytes = recv(p->getFD(), &dipByte,sizeof(uint8_t),MSG_WAITALL);
+    {std::lock_guard<std::recursive_mutex>lock(GMLock);std::cout << fmt::format("{0} sent type: {1}",std::to_string(dipByte));}
     if(bytes < 1)
     {
         dipByte = 0;
@@ -390,7 +391,7 @@ void Gamemaster::proc_changeroom(std::shared_ptr<Player> p)
     ssize_t bytes;
     int fd = p->getFD();
     uint16_t curr = p->charTainer.CURRENT_ROOM_NUMBER;
-    uint16_t next;
+    uint16_t next = 0;
     bytes = recv(fd,&next, sizeof(uint16_t),MSG_WAITALL);
     
     {
@@ -449,7 +450,7 @@ void Gamemaster::proc_character(std::shared_ptr<Player> p)
 }
 
 void Gamemaster::proc_start(std::shared_ptr<Player> p)
-{
+{// ADD SEPARATE PORTAL FOR ENTRY AND REWORK CHANGEROOM
     int size = 0;
     p->startPlayer();
     {
