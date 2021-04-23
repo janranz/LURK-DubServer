@@ -2,32 +2,23 @@
 
 Room::Room(std::string name,std::string desc,uint16_t num)
 {
-    // strlcpy(roomTainer.ROOM_NAME,name.c_str(),32);
-    roomTainer.ROOM_NAME.assign(name.begin(),name.end());
-    roomTainer.ROOM_NAME.resize(32,'\0');
+    strncpy(M_ToCP(roomTainer.ROOM_NAME),name.c_str(),32);
 
     roomDesc = desc;
     roomTainer.ROOM_NUMBER = num;
     roomTainer.DESC_LENGTH = desc.length();
     std::string m = "The Mysterious Butler";
-    std::string n = "Unknown Player";
+    
 
     // strlcpy(rmpm.SENDER_NAME,m.c_str(),32);
     // strlcpy(rmpm.CEIVER_NAME,n.c_str(),32);
+    strncpy(M_ToCP(rmpm.SENDER_NAME),m.c_str(),32);
 
-    rmpm.SENDER_NAME.assign(m.begin(),m.end());
-    rmpm.CEIVER_NAME.assign(n.begin(),n.end());
-    rmpm.SENDER_NAME.resize(32,'\0');
-    rmpm.CEIVER_NAME.resize(32,'\0');
-
-    room_connections.reserve(100);
-    baddie_list.reserve(100);
-    player_list.reserve(1000);
 }
 
 void Room::emplace_connection(std::shared_ptr<Room> r)
 {
-    std::lock_guard<std::mutex> lock(rLock);
+    M_lg(rLock);
     room_connections.emplace_back(r);
 }
 
@@ -35,7 +26,7 @@ void Room::emplace_player(std::shared_ptr<Player>p)
 {// consider if we need to make a copy
  // std::shared_ptr<Player> tmp = std::make_shared<Player>(p);
     {
-        std::lock_guard<std::mutex> lock(rLock);
+        M_lg(rLock);
         player_list.emplace_back(p);
     }
     inform_connections(p);
@@ -44,18 +35,18 @@ void Room::emplace_player(std::shared_ptr<Player>p)
     // inform_connections(p);
     
     std::string m = fmt::format("{} has joined the room to fight by your side!\n"
-        ,fmt::join(p.get()->charTainer.CHARACTER_NAME,""));
+        ,p->charTainer.CHARACTER_NAME);
     
-    int fd = p.get()->getFD();
+    int fd = p->getFD();
     {
-        std::lock_guard<std::mutex> lock(rLock);
+        M_lg(rLock);
         for(auto t = player_list.begin(); t != player_list.end(); ++t)
         {
-            if((*t).get()->getFD() != fd)
+            if((*t)->getFD() != fd)
             {
-                // strncpy(rmpm.CEIVER_NAME,(*t).get()->charTainer.CHARACTER_NAME,32);
+                // strncpy(rmpm.CEIVER_NAME,(*t)->charTainer.CHARACTER_NAME,32);
                 // rmpm.CEIVER_NAME[32] = 0;
-                (*t).get()->write_msg(rmpm,m);
+                (*t)->write_msg(rmpm,m);
             }
         }
     }
@@ -65,12 +56,15 @@ void Room::emplace_player(std::shared_ptr<Player>p)
 
 bool Room::isValidConnection(uint16_t r)
 {
-    for(auto t = room_connections.begin(); t != room_connections.end(); ++t)
     {
-        if((*t).get()->roomTainer.ROOM_NUMBER == r)
+        M_lg(rLock);
+        for(auto t = room_connections.begin(); t != room_connections.end(); ++t)
         {
-            // std::cout << "Valid connection found!: " << r << std::endl;
-            return true;
+            if((*t)->roomTainer.ROOM_NUMBER == r)
+            {
+                // std::cout << "Valid connection found!: " << r << std::endl;
+                return true;
+            }
         }
     }
     return false;
@@ -79,7 +73,7 @@ bool Room::isValidConnection(uint16_t r)
 void Room::emplace_baddie(std::shared_ptr<Baddie> b)
 {
     {
-        std::lock_guard<std::mutex> lock(rLock);
+        M_lg(rLock);
         baddie_list.emplace_back(b);
     }
 }
@@ -88,10 +82,10 @@ bool Room::seek_remove_player(std::shared_ptr<Player> p)
 {
     bool found = false;
     {
-        std::lock_guard<std::mutex> lock(rLock);
+        M_lg(rLock);
         for(auto t = player_list.begin(); t != player_list.end(); ++t)
         {
-            if((*t).get()->charTainer.CHARACTER_NAME == p.get()->charTainer.CHARACTER_NAME)
+            if((*t)->charTainer.CHARACTER_NAME == p->charTainer.CHARACTER_NAME)
             {
                 found = true;
                 break;
@@ -101,7 +95,7 @@ bool Room::seek_remove_player(std::shared_ptr<Player> p)
     }
     if(found)
     {
-        p.get()->charTainer.CURRENT_ROOM_NUMBER = 99;
+        p->charTainer.CURRENT_ROOM_NUMBER = 99; // potentially unsafe
         remove_player(p);
     }
     return found;
@@ -109,14 +103,14 @@ bool Room::seek_remove_player(std::shared_ptr<Player> p)
 
 void Room::remove_player(std::shared_ptr<Player>p)
 {
-    int pfd = p.get()->getFD();
+    int pfd = p->getFD();
     inform_players_friendly();
     // bool DEBUG_found = false;
     {
-        std::lock_guard<std::mutex> lock(rLock);
+        M_lg(rLock);
         for(auto t = player_list.begin(); t != player_list.end(); ++t)
         {
-            int tfd = (*t).get()->getFD();
+            int tfd = (*t)->getFD();
             if(tfd == pfd)
             {
                 // DEBUG_found = true;
@@ -125,41 +119,27 @@ void Room::remove_player(std::shared_ptr<Player>p)
             }
         }
     }
-    std::string m = fmt::format("{0} has left the room.\n",fmt::join(p.get()->charTainer.CHARACTER_NAME,""));
+    std::string m = fmt::format("{0} has left the room.\n",p->charTainer.CHARACTER_NAME);
     {
-        std::lock_guard<std::mutex> lock(rLock);
+        M_lg(rLock);
         for(auto t = player_list.begin(); t != player_list.end(); ++t)
         {
-            // strncpy(rmpm.CEIVER_NAME,(*t).get()->charTainer.CHARACTER_NAME,32);
-            (*t).get()->write_msg(rmpm, m);
+            // strncpy(rmpm.CEIVER_NAME,(*t)->charTainer.CHARACTER_NAME,32);
+            (*t)->write_msg(rmpm, m);
         }
     }
-    
-    // if(DEBUG_found)
-    // {
-    //     std::cout << fmt::format("{0} was found in room: {1} and was successfully removed\n",
-    //         p.get()->charTainer.CHARACTER_NAME,roomTainer.ROOM_NAME);
-
-    //     {
-    //         std::lock_guard<std::mutex> lock(rLock);
-    //         for(auto t = player_list.begin(); t != player_list.end(); ++t)
-    //         {
-    //             std::cout << (*t).get()->charTainer.CHARACTER_NAME << std::endl;
-    //         }
-    //     }
-    // }
 }
 
 void Room::inform_connections(std::shared_ptr<Player> p)
-{// static no lock
+{
     // inform room
     {
-        std::lock_guard<std::mutex> lock(rLock); // TEMPORARY
-        p.get()->write_room(roomTainer,roomDesc);
+        M_lg(rLock); // TEMPORARY
+        p->write_room(roomTainer,roomDesc);
         //inform connections
         for(auto t = room_connections.begin(); t != room_connections.end(); ++t)
         {
-            p.get()->write_connection((*t).get()->roomTainer,(*t).get()->roomDesc);
+            p->write_connection((*t)->roomTainer,(*t)->roomDesc);
         }
     }
 
@@ -168,12 +148,12 @@ void Room::inform_connections(std::shared_ptr<Player> p)
 void Room::inform_players_friendly()
 {
     {
-        std::lock_guard<std::mutex> lock(rLock);
+        M_lg(rLock);
         for(auto t = player_list.begin(); t != player_list.end(); ++t)
         {
             for(auto b = player_list.begin(); b != player_list.end(); ++b)
             {
-                (*t).get()->write_character((*b).get()->charTainer,(*b).get()->desc);
+                (*t)->write_character((*b)->charTainer,(*b)->desc);
             }
         }
     }
@@ -181,21 +161,21 @@ void Room::inform_players_friendly()
 void Room::inform_baddies(std::shared_ptr<Player> p)
 {// static no rLock but baddie lock(bLock)
     {
-        std::lock_guard<std::mutex> lock(rLock); // TEMPORARY
+        M_lg(rLock); // TEMPORARY
         for(auto t = baddie_list.begin(); t != baddie_list.end(); ++t)
         {
-            std::lock_guard<std::mutex> lock((*t)->bLock);
-            p.get()->write_character((*t)->bTainer,(*t)->desc);
+            M_lg((*t)->bLock);
+            p->write_character((*t)->bTainer,(*t)->desc);
         }
     }
 }
 
 //debug
-size_t Room::room_connection_size()
-{
-    return room_connections.size();
-}
-size_t Room::baddie_list_size()
-{
-    return baddie_list.size();
-}
+// size_t Room::room_connection_size()
+// {
+//     return room_connections.size();
+// }
+// size_t Room::baddie_list_size()
+// {
+//     return baddie_list.size();
+// }

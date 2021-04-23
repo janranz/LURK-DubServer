@@ -18,12 +18,12 @@ std::vector<std::string> splitter(std::string s, std::string delimiter)
     return res;
 }
 
-bool compare_to_lowers(const std::vector<unsigned char> &a,const std::vector<unsigned char> &b)
+bool compare_to_lowers(char* a,char* b)
 {
-    if(a.size() != b.size()){return false;}
+    if(strlen(a) != strlen(b)){return false;}
     std::string nameA;
     std::string nameB;
-    size_t len = a.size();
+    size_t len = strlen(a);
 
     for(size_t i = 0; i < len; i++)
     {

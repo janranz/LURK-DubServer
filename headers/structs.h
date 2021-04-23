@@ -1,5 +1,7 @@
 #ifndef STRUCTS_H
 #define STRUCTS_H
+#define M_ToCP(p) reinterpret_cast<char*>(p)
+#define M_lg(p) std::lock_guard<std::mutex>lock(p)
 #include<vector>
 #include<string>
 #include<cstdint>
@@ -14,7 +16,9 @@ struct chatter_messages
                              adj,noun,roomType;
 };
 
-
+//global mutex
+extern std::mutex printLock;
+extern std::mutex randLock;
 struct serverStats
 {
     static const  uint8_t GAME_VERSION_MAJOR;
@@ -90,27 +94,12 @@ struct cm_sizes
 };
 
 // LURK Tainers
-// struct LURK_MSG
-// {
-//     // uint8_t TYPE = 1;
-//     uint16_t MSG_LEN;
-//     char CEIVER_NAME[32];
-//     char SENDER_NAME[32];
-// }__attribute__((packed));
 struct LURK_MSG
 {
     // uint8_t TYPE = 1;
     uint16_t MSG_LEN;
-    std::array<unsigned char,32>CEIVER_NAME;
-    std::array<unsigned char,32>SENDER_NAME;
-}__attribute__((packed));
-
-struct GM_MSG
-{
-    // uint8_t TYPE = 1;
-    uint16_t MSG_LEN;
-    std::array<unsigned char,32>CEIVER_NAME;
-    std::array<unsigned char,32>SENDER_NAME;
+    unsigned char CEIVER_NAME[32];
+    unsigned char SENDER_NAME[32];
 }__attribute__((packed));
 
 struct LURK_CHANGEROOM
@@ -122,13 +111,13 @@ struct LURK_CHANGEROOM
 struct LURK_PVP
 {
     // uint8_t TYPE = 4;
-    std::array<unsigned char,32>TARGET;
+    unsigned char TARGET[32];
 }__attribute__((packed));
 
 struct LURK_LOOT
 {
     // uint8_t TYPE = 5;
-    std::array<unsigned char,32>TARGET;
+    unsigned char TARGET[32];
 }__attribute__((packed));
 
 struct LURK_ERROR
@@ -148,14 +137,14 @@ struct LURK_ROOM
 {
     // uint8_t TYPE = 9;
     uint16_t ROOM_NUMBER;
-    std::array<unsigned char,32>ROOM_NAME;
+    unsigned char ROOM_NAME[32];
     uint16_t DESC_LENGTH;
 }__attribute__((packed));
 
 struct LURK_CHARACTER
 {
     // uint8_t TYPE = 10;
-    std::array<unsigned char,32>CHARACTER_NAME;
+    unsigned char CHARACTER_NAME[32];
     uint8_t FLAGS;
     uint16_t ATTACK;
     uint16_t DEFENSE;

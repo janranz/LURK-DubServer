@@ -99,9 +99,9 @@ int main(int argc, char** argv)
     //listener loop.
     while(1)
     {
-        std::cout << "Listening..." << std::endl;
+        {M_lg(printLock);std::cout << "Listening..." << std::endl;}
         player_fd = accept(dubSkt, (struct sockaddr*)(&client_addr), &address_size);
-        std::cout << fmt::format("Connection established from {0}\n",inet_ntoa(client_addr.sin_addr));
+        {M_lg(printLock);std::cout << fmt::format("Connection established from {0}\n",inet_ntoa(client_addr.sin_addr));}
 
         std::thread t1(&Gamemaster::GMController,&GM,player_fd);
 

@@ -3,7 +3,7 @@
 std::string const  serverStats::GAME_GREETING = "Welcome to the portal room.."
     " the source of all great things!\n"
     "Go wherever your heart desires, or start off from the beginning.\n";
-std::string const  serverStats::GM_NAME = "Gamemaster Dubs (Server)";
+std::string const serverStats::GM_NAME = "Gamemaster Dubs (Server)";
 uint8_t  const  serverStats::GAME_VERSION_MAJOR  = 2;
 uint8_t  const  serverStats::GAME_VERSION_MINOR  = 2;
 uint8_t  const  serverStats::GAME_VERSION_EXT    = 0;

@@ -7,10 +7,9 @@
 #include"../headers/player.h"
 #include<string>
 #include<vector>
-#include<memory>
 #include<ctime>
 #include<sys/socket.h>
-#include<bsd/string.h>
+
 class Gamemaster
 {
     private:

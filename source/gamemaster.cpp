@@ -8,26 +8,24 @@
 Gamemaster::Gamemaster()
 {
     g_seed = static_cast<unsigned int>(std::time(NULL));
-    gmInfo.INITIAL_POINTS = serverStats::PLAYER_INIT_POINTS;
-    gmInfo.STAT_LIMIT = serverStats::PLAYER_MAX_STAT;
-    gmInfo.DESC_LENGTH = serverStats::GAME_GREETING.length();
-
-    gmpm.SENDER_NAME.assign(serverStats::GM_NAME.begin(),serverStats::GM_NAME.end());
-    gmpm.SENDER_NAME.resize(32);
-    // strlcpy(gmpm.SENDER_NAME,serverStats::GM_NAME.c_str(),32);
 
     vers.MAJOR = serverStats::GAME_VERSION_MAJOR;
     vers.MINOR = serverStats::GAME_VERSION_MINOR;
     vers.EXTENS_SIZE = serverStats::GAME_VERSION_EXT;
 
-    master_room_list.reserve(200); // temporary
-    master_player_list.reserve(1000); // temporary
+    gmInfo.INITIAL_POINTS = serverStats::PLAYER_INIT_POINTS;
+    gmInfo.STAT_LIMIT = serverStats::PLAYER_MAX_STAT;
+    gmInfo.DESC_LENGTH = serverStats::GAME_GREETING.length();
 
+    //set GM's name
+    strncpy(M_ToCP(gmpm.SENDER_NAME),serverStats::GM_NAME.c_str(),32);
+    
 }
 
 //events
 int Gamemaster::fast_rand()
 {
+    M_lg(randLock);
     g_seed = (214013*g_seed+2531011);
     return (g_seed>>16)&0x7FFF;
 }
@@ -143,14 +141,14 @@ void Gamemaster::build_rooms()
         {// portal room
             for(auto b = master_room_list.begin() + 1; b != master_room_list.end(); ++b)
             {
-                (*t).get()->emplace_connection(*b);
+                (*t)->emplace_connection(*b);
             }
         }else if( t+1 != master_room_list.end())
         {
-            (*t).get()->emplace_connection(*(t-1));
-            (*t).get()->emplace_connection(*(t+1));
+            (*t)->emplace_connection(*(t-1));
+            (*t)->emplace_connection(*(t+1));
         }else{
-            (*t).get()->emplace_connection(*(t-1));
+            (*t)->emplace_connection(*(t-1));
         }
     }
 }
@@ -164,22 +162,22 @@ std::shared_ptr<Baddie> Gamemaster::build_a_baddie(uint16_t roomNumber)
         dex = (fast_rand() % c_m.baddies.size());
         name = c_m.baddies.at(dex);
     }while(name.length() > 30);
-    // strlcpy(b.get()->bTainer.CHARACTER_NAME,name.c_str(),32);
-    b.get()->bTainer.CHARACTER_NAME.assign(name.begin(),name.end());
-    b.get()->bTainer.CHARACTER_NAME.resize(32,'\0');
+    
+    strncpy(M_ToCP(b->bTainer.CHARACTER_NAME),name.c_str(),32);
+    b->bTainer.CHARACTER_NAME[32] = 0;
 
     dex = (fast_rand() % c_m.baddie_desc.size());
-    b.get()->desc = c_m.baddie_desc.at(dex);
+    b->desc = c_m.baddie_desc.at(dex);
 
-    b.get()->bTainer.FLAGS = serverStats::BADDIE_AFLAGS;
-    b.get()->bTainer.CURRENT_ROOM_NUMBER = roomNumber;
-    b.get()->bTainer.DESC_LENGTH = b.get()->desc.length();
+    b->bTainer.FLAGS = serverStats::BADDIE_AFLAGS;
+    b->bTainer.CURRENT_ROOM_NUMBER = roomNumber;
+    b->bTainer.DESC_LENGTH = b->desc.length();
 
-    b.get()->bTainer.GOLD = (fast_rand() %
+    b->bTainer.GOLD = (fast_rand() %
         (serverStats::BADDIE_MAX_GOLD - serverStats::BADDIE_MIN_GOLD)
         + serverStats::BADDIE_MIN_GOLD);
 
-    b.get()->bTainer.HEALTH = (fast_rand() %
+    b->bTainer.HEALTH = (fast_rand() %
         (serverStats::BADDIE_MAX_HEALTH - serverStats::BADDIE_MIN_HEALTH)
         + serverStats::BADDIE_MIN_HEALTH);
     
@@ -218,14 +216,9 @@ std::shared_ptr<Baddie> Gamemaster::build_a_baddie(uint16_t roomNumber)
         }
         i++;
     }
-    b.get()->bTainer.ATTACK = attack;
-    b.get()->bTainer.DEFENSE = defense;
-    b.get()->bTainer.REGEN = regen;
-    // std::cout << fmt::format("Monster Name: {0}\nAttack: {1}\nDefense: {2}\nRegen: {3}\n"
-    //     "Health: {4}\nGold: {5}\n", b.get()->bTainer.CHARACTER_NAME,
-    //     std::to_string(b.get()->bTainer.ATTACK),std::to_string(b.get()->bTainer.DEFENSE),
-    //     std::to_string(b.get()->bTainer.REGEN),std::to_string(b.get()->bTainer.HEALTH),
-    //     std::to_string(b.get()->bTainer.GOLD));
+    b->bTainer.ATTACK = attack;
+    b->bTainer.DEFENSE = defense;
+    b->bTainer.REGEN = regen;
     return b;
 }
 
@@ -233,56 +226,56 @@ void Gamemaster::populate_rooms()
 {
     for(auto t = master_room_list.begin(); t != master_room_list.end(); ++t)
     {
-        int roomNumber = (*t).get()->roomTainer.ROOM_NUMBER;
+        int roomNumber = (*t)->roomTainer.ROOM_NUMBER;
         int baddie_count = (fast_rand() %
             (serverStats::MAX_BADDIES_PER_ROOM - serverStats::MIN_BADDIES_PER_ROOM)
             + serverStats::MIN_BADDIES_PER_ROOM);
         
         for(int i = 0; i < baddie_count; i++)
-            (*t).get()->emplace_baddie(build_a_baddie(roomNumber));
-    // std::cout << fmt::format("{0} has {1} baddies.\n",
-    //     (*t).get()->roomTainer.ROOM_NAME, std::to_string((*t).get()->baddie_list_size()));
+            (*t)->emplace_baddie(build_a_baddie(roomNumber));
     }
 
 }
 //cleanup
 void Gamemaster::ragequit(std::shared_ptr<Player> p)
 {
-    if(p.get()->isStarted())
     {
-        int fd = p.get()->getFD();
-        std::string m = fmt::format("{0} has disconnected from the server!\n",fmt::join(p.get()->charTainer.CHARACTER_NAME,""));
-        
+        M_lg(GMLock);
+        if(p->isStarted())
         {
-            std::lock_guard<std::mutex>lock(GMLock);
+            int fd = p->getFD();
+            std::string m = fmt::format("{0} has disconnected from the server!\n",p->charTainer.CHARACTER_NAME);
+            
             for(auto t = master_room_list.begin(); t != master_room_list.end(); ++t)
             {
-                if((*t).get()->seek_remove_player(p)){break;}
+                if((*t)->seek_remove_player(p)){break;}
             }
             for(auto t = master_player_list.begin(); t != master_player_list.end(); ++t)
             {
-                if(fd == (*t).get()->getFD())
+                if(fd == (*t)->getFD())
                 {
                     t = master_player_list.erase(t);
                     --t;
                     break;
-                    std::cout << "Found in master_player list. removed!\n";
+                    {M_lg(printLock);std::cout << "Found in master_player list. removed!\n";}
                 }
             }
             for(auto t = master_player_list.begin(); t != master_player_list.end(); ++t)
             {
-                (*t).get()->write_msg(gmpm,m);
+                (*t)->write_msg(gmpm,m);
             }
+        
+            M_lg(printLock);
+            std::cout << fmt::format("{0} has ragequit.\n Masterlist Size: {1}\n"
+            ,p->charTainer.CHARACTER_NAME, std::to_string(master_player_list.size()));
         }
     }
-    std::cout << fmt::format("Player has ragequit.\n Masterlist Size: {1}\n"
-        , std::to_string(master_player_list.size()));
 }
 
 void Gamemaster::pump_n_dump(std::shared_ptr<Player>p)
 {// don't check bytes on MSG_DONTWAIT
-    std::vector<char> dump(1024);
-    recv(p.get()->getFD(), dump.data(), sizeof(size_t), MSG_DONTWAIT);
+    char dump[1024];
+    recv(p->getFD(), dump, 1024, MSG_DONTWAIT);
 }
 
 
@@ -290,10 +283,10 @@ void Gamemaster::pump_n_dump(std::shared_ptr<Player>p)
 void Gamemaster::GMController(int fd)
 {
     auto p = std::make_shared<Player>(fd);
-    p.get()->write_version(vers);
-    p.get()->write_game(gmInfo,serverStats::GAME_GREETING);
+    p->write_version(vers);
+    p->write_game(gmInfo,serverStats::GAME_GREETING);
 
-    while(p.get()->isSktAlive() && !(p.get()->isValidToon()))
+    while(p->isSktAlive() && !(p->isValidToon()))
     {
         uint8_t type = listener(p);
         if(type == LURK_TYPES::TYPE_CHARACTER)
@@ -304,7 +297,7 @@ void Gamemaster::GMController(int fd)
             pump_n_dump(p);
         }
     }
-    while(p.get()->isSktAlive() && !(p.get()->isStarted()))
+    while(p->isSktAlive() && !(p->isStarted()))
     {
         uint8_t type = listener(p);
         if(type == LURK_TYPES::TYPE_START)
@@ -315,8 +308,8 @@ void Gamemaster::GMController(int fd)
             pump_n_dump(p);
         }
     }
-    std::cout << p.get()->desc << std::endl;
-    while(p.get()->isSktAlive())
+    {M_lg(printLock);std::cout << p->desc << std::endl;}
+    while(p->isSktAlive())
     {
         uint8_t type = listener(p);
         if(type == LURK_TYPES::TYPE_MSG)
@@ -325,11 +318,11 @@ void Gamemaster::GMController(int fd)
         }else if(type == LURK_TYPES::TYPE_CHANGEROOM)
         {
             proc_changeroom(p);
-        }else if(type == LURK_TYPES::TYPE_LEAVE)
+        }else if((type == LURK_TYPES::TYPE_LEAVE) || type == 0)
         {
-            // std::string m = fmt::format("Walk in the light, {0}...\n",p.get()->charTainer.CHARACTER_NAME);
-            // p.get()->write_msg(gmpm,m);
-            p.get()->quitPlayer();
+            // std::string m = fmt::format("Walk in the light, {0}...\n",p->charTainer.CHARACTER_NAME);
+            // p->write_msg(gmpm,m);
+            p->quitPlayer();
         }
 
     }
@@ -343,12 +336,9 @@ uint8_t Gamemaster::listener(std::shared_ptr<Player> p)
 {
     ssize_t bytes;
     uint8_t dipByte;
-    bytes = recv(p.get()->getFD(), &dipByte,sizeof(uint8_t),MSG_WAITALL);
-    
+    bytes = recv(p->getFD(), &dipByte,sizeof(uint8_t),MSG_WAITALL);
     if(bytes < 1)
     {
-        std::cout << "Bytes: " << bytes << std::endl;
-        p.get()->quitPlayer();
         dipByte = 0;
     }
     return dipByte;
@@ -359,30 +349,31 @@ uint8_t Gamemaster::listener(std::shared_ptr<Player> p)
 void Gamemaster::proc_msg(std::shared_ptr<Player> p)
 {
     ssize_t bytes;
-    int fd = p.get()->getFD();
+    int fd = p->getFD();
     LURK_MSG pkg;
     std::string m;
     bool found = true;
 
     recv(fd, &pkg, sizeof(LURK_MSG),MSG_WAITALL);
-    std::vector<unsigned char>message(500);
-    bytes = recv(fd, message.data(), pkg.MSG_LEN,MSG_WAITALL);
-    message.resize(pkg.MSG_LEN,'\0');
-    m = std::string(message.begin(), message.end());
-    
+    char* msg = new char[pkg.MSG_LEN];
+    bytes = recv(fd, msg, pkg.MSG_LEN,MSG_WAITALL);
+    msg[pkg.MSG_LEN] = 0;
+    m = std::string(msg);
+    delete msg;
     if(bytes < 1)
     {
-        p.get()->quitPlayer();
+        p->quitPlayer();
         return;
     }
     {
-        std::lock_guard<std::mutex>lock(GMLock);
+        M_lg(GMLock);
         for(auto t = master_player_list.begin(); t != master_player_list.end(); ++t)
         {
-            if(compare_to_lowers(pkg.CEIVER_NAME,(*t).get()->charTainer.CHARACTER_NAME))
+            
+            if(compare_to_lowers(M_ToCP(pkg.CEIVER_NAME),M_ToCP((*t)->charTainer.CHARACTER_NAME)))
             {
-                (*t).get()->write_accept(LURK_TYPES::TYPE_MSG);
-                (*t).get()->write_msg(pkg,m);
+                (*t)->write_accept(LURK_TYPES::TYPE_MSG);
+                (*t)->write_msg(pkg,m);
                 found = true;
                 break;
             }
@@ -397,26 +388,27 @@ void Gamemaster::proc_msg(std::shared_ptr<Player> p)
 void Gamemaster::proc_changeroom(std::shared_ptr<Player> p)
 {
     ssize_t bytes;
-    int fd = p.get()->getFD();
-    uint16_t curr = p.get()->charTainer.CURRENT_ROOM_NUMBER;
+    int fd = p->getFD();
+    uint16_t curr = p->charTainer.CURRENT_ROOM_NUMBER;
     uint16_t next;
     bytes = recv(fd,&next, sizeof(uint16_t),MSG_WAITALL);
+    
     {
-        std::lock_guard<std::mutex> lock(GMLock); // consider more spec lock
+        M_lg(GMLock); // consider more spec lock
         if(bytes < 1)
         {
-            p.get()->quitPlayer();
+            p->quitPlayer();
             return;
         }
-        bool c = master_room_list.at(curr).get()->isValidConnection(next);
+        bool c = master_room_list.at(curr)->isValidConnection(next);
         if(c)
         {
-            p.get()->write_accept(LURK_TYPES::TYPE_CHANGEROOM);
-            p.get()->charTainer.CURRENT_ROOM_NUMBER = next;
-            master_room_list.at(curr).get()->remove_player(p);
-            master_room_list.at(next).get()->emplace_player(p);
+            p->write_accept(LURK_TYPES::TYPE_CHANGEROOM);
+            p->charTainer.CURRENT_ROOM_NUMBER = next;
+            master_room_list.at(curr)->remove_player(p);
+            master_room_list.at(next)->emplace_player(p);
         }else{
-            master_room_list.at(curr).get()->inform_connections(p);
+            master_room_list.at(curr)->inform_connections(p);
             error_changeroom(p);
         }
     }
@@ -425,19 +417,20 @@ void Gamemaster::proc_changeroom(std::shared_ptr<Player> p)
 void Gamemaster::proc_character(std::shared_ptr<Player> p)
 {
     ssize_t bytes;
-    recv(p.get()->getFD(), &p.get()->charTainer, sizeof(LURK_CHARACTER),MSG_WAITALL);
-    p.get()->charTainer.CHARACTER_NAME.resize(32,'\0');
-    uint16_t len = p.get()->charTainer.DESC_LENGTH;
+    recv(p->getFD(), &p->charTainer, sizeof(LURK_CHARACTER),MSG_WAITALL);
+    p->charTainer.CHARACTER_NAME[32] = 0;
+    uint16_t len = p->charTainer.DESC_LENGTH;
     
     // char desc[len];
-    std::vector<unsigned char> desc(1024);
-    bytes = recv(p.get()->getFD(),desc.data(),len,MSG_WAITALL);
-    desc.resize(len,'\0');
-    p.get()->desc = std::string(desc.begin(),desc.end());
+    char* desc = new char[len];
+    bytes = recv(p->getFD(),desc,len,MSG_WAITALL);
+    desc[len] = 0;
+    p->desc = std::string(desc);
+    delete desc;
 
     if(bytes < 1)
     {
-        p.get()->quitPlayer();
+        p->quitPlayer();
         return;
     }
     bool checks = false;
@@ -446,9 +439,9 @@ void Gamemaster::proc_character(std::shared_ptr<Player> p)
 
     if(checks)
     {
-        p.get()->setValid();
-        p.get()->write_accept(LURK_TYPES::TYPE_CHARACTER);
-        p.get()->write_character(p.get()->charTainer,p.get()->desc);
+        p->setValid();
+        p->write_accept(LURK_TYPES::TYPE_CHARACTER);
+        p->write_character(p->charTainer,p->desc);
     }else{
         error_character(p);
     }
@@ -457,14 +450,18 @@ void Gamemaster::proc_character(std::shared_ptr<Player> p)
 
 void Gamemaster::proc_start(std::shared_ptr<Player> p)
 {
-    p.get()->startPlayer();
+    p->startPlayer();
     {
-        std::lock_guard<std::mutex> lock(GMLock);
+        M_lg(GMLock);
         master_player_list.emplace_back(p);
     }
-    std::cout << fmt::format("Player has been added to Master: {1} (size)\n",fmt::to_string(master_player_list.size()));
+    { 
+        M_lg(printLock);
+        M_lg(GMLock);
+        std::cout << fmt::format("Player has been added to Master: {1} (size)\n",fmt::to_string(master_player_list.size()));
+    }
     
-    p.get()->write_accept(LURK_TYPES::TYPE_START);
+    p->write_accept(LURK_TYPES::TYPE_START);
     move_player(p,0);
 
 }
@@ -476,7 +473,7 @@ void Gamemaster::error_msg(std::shared_ptr<Player> p)
     LURK_ERROR pkg;
     pkg.CODE = 6;
     std::string m = fmt::format("{}: You stick your message in the mailbox, but the mailman gets eaten by a baddie!\n",serverStats::GM_NAME);
-    p.get()->write_error(pkg, m);
+    p->write_error(pkg, m);
 }
 
 void Gamemaster::error_changeroom(std::shared_ptr<Player> p)
@@ -486,7 +483,7 @@ void Gamemaster::error_changeroom(std::shared_ptr<Player> p)
     std::string m = fmt::format("{}: You attempt to step through to that room, but you quickly realize that is an error in judgement!\n",
         serverStats::GM_NAME);
         pkg.MSG_LEN = m.length();
-        p.get()->write_error(pkg, m);
+        p->write_error(pkg, m);
 }
 
 void Gamemaster::error_character(std::shared_ptr<Player> p)
@@ -494,19 +491,22 @@ void Gamemaster::error_character(std::shared_ptr<Player> p)
     LURK_ERROR pkg;
     pkg.CODE = 4;
     std::string m;
-    if(p.get()->isStarted())
     {
-        m = fmt::format("{}: Join battle is always on"
-            "and is not a choice (yet).\n",serverStats::GM_NAME);
-    }else if(!(p.get()->isValidToon()))
-    {
-        m = fmt::format("{}: You attempt to set invalid stats.\n",serverStats::GM_NAME);
+        M_lg(GMLock);
+        if(p->isStarted())
+        {
+            m = fmt::format("{}: Join battle is always on"
+                "and is not a choice (yet).\n",serverStats::GM_NAME);
+        }else if(!(p->isValidToon()))
+        {
+            m = fmt::format("{}: You attempt to set invalid stats.\n",serverStats::GM_NAME);
 
-    }else {
-        m = fmt::format("{}: You shouldn't see this. (DEBUG: error_character())\n",serverStats::GM_NAME);
+        }else {
+            m = fmt::format("{}: You shouldn't see this. (DEBUG: error_character())\n",serverStats::GM_NAME);
+        }
     }
     pkg.MSG_LEN = m.length();
-    p.get()->write_error(pkg,m);
+    p->write_error(pkg,m);
 
 }
 
@@ -515,15 +515,18 @@ void Gamemaster::error_start(std::shared_ptr<Player> p)
     LURK_ERROR pkg;
     pkg.CODE = 1;
     std::string m;
-    if(p.get()->isStarted())
     {
-       m = fmt::format("{0}: Dearest {1}, you have already started. I love the passion, though.\n",
-       serverStats::GM_NAME, fmt::join(p.get()->charTainer.CHARACTER_NAME,""));
-    }else{
-        m = fmt::format("{0}: {1}, Send me a start! (Type 6)\n", serverStats::GM_NAME, fmt::join(p.get()->charTainer.CHARACTER_NAME,""));
+        M_lg(GMLock);
+        if(p->isStarted())
+        {
+        m = fmt::format("{0}: Dearest {1}, you have already started. I love the passion, though.\n",
+        serverStats::GM_NAME,p->charTainer.CHARACTER_NAME);
+        }else{
+            m = fmt::format("{0}: {1}, Send me a start! (Type 6)\n", serverStats::GM_NAME,p->charTainer.CHARACTER_NAME);
+        }
     }
     pkg.MSG_LEN = m.length();
-    p.get()->write_error(pkg,m);
+    p->write_error(pkg,m);
 }
 
 //helper
@@ -532,13 +535,15 @@ void Gamemaster::error_start(std::shared_ptr<Player> p)
 
 bool Gamemaster::check_name(std::shared_ptr<Player> p)
 {
+    M_lg(GMLock);
+    p->charTainer.CHARACTER_NAME[32] = 0;
     bool unique = true;
     if(!(master_player_list.empty()))
     {
-        std::lock_guard<std::mutex> lock(GMLock);
+        
         for(auto t = master_player_list.begin(); t != master_player_list.end(); ++t)
         {
-            if((*t).get()->charTainer.CHARACTER_NAME == p.get()->charTainer.CHARACTER_NAME)
+            if((*t)->charTainer.CHARACTER_NAME == p->charTainer.CHARACTER_NAME)
             {
                 unique = false;
                 break;
@@ -553,31 +558,31 @@ bool Gamemaster::check_stat(std::shared_ptr<Player> p)
     bool good = false;
     
     
-    uint16_t stat = p.get()->charTainer.ATTACK + p.get()->charTainer.DEFENSE + p.get()->charTainer.REGEN;
-    p.get()->charTainer.GOLD = (fast_rand() %
+    uint16_t stat = p->charTainer.ATTACK + p->charTainer.DEFENSE + p->charTainer.REGEN;
+    p->charTainer.GOLD = (fast_rand() %
         (serverStats::PLAYER_MAX_GOLD - serverStats::PLAYER_MIN_GOLD) + serverStats::PLAYER_MIN_GOLD);
     
     if(stat <= serverStats::PLAYER_INIT_POINTS)
     {
         uint16_t remaining = serverStats::PLAYER_INIT_POINTS - stat;
-        p.get()->charTainer.HEALTH = (serverStats::PLAYER_BASE_HEALTH + remaining);
+        p->charTainer.HEALTH = (serverStats::PLAYER_BASE_HEALTH + remaining);
         good = true;
-        p.get()->charTainer.CURRENT_ROOM_NUMBER = 0;
+        p->charTainer.CURRENT_ROOM_NUMBER = 0;
     }
-    p.get()->charTainer.DESC_LENGTH = p.get()->desc.length();
+    p->charTainer.DESC_LENGTH = p->desc.length();
     
-    size_t len = p.get()->charTainer.CHARACTER_NAME.size();
+    size_t len = strlen(M_ToCP(p->charTainer.CHARACTER_NAME));
 
     {
-        std::lock_guard<std::mutex> lock (GMLock);
+        M_lg(GMLock);
         for(auto t = master_player_list.begin(); t != master_player_list.end(); ++t)
         {
-            if(compare_to_lowers(p.get()->charTainer.CHARACTER_NAME,(*t).get()->charTainer.CHARACTER_NAME))
+            if(compare_to_lowers(M_ToCP(p->charTainer.CHARACTER_NAME),M_ToCP((*t)->charTainer.CHARACTER_NAME)))
             {
                 good = false;
-                std::string m = fmt::format("Sorry, {0 is actively playing! Pick a different name and go rough them up in Room #{1}!\n",
-                fmt::join((*t).get()->charTainer.CHARACTER_NAME,""), std::to_string((*t).get()->charTainer.CURRENT_ROOM_NUMBER));
-                p.get()->write_msg(gmpm,m);
+                std::string m = fmt::format("Sorry, {0} is actively playing! Pick a different name and go rough them up in Room #{1}!\n",
+                (*t)->charTainer.CHARACTER_NAME, std::to_string((*t)->charTainer.CURRENT_ROOM_NUMBER));
+                p->write_msg(gmpm,m);
                 break;
             }
         }
@@ -587,15 +592,15 @@ bool Gamemaster::check_stat(std::shared_ptr<Player> p)
         //     std::string nameB;
         //     for(size_t i = 0; i < len; i++)
         //     {
-        //         nameA += std::tolower((*t).get()->charTainer.CHARACTER_NAME[i]);
-        //         nameB += std::tolower(p.get()->charTainer.CHARACTER_NAME[i]);
+        //         nameA += std::tolower((*t)->charTainer.CHARACTER_NAME[i]);
+        //         nameB += std::tolower(p->charTainer.CHARACTER_NAME[i]);
         //     }
         //     if(nameA.compare(nameB) == 0)
         //     {
         //         good = false;
         //         std::string m = fmt::format("Sorry, {0} is actively playing! Pick a different name and go rough them up in Room #{1}\n"
-        //         ,(*t).get()->charTainer.CHARACTER_NAME, std::to_string((*t).get()->charTainer.CURRENT_ROOM_NUMBER));
-        //         p.get()->write_msg(gmpm,m);
+        //         ,(*t)->charTainer.CHARACTER_NAME, std::to_string((*t)->charTainer.CURRENT_ROOM_NUMBER));
+        //         p->write_msg(gmpm,m);
         //         break;
         //     }
         //}
@@ -606,18 +611,18 @@ bool Gamemaster::check_stat(std::shared_ptr<Player> p)
 void Gamemaster::move_player(std::shared_ptr<Player> p, uint16_t room)
 {
     {
-        std::lock_guard<std::mutex> lock(GMLock);
-        if(p.get()->isFreshSpawn())
+        M_lg(GMLock);
+        if(p->isFreshSpawn())
         {
-            master_room_list.at(0).get()->emplace_player(p);
-            p.get()->despawn();
+            master_room_list.at(0)->emplace_player(p);
+            p->despawn();
         }else{
-            bool found = master_room_list.at(p.get()->charTainer.CURRENT_ROOM_NUMBER).get()->isValidConnection(room);
+            bool found = master_room_list.at(p->charTainer.CURRENT_ROOM_NUMBER)->isValidConnection(room);
 
             if(found)
             {
-                master_room_list.at(p.get()->charTainer.CURRENT_ROOM_NUMBER).get()->remove_player(p);
-                master_room_list.at(room).get()->emplace_player(p);
+                master_room_list.at(p->charTainer.CURRENT_ROOM_NUMBER)->remove_player(p);
+                master_room_list.at(room)->emplace_player(p);
             }
         }
     }
