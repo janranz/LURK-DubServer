@@ -5,6 +5,7 @@ Player::Player(int fd)
     socketFD = fd;
     bytes = 0;
     sktAlive = true;
+    playerAlive = false;
     started = false;
     validToon = false;
     freshSpawn = true;
@@ -16,28 +17,44 @@ Player::Player(int fd)
 //state check
 bool Player::isSktAlive()
 {
+    std::lock_guard<std::mutex>lock(pLock);
     return sktAlive;
 }
 bool Player::isStarted()
 {
+    std::lock_guard<std::mutex>lock(pLock);
     return started;
 }
 bool Player::isValidToon()
 {
+    std::lock_guard<std::mutex>lock(pLock);
     return validToon;
 }
 bool Player::isFreshSpawn()
 {
+    std::lock_guard<std::mutex>lock(pLock);
     return freshSpawn;
 }
-
+bool Player::isPlayerAlive()
+{
+    std::lock_guard<std::mutex>lock(pLock);
+    return playerAlive;
+}
 //state set
+
+void Player::giveRoom(uint16_t n)
+{
+    {
+        std::lock_guard<std::mutex> lock(pLock);
+        charTainer.FLAGS = n;
+    }
+}
+
 void Player::startPlayer()
 {
     {
         std::lock_guard<std::mutex> lock(pLock);
         started = true;
-        charTainer.FLAGS = serverStats::PLAYER_AFLAGS;
     }
 }
 void Player::quitPlayer()
@@ -62,20 +79,45 @@ void Player::setValid()
 }
 void Player::respawn()
 {
-    {std::lock_guard<std::mutex> lock(pLock);freshSpawn = true;}
+    {
+        std::lock_guard<std::mutex> lock(pLock);
+        charTainer.FLAGS = serverStats::PLAYER_AFLAGS;
+        playerAlive = true;
+    }
 }
 void Player::despawn()
 {
-    {std::lock_guard<std::mutex> lock(pLock);freshSpawn = false;}
+    {
+        std::lock_guard<std::mutex> lock(pLock);
+        charTainer.FLAGS = serverStats::PLAYER_DFLAGS;
+        playerAlive = false;
+    }
 }
 
 //getter
 int Player::getFD()
 {
+    std::lock_guard<std::mutex>lock(pLock);
     return socketFD;
 }
 
 //writer
+
+void Player::write_reflect()
+{// self character message
+    ssize_t bytes;
+    {
+        std::lock_guard<std::mutex> lock(pLock);
+        write(socketFD,&LURK_TYPES::TYPE_CHARACTER, sizeof(uint8_t));
+        write(socketFD,&charTainer,sizeof(LURK_CHARACTER));
+        bytes = write(socketFD,desc.c_str(),charTainer.DESC_LENGTH);
+    }
+    if( bytes < 1)
+    {
+        quitPlayer();
+    }
+}
+
 void Player::write_msg(LURK_MSG pkg, std::string msg)
 {
     {
@@ -113,7 +155,6 @@ void Player::write_accept(uint8_t t)
         std::lock_guard<std::mutex> lock(pLock);
         LURK_ACCEPT pkg;
         pkg.ACCEPT_TYPE = t;
-
         write(socketFD, &LURK_TYPES::TYPE_ACCEPT,sizeof(uint8_t));
         bytes = write(socketFD,&pkg.ACCEPT_TYPE,sizeof(uint8_t));
         if(bytes < 1)

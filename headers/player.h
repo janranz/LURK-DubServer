@@ -15,6 +15,7 @@ class Player
         bool started;
         bool validToon;
         bool freshSpawn;
+        bool playerAlive;
         ssize_t bytes;
     
     public:
@@ -29,11 +30,13 @@ class Player
         bool isStarted();
         bool isValidToon();
         bool isFreshSpawn();
+        bool isPlayerAlive();
 
         //state set
         void startPlayer();
         void quitPlayer();
         void setValid();
+        void giveRoom(uint16_t);
         void respawn();
         void despawn();
 
@@ -49,6 +52,7 @@ class Player
         void write_game(LURK_GAME, std::string);
         void write_connection(LURK_ROOM,std::string);
         void write_version(LURK_VERSION);
+        void write_reflect();
 };
 
 #endif // PLAYER_H

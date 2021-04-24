@@ -22,20 +22,21 @@ class Room
         LURK_ROOM roomTainer;
         std::string roomDesc;
         // std::mutex rLock;
-        std::recursive_mutex rLock;
+        std::mutex rLock;
         
         Room(std::string,std::string,uint16_t);
         void emplace_connection(std::shared_ptr<Room>);
         void emplace_baddie(std::shared_ptr<Baddie>);
         void emplace_player(std::shared_ptr<Player>);
-        void remove_player(std::shared_ptr<Player>);
+        bool remove_player(std::shared_ptr<Player>);
         void inform_connections(std::shared_ptr<Player>);    // "static"
-        void inform_players_friendly();  // everyone for everyone
+        void inform_player_friendly(std::shared_ptr<Player>);  // everyone for everyone
+        void inform_others_player(std::shared_ptr<Player>);
         void inform_baddies(std::shared_ptr<Player>); // "static"
 
         //helper
         bool isValidConnection(uint16_t);
-        bool seek_remove_player(std::shared_ptr<Player>);
+        
         //debug
         size_t room_connection_size();
         size_t baddie_list_size();

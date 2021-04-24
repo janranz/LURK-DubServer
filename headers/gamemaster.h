@@ -18,7 +18,7 @@ class Gamemaster
         LURK_VERSION vers;
         LURK_MSG gmpm;
         //std::mutex GMLock;
-        std::recursive_mutex GMLock;
+        std::mutex GMLock;
         std::vector<std::shared_ptr<Room>> master_room_list;
         std::vector<std::shared_ptr<Player>> master_player_list;
         chatter_messages c_m;
@@ -53,7 +53,7 @@ class Gamemaster
         bool check_name(std::shared_ptr<Player>);
         bool check_stat(std::shared_ptr<Player>);
         void move_player(std::shared_ptr<Player>,uint16_t);
-        
+        void spawn_player(std::shared_ptr<Player>);
         
         // error handling
         void error_character(std::shared_ptr<Player>);
