@@ -12,7 +12,9 @@ Room::Room(std::string name,std::string desc,uint16_t num)
 
     // strlcpy(rmpm.SENDER_NAME,m.c_str(),32);
     // strlcpy(rmpm.CEIVER_NAME,n.c_str(),32);
+    memset(rmpm.SENDER_NAME,0,32);
     strncpy(M_ToCP(rmpm.SENDER_NAME),m.c_str(),32);
+    rmpm.SENDER_NAME[32] = 0;
 
 }
 
@@ -36,9 +38,6 @@ void Room::emplace_player(std::shared_ptr<Player>p)
     inform_baddies(p);
     inform_connections(p); // may be out of order with baddies. double check
     inform_others_player(p);
-    
-    
-    
     
     std::string m = fmt::format("{} has joined the room to fight by your side!\n"
         ,p->charTainer.CHARACTER_NAME);
@@ -79,7 +78,7 @@ void Room::emplace_baddie(std::shared_ptr<Baddie> b)
     }
 }
 
-bool Room::remove_player(std::shared_ptr<Player>p)
+void Room::remove_player(std::shared_ptr<Player>p)
 {// assume this to be called after player(p) has been given a new room.
     int pfd = p->getFD();
     bool found = false;
@@ -95,6 +94,13 @@ bool Room::remove_player(std::shared_ptr<Player>p)
                 break; // --t;
             }
         }
+    }
+    if(found)
+    {
+        
+    }else{
+        std::lock_guard<std::mutex>lock(printLock);std::cout << fmt::format("{0} NOT found in: {1}\n",
+            p->charTainer.CHARACTER_NAME,std::to_string(roomTainer.ROOM_NUMBER));
     }
     inform_others_player(p);
 

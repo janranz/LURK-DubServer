@@ -28,7 +28,7 @@ class Room
         void emplace_connection(std::shared_ptr<Room>);
         void emplace_baddie(std::shared_ptr<Baddie>);
         void emplace_player(std::shared_ptr<Player>);
-        bool remove_player(std::shared_ptr<Player>);
+        void remove_player(std::shared_ptr<Player>);
         void inform_connections(std::shared_ptr<Player>);    // "static"
         void inform_player_friendly(std::shared_ptr<Player>);  // everyone for everyone
         void inform_others_player(std::shared_ptr<Player>);

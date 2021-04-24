@@ -2,6 +2,8 @@
 
 Player::Player(int fd)
 {
+    std::string m = "unknown";
+    strncpy(M_ToCP(charTainer.CHARACTER_NAME),m.c_str(),32);
     socketFD = fd;
     bytes = 0;
     sktAlive = true;
@@ -11,6 +13,12 @@ Player::Player(int fd)
     freshSpawn = true;
     charTainer.HEALTH = serverStats::PLAYER_BASE_HEALTH;
     charTainer.FLAGS = serverStats::BASE_FLAGS;
+    charTainer.ATTACK = 0;
+    charTainer.DEFENSE = 0;
+    charTainer.REGEN = 0;
+    charTainer.GOLD = 0;
+    charTainer.CURRENT_ROOM_NUMBER = 0;
+    
     desc = "";
 }
 
@@ -100,7 +108,11 @@ int Player::getFD()
     std::lock_guard<std::mutex>lock(pLock);
     return socketFD;
 }
-
+uint16_t Player::getRoomNumber()
+{
+    std::lock_guard<std::mutex>lock(pLock);
+    return charTainer.CURRENT_ROOM_NUMBER;
+}
 //writer
 
 void Player::write_reflect()

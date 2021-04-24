@@ -42,6 +42,7 @@ class Player
 
         //getter
         int getFD();
+        uint16_t getRoomNumber();
 
         //writer
         void write_msg(LURK_MSG, std::string);

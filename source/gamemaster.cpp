@@ -319,7 +319,7 @@ void Gamemaster::GMController(int fd)
         }else if(type == LURK_TYPES::TYPE_CHANGEROOM)
         {
             proc_changeroom(p);
-        }else if((type == LURK_TYPES::TYPE_LEAVE) || type == 0)
+        }else if((type == LURK_TYPES::TYPE_LEAVE) || (type == 0))
         {
             // std::string m = fmt::format("Walk in the light, {0}...\n",p->charTainer.CHARACTER_NAME);
             // p->write_msg(gmpm,m);
@@ -448,6 +448,7 @@ void Gamemaster::proc_start(std::shared_ptr<Player> p)
         std::lock_guard<std::mutex> lock(printLock);
         std::cout << fmt::format("{0} has been added to Master: {1} (size)\n",p->charTainer.CHARACTER_NAME,std::to_string(size));
     }
+    p->startPlayer();
     p->write_accept(LURK_TYPES::TYPE_START);
     spawn_player(p);
 
@@ -587,11 +588,12 @@ void Gamemaster::move_player(std::shared_ptr<Player> p, uint16_t room)
 {
     {
         std::lock_guard<std::mutex> lock(GMLock);
-        bool found = master_room_list.at(p->charTainer.CURRENT_ROOM_NUMBER)->isValidConnection(room);
+        uint16_t rm = p->getRoomNumber();
+        bool found = master_room_list.at(rm)->isValidConnection(room);
         if(found)
         {
             p->write_accept(LURK_TYPES::TYPE_CHANGEROOM);
-            master_room_list.at(p->charTainer.CURRENT_ROOM_NUMBER)->remove_player(p);
+            master_room_list.at(rm)->remove_player(p);
             master_room_list.at(room)->emplace_player(p);
         }else{
             error_changeroom(p);
