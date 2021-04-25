@@ -2,8 +2,8 @@
 
 Player::Player(int fd)
 {
-    std::string m = "unknown";
-    strncpy(M_ToCP(charTainer.CHARACTER_NAME),m.c_str(),32);
+    std::string m = "unknown Player";
+    strncpy(M_ToCP(charTainer.CHARACTER_NAME),m.c_str(),sizeof(charTainer.CHARACTER_NAME));
     socketFD = fd;
     bytes = 0;
     sktAlive = true;
@@ -54,7 +54,7 @@ void Player::giveRoom(uint16_t n)
 {
     {
         std::lock_guard<std::mutex> lock(pLock);
-        charTainer.FLAGS = n;
+        charTainer.CURRENT_ROOM_NUMBER = n;
     }
 }
 
@@ -134,11 +134,10 @@ void Player::write_msg(LURK_MSG pkg, std::string msg)
 {
     {
         std::lock_guard<std::mutex> lock(pLock);
-        memset(pkg.CEIVER_NAME,0,32);
-        strncpy(M_ToCP(pkg.CEIVER_NAME),M_ToCP(charTainer.CHARACTER_NAME),32);
-        pkg.CEIVER_NAME[32] = 0;
+        
+        strncpy(M_ToCP(pkg.CEIVER_NAME),M_ToCP(charTainer.CHARACTER_NAME),sizeof(pkg.CEIVER_NAME));
         pkg.MSG_LEN = msg.length();
-
+        
         write(socketFD,&LURK_TYPES::TYPE_MSG,sizeof(uint8_t));
         write(socketFD, &pkg, sizeof(LURK_MSG));
         bytes = write(socketFD,msg.c_str(), pkg.MSG_LEN);

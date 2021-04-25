@@ -8,17 +8,15 @@
 Gamemaster::Gamemaster()
 {
     g_seed = static_cast<unsigned int>(std::time(NULL));
-
     vers.MAJOR = serverStats::GAME_VERSION_MAJOR;
     vers.MINOR = serverStats::GAME_VERSION_MINOR;
     vers.EXTENS_SIZE = serverStats::GAME_VERSION_EXT;
-
     gmInfo.INITIAL_POINTS = serverStats::PLAYER_INIT_POINTS;
     gmInfo.STAT_LIMIT = serverStats::PLAYER_MAX_STAT;
     gmInfo.DESC_LENGTH = serverStats::GAME_GREETING.length();
-
     //set GM's name
-    strncpy(M_ToCP(gmpm.SENDER_NAME),serverStats::GM_NAME.c_str(),32);
+    strncpy(M_ToCP(gmpm.SENDER_NAME),serverStats::GM_NAME.c_str(),sizeof(gmpm.SENDER_NAME));
+    
     
 }
 
@@ -77,27 +75,6 @@ void Gamemaster::size_vectors()
     vsize.adj_VSize         = c_m.adj.size();
     vsize.noun_VSize        = c_m.noun.size();
     vsize.roomType_VSize    = c_m.roomType.size();
-
-    /*debug
-    std::cout << "Awaken: "     << vsize.awaken_VSize      << std::endl
-              << "Baddie: "     << vsize.baddies_VSize     << std::endl
-              << "Danger: "     << vsize.danger_VSize      << std::endl
-              << "death: "      << vsize.death_VSize       << std::endl
-              << "error: "      << vsize.error_VSize       << std::endl
-              << "fightHit: "   << vsize.fightHit_VSize    << std::endl
-              << "food: "       << vsize.food_VSize        << std::endl
-              << "health: "     << vsize.health_VSize      << std::endl
-              << "loot: "       << vsize.loot_VSize        << std::endl
-              << "pvp: "        << vsize.pvp_VSize         << std::endl
-              << "safe: "       << vsize.safeEv_VSize      << std::endl
-              << "trans: "      << vsize.trans_VSize       << std::endl
-              << "weapons: "    << vsize.weapons_VSize     << std::endl
-              << "baddieDesc: " << vsize.baddie_desc_VSize << std::endl
-              << "roomDesc: "   << vsize.room_desc_VSize   << std::endl
-              << "adj: "        << vsize.adj_VSize         << std::endl
-              << "noun: "       << vsize.noun_VSize        << std::endl
-              << "roomType: "   << vsize.roomType_VSize    << std::endl;
-    */
 }
 void Gamemaster::craft_room_names()
 {
@@ -163,8 +140,8 @@ std::shared_ptr<Baddie> Gamemaster::build_a_baddie(uint16_t roomNumber)
         name = c_m.baddies.at(dex);
     }while(name.length() > 30);
     
-    strncpy(M_ToCP(b->bTainer.CHARACTER_NAME),name.c_str(),32);
-    b->bTainer.CHARACTER_NAME[32] = 0;
+    strncpy(M_ToCP(b->bTainer.CHARACTER_NAME),name.c_str(),sizeof(b->bTainer.CHARACTER_NAME));
+    b->bTainer.CHARACTER_NAME[31] = 0;
 
     dex = (fast_rand() % c_m.baddie_desc.size());
     b->desc = c_m.baddie_desc.at(dex);
@@ -247,6 +224,7 @@ void Gamemaster::ragequit(std::shared_ptr<Player> p)
             std::string m = fmt::format("{0} has disconnected from the server!\n",p->charTainer.CHARACTER_NAME);
 
             master_room_list.at(p->charTainer.CURRENT_ROOM_NUMBER)->remove_player(p);
+            master_room_list.at(p->charTainer.CURRENT_ROOM_NUMBER)->inform_others_player(p);
 
             for(auto t = master_player_list.begin(); t != master_player_list.end(); ++t)
             {
@@ -339,7 +317,7 @@ uint8_t Gamemaster::listener(std::shared_ptr<Player> p)
     uint8_t dipByte;
     bytes = recv(p->getFD(), &dipByte,sizeof(uint8_t),MSG_WAITALL);
     if(p->isValidToon())
-        {std::lock_guard<std::mutex>lock(GMLock);std::cout << fmt::format("{0} sent type: {1}\n",p->charTainer.CHARACTER_NAME,std::to_string(dipByte));}
+        {std::lock_guard<std::mutex>lock(printLock);std::cout << fmt::format("{0} sent type: {1}\n",p->charTainer.CHARACTER_NAME,std::to_string(dipByte));}
     if(bytes < 1)
     {
         dipByte = 0;
@@ -358,11 +336,15 @@ void Gamemaster::proc_msg(std::shared_ptr<Player> p)
     bool found = true;
 
     recv(fd, &pkg, sizeof(LURK_MSG),MSG_WAITALL);
-    char* msg = new char[pkg.MSG_LEN];
+    pkg.CEIVER_NAME[31] = 0;
+    pkg.SENDER_NAME[31] = 0;    
+
+    char* msg = new char[pkg.MSG_LEN + 1];
     bytes = recv(fd, msg, pkg.MSG_LEN,MSG_WAITALL);
     msg[pkg.MSG_LEN] = 0;
     m = std::string(msg);
     delete msg;
+
     if(bytes < 1)
     {
         p->quitPlayer();
@@ -375,7 +357,7 @@ void Gamemaster::proc_msg(std::shared_ptr<Player> p)
             
             if(compare_to_lowers(M_ToCP(pkg.CEIVER_NAME),M_ToCP((*t)->charTainer.CHARACTER_NAME)))
             {
-                (*t)->write_accept(LURK_TYPES::TYPE_MSG);
+                (*t)->write_accept(LURK_TYPES::TYPE_MSG);                
                 (*t)->write_msg(pkg,m);
                 found = true;
                 break;
@@ -405,11 +387,11 @@ void Gamemaster::proc_character(std::shared_ptr<Player> p)
 {
     ssize_t bytes;
     recv(p->getFD(), &p->charTainer, sizeof(LURK_CHARACTER),MSG_WAITALL);
-    p->charTainer.CHARACTER_NAME[32] = 0;
+    p->charTainer.CHARACTER_NAME[31] = 0;
     uint16_t len = p->charTainer.DESC_LENGTH;
     
     // char desc[len];
-    char* desc = new char[len];
+    char* desc = new char[len + 1];
     bytes = recv(p->getFD(),desc,len,MSG_WAITALL);
     desc[len] = 0;
     p->desc = std::string(desc);
@@ -523,7 +505,7 @@ void Gamemaster::error_start(std::shared_ptr<Player> p)
 bool Gamemaster::check_name(std::shared_ptr<Player> p)
 {
     std::lock_guard<std::mutex> lock(GMLock);
-    p->charTainer.CHARACTER_NAME[32] = 0;
+    // p->charTainer.CHARACTER_NAME[32] = 0;
     bool unique = true;
     if(!(master_player_list.empty()))
     {
@@ -595,11 +577,11 @@ void Gamemaster::move_player(std::shared_ptr<Player> p, uint16_t room)
             p->write_accept(LURK_TYPES::TYPE_CHANGEROOM);
             master_room_list.at(rm)->remove_player(p);
             master_room_list.at(room)->emplace_player(p);
+            
+            master_room_list.at(rm)->inform_others_player(p);
+            // master_room_list.at(room)->inform_others_player(p);
         }else{
             error_changeroom(p);
         }
-        // }else{
-        //     error_changeroom(p);
-        // }
     }
 }

@@ -32,14 +32,15 @@ class Room
         void inform_connections(std::shared_ptr<Player>);    // "static"
         void inform_player_friendly(std::shared_ptr<Player>);  // everyone for everyone
         void inform_others_player(std::shared_ptr<Player>);
+        // void inform_others_player_left(std::shared_ptr<Player>);
         void inform_baddies(std::shared_ptr<Player>); // "static"
 
         //helper
         bool isValidConnection(uint16_t);
         
         //debug
-        size_t room_connection_size();
-        size_t baddie_list_size();
+        // size_t room_connection_size();
+        // size_t baddie_list_size();
         // fight logic separate threads here!
 };
 

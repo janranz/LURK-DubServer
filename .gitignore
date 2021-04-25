@@ -31,3 +31,7 @@
 *.out
 *.app
 .vscode/
+
+# Dir
+bin/
+log/
