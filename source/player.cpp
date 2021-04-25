@@ -5,7 +5,6 @@ Player::Player(int fd)
     std::string m = "unknown Player";
     strncpy(M_ToCP(charTainer.CHARACTER_NAME),m.c_str(),sizeof(charTainer.CHARACTER_NAME));
     socketFD = fd;
-    bytes = 0;
     sktAlive = true;
     playerAlive = false;
     started = false;
@@ -25,27 +24,27 @@ Player::Player(int fd)
 //state check
 bool Player::isSktAlive()
 {
-    std::lock_guard<std::mutex>lock(pLock);
+    std::shared_lock<std::shared_mutex>lock(pLock);
     return sktAlive;
 }
 bool Player::isStarted()
 {
-    std::lock_guard<std::mutex>lock(pLock);
+    std::shared_lock<std::shared_mutex>lock(pLock);
     return started;
 }
 bool Player::isValidToon()
 {
-    std::lock_guard<std::mutex>lock(pLock);
+    std::shared_lock<std::shared_mutex>lock(pLock);
     return validToon;
 }
 bool Player::isFreshSpawn()
 {
-    std::lock_guard<std::mutex>lock(pLock);
+    std::shared_lock<std::shared_mutex>lock(pLock);
     return freshSpawn;
 }
 bool Player::isPlayerAlive()
 {
-    std::lock_guard<std::mutex>lock(pLock);
+    std::shared_lock<std::shared_mutex>lock(pLock);
     return playerAlive;
 }
 //state set
@@ -53,7 +52,7 @@ bool Player::isPlayerAlive()
 void Player::giveRoom(uint16_t n)
 {
     {
-        std::lock_guard<std::mutex> lock(pLock);
+        std::lock_guard<std::shared_mutex> lock(pLock);
         charTainer.CURRENT_ROOM_NUMBER = n;
     }
 }
@@ -61,14 +60,14 @@ void Player::giveRoom(uint16_t n)
 void Player::startPlayer()
 {
     {
-        std::lock_guard<std::mutex> lock(pLock);
+        std::lock_guard<std::shared_mutex> lock(pLock);
         started = true;
     }
 }
 void Player::quitPlayer()
 {
     {
-        std::lock_guard<std::mutex> lock(pLock);
+        std::lock_guard<std::shared_mutex> lock(pLock);
         sktAlive = false;
         std::string m;
         if(started)
@@ -83,12 +82,12 @@ void Player::quitPlayer()
 }
 void Player::setValid()
 {
-    {std::lock_guard<std::mutex> lock(pLock);validToon = true;}
+    {std::lock_guard<std::shared_mutex> lock(pLock);validToon = true;}
 }
 void Player::respawn()
 {
     {
-        std::lock_guard<std::mutex> lock(pLock);
+        std::lock_guard<std::shared_mutex> lock(pLock);
         charTainer.FLAGS = serverStats::PLAYER_AFLAGS;
         playerAlive = true;
     }
@@ -96,7 +95,7 @@ void Player::respawn()
 void Player::despawn()
 {
     {
-        std::lock_guard<std::mutex> lock(pLock);
+        std::lock_guard<std::shared_mutex> lock(pLock);
         charTainer.FLAGS = serverStats::PLAYER_DFLAGS;
         playerAlive = false;
     }
@@ -105,21 +104,21 @@ void Player::despawn()
 //getter
 int Player::getFD()
 {
-    std::lock_guard<std::mutex>lock(pLock);
+    std::shared_lock<std::shared_mutex>lock(pLock);
     return socketFD;
 }
 uint16_t Player::getRoomNumber()
 {
-    std::lock_guard<std::mutex>lock(pLock);
+    std::shared_lock<std::shared_mutex>lock(pLock);
     return charTainer.CURRENT_ROOM_NUMBER;
 }
 //writer
 
 void Player::write_reflect()
 {// self character message
-    ssize_t bytes;
+    ssize_t bytes = 0;
     {
-        std::lock_guard<std::mutex> lock(pLock);
+        std::shared_lock<std::shared_mutex>lock(pLock);
         write(socketFD,&LURK_TYPES::TYPE_CHARACTER, sizeof(uint8_t));
         write(socketFD,&charTainer,sizeof(LURK_CHARACTER));
         bytes = write(socketFD,desc.c_str(),charTainer.DESC_LENGTH);
@@ -132,8 +131,9 @@ void Player::write_reflect()
 
 void Player::write_msg(LURK_MSG pkg, std::string msg)
 {
+    ssize_t bytes = 0;
     {
-        std::lock_guard<std::mutex> lock(pLock);
+        std::lock_guard<std::shared_mutex> lock(pLock);
         
         strncpy(M_ToCP(pkg.CEIVER_NAME),M_ToCP(charTainer.CHARACTER_NAME),sizeof(pkg.CEIVER_NAME));
         pkg.MSG_LEN = msg.length();
@@ -141,101 +141,109 @@ void Player::write_msg(LURK_MSG pkg, std::string msg)
         write(socketFD,&LURK_TYPES::TYPE_MSG,sizeof(uint8_t));
         write(socketFD, &pkg, sizeof(LURK_MSG));
         bytes = write(socketFD,msg.c_str(), pkg.MSG_LEN);
+    }
         if(bytes < 1)
         {
             quitPlayer();
         }
-    }
+    
 }
 void Player::write_error(LURK_ERROR pkg, std::string msg)
 {
+    ssize_t bytes = 0;
     {
-        std::lock_guard<std::mutex> lock(pLock);
+        std::lock_guard<std::shared_mutex> lock(pLock);
         write(socketFD, &LURK_TYPES::TYPE_ERROR,sizeof(uint8_t));
         write(socketFD, &pkg, sizeof(LURK_ERROR));
         bytes = write(socketFD,msg.c_str(), pkg.MSG_LEN);
-        if(bytes < 1)
-        {
-            quitPlayer();
-        }
+
+    }
+    if(bytes < 1)
+    {
+        quitPlayer();
     }
 }
 void Player::write_accept(uint8_t t)
 {
+    ssize_t bytes = 0;
     {
-        std::lock_guard<std::mutex> lock(pLock);
+        std::lock_guard<std::shared_mutex> lock(pLock);
         LURK_ACCEPT pkg;
         pkg.ACCEPT_TYPE = t;
         write(socketFD, &LURK_TYPES::TYPE_ACCEPT,sizeof(uint8_t));
         bytes = write(socketFD,&pkg.ACCEPT_TYPE,sizeof(uint8_t));
-        if(bytes < 1)
-        {
-            quitPlayer();
-        }
     }
-    
+    if(bytes < 1)
+    {
+        quitPlayer();
+    }
 }
 void Player::write_room(LURK_ROOM pkg, std::string msg)
 {
+    ssize_t bytes = 0;
     {
-        std::lock_guard<std::mutex> lock(pLock);
+        std::lock_guard<std::shared_mutex> lock(pLock);
         write(socketFD, &LURK_TYPES::TYPE_ROOM, sizeof(uint8_t));
         write(socketFD, &pkg, sizeof(LURK_ROOM));
         bytes = write(socketFD,msg.c_str(), pkg.DESC_LENGTH);
-        if(bytes < 1)
-        {
-            quitPlayer();
-        }
+    }
+    if(bytes < 1)
+    {
+        quitPlayer();
     }
 }
 void Player::write_character(LURK_CHARACTER pkg, std::string msg)
 {
+    ssize_t bytes = 0;
     {
-        std::lock_guard<std::mutex> lock(pLock);
+        std::lock_guard<std::shared_mutex> lock(pLock);
         write(socketFD, &LURK_TYPES::TYPE_CHARACTER, sizeof(uint8_t));
         write(socketFD, &pkg, sizeof(LURK_CHARACTER));
         bytes = write(socketFD,msg.c_str(), pkg.DESC_LENGTH);
-        if(bytes < 1)
-        {
-            quitPlayer();
-        }
+    }
+    if(bytes < 1)
+    {
+        quitPlayer();
     }
 }
 void Player::write_game(LURK_GAME pkg, std::string msg)
 {
+    ssize_t bytes = 0;
     {
-        std::lock_guard<std::mutex> lock(pLock);
+        std::lock_guard<std::shared_mutex> lock(pLock);
         write(socketFD,&LURK_TYPES::TYPE_GAME, sizeof(uint8_t));
         write(socketFD, &pkg, sizeof(LURK_GAME));
         bytes = write(socketFD,msg.c_str(),pkg.DESC_LENGTH);
-        if(bytes < 1)
-        {
-            quitPlayer();
-        }
+    }
+    if(bytes < 1)
+    {
+        quitPlayer();
     }
 }
 void Player::write_version(LURK_VERSION pkg)
 {
+    ssize_t bytes = 0;
     {
-        std::lock_guard<std::mutex> lock(pLock);
+        std::lock_guard<std::shared_mutex> lock(pLock);
         write(socketFD, &LURK_TYPES::TYPE_VERSION, sizeof(uint8_t));
         bytes = write(socketFD, &pkg, sizeof(LURK_VERSION));
-        if(bytes < 1)
-        {
-            quitPlayer();
-        }
+    }
+    if(bytes < 1)
+    {
+        quitPlayer();
     }
 }
 void Player::write_connection(LURK_ROOM pkg,std::string msg)
 {
+    ssize_t bytes = 0;
     {
-        std::lock_guard<std::mutex> lock(pLock);
+        std::lock_guard<std::shared_mutex> lock(pLock);
         write(socketFD, &LURK_TYPES::TYPE_CONNECTION, sizeof(uint8_t));
         write(socketFD,&pkg, sizeof(LURK_ROOM));
         bytes = write(socketFD,msg.c_str(),pkg.DESC_LENGTH);
-        if(bytes < 1)
-        {
-            quitPlayer();
-        }
+    }
+    if(bytes < 1)
+    {
+        quitPlayer();
     }
 }

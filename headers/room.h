@@ -5,7 +5,7 @@
 #include<vector>
 #include<string>
 #include<string.h>
-#include<mutex>
+#include<shared_mutex>
 #include<memory>
 #include<bsd/string.h>
 
@@ -22,7 +22,7 @@ class Room
         LURK_ROOM roomTainer;
         std::string roomDesc;
         // std::mutex rLock;
-        std::mutex rLock;
+        std::shared_mutex rLock;
         
         Room(std::string,std::string,uint16_t);
         void emplace_connection(std::shared_ptr<Room>);

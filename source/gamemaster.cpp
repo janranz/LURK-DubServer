@@ -218,7 +218,7 @@ void Gamemaster::ragequit(std::shared_ptr<Player> p)
 {
     int fd = p->getFD();
     {
-        std::lock_guard<std::mutex> lock(GMLock);
+        std::lock_guard<std::shared_mutex> lock(GMLock);
         if(p->isStarted())
         {
             std::string m = fmt::format("{0} has disconnected from the server!\n",p->charTainer.CHARACTER_NAME);
@@ -241,9 +241,11 @@ void Gamemaster::ragequit(std::shared_ptr<Player> p)
                 (*t)->write_msg(gmpm,m);
             }
             int size = master_player_list.size();
-            std::lock_guard<std::mutex> lock(printLock);
-            std::cout << fmt::format("{0} has ragequit.\n Masterlist Size: {1}\n"
-            ,p->charTainer.CHARACTER_NAME, std::to_string(size));
+            {
+                std::lock_guard<std::mutex> lock(printLock);
+                std::cout << fmt::format("{0} has ragequit.\n Masterlist Size: {1}\n"
+                ,p->charTainer.CHARACTER_NAME, std::to_string(size));
+            }
         }
     }
     close(fd);
@@ -351,7 +353,7 @@ void Gamemaster::proc_msg(std::shared_ptr<Player> p)
         return;
     }
     {
-        std::lock_guard<std::mutex> lock(GMLock);
+        std::shared_lock<std::shared_mutex> lock(GMLock);
         for(auto t = master_player_list.begin(); t != master_player_list.end(); ++t)
         {
             
@@ -421,7 +423,7 @@ void Gamemaster::proc_start(std::shared_ptr<Player> p)
 {// ADD SEPARATE PORTAL FOR ENTRY AND REWORK CHANGEROOM
     int size = 0;
     {
-        std::lock_guard<std::mutex> lock(GMLock);
+        std::lock_guard<std::shared_mutex> lock(GMLock);
         master_player_list.emplace_back(p);
         size = master_player_list.size();
         
@@ -462,7 +464,7 @@ void Gamemaster::error_character(std::shared_ptr<Player> p)
     pkg.CODE = 4;
     std::string m;
     {
-        std::lock_guard<std::mutex> lock(GMLock);
+        std::shared_lock<std::shared_mutex> lock(GMLock);
         if(p->isStarted())
         {
             m = fmt::format("{}: Join battle is always on"
@@ -486,7 +488,7 @@ void Gamemaster::error_start(std::shared_ptr<Player> p)
     pkg.CODE = 1;
     std::string m;
     {
-        std::lock_guard<std::mutex> lock(GMLock);
+        std::shared_lock<std::shared_mutex> lock(GMLock);
         if(p->isStarted())
         {
         m = fmt::format("{0}: Dearest {1}, you have already started. I love the passion, though.\n",
@@ -504,7 +506,7 @@ void Gamemaster::error_start(std::shared_ptr<Player> p)
 
 bool Gamemaster::check_name(std::shared_ptr<Player> p)
 {
-    std::lock_guard<std::mutex> lock(GMLock);
+    std::shared_lock<std::shared_mutex> lock(GMLock);
     // p->charTainer.CHARACTER_NAME[32] = 0;
     bool unique = true;
     if(!(master_player_list.empty()))
@@ -541,7 +543,7 @@ bool Gamemaster::check_stat(std::shared_ptr<Player> p)
     p->charTainer.DESC_LENGTH = p->desc.length();
 
     {
-        std::lock_guard<std::mutex> lock(GMLock);
+        std::shared_lock<std::shared_mutex> lock(GMLock);
         for(auto t = master_player_list.begin(); t != master_player_list.end(); ++t)
         {
             if(compare_to_lowers(M_ToCP(p->charTainer.CHARACTER_NAME),M_ToCP((*t)->charTainer.CHARACTER_NAME)))
@@ -560,7 +562,7 @@ bool Gamemaster::check_stat(std::shared_ptr<Player> p)
 void Gamemaster::spawn_player(std::shared_ptr<Player> p)
 {
     {
-        std::lock_guard<std::mutex>lock(GMLock);
+        std::lock_guard<std::shared_mutex>lock(GMLock);
         p->respawn();
         master_room_list.at(0)->emplace_player(p);
     }
@@ -569,7 +571,7 @@ void Gamemaster::spawn_player(std::shared_ptr<Player> p)
 void Gamemaster::move_player(std::shared_ptr<Player> p, uint16_t room)
 {
     {
-        std::lock_guard<std::mutex> lock(GMLock);
+        std::lock_guard<std::shared_mutex> lock(GMLock);
         uint16_t rm = p->getRoomNumber();
         bool found = master_room_list.at(rm)->isValidConnection(room);
         if(found)

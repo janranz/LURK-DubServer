@@ -9,6 +9,7 @@
 #include<vector>
 #include<ctime>
 #include<sys/socket.h>
+#include<shared_mutex>
 
 class Gamemaster
 {
@@ -18,7 +19,7 @@ class Gamemaster
         LURK_VERSION vers;
         LURK_MSG gmpm;
         //std::mutex GMLock;
-        std::mutex GMLock;
+        std::shared_mutex GMLock;
         std::vector<std::shared_ptr<Room>> master_room_list;
         std::vector<std::shared_ptr<Player>> master_player_list;
         chatter_messages c_m;

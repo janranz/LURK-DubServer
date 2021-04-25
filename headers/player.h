@@ -3,7 +3,7 @@
 
 #include"../headers/structs.h"
 #include"../headers/fmt/format.h"
-#include<mutex>
+#include<shared_mutex>
 #include<iostream>
 #include<unistd.h>
 #include<bsd/string.h>
@@ -16,12 +16,11 @@ class Player
         bool validToon;
         bool freshSpawn;
         bool playerAlive;
-        ssize_t bytes;
     
     public:
         LURK_CHARACTER charTainer;
         std::string desc;
-        std::mutex pLock;
+        std::shared_mutex pLock;
 
         Player(int);
 

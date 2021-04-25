@@ -14,14 +14,14 @@ Room::Room(std::string name,std::string desc,uint16_t num)
 }
 void Room::emplace_connection(std::shared_ptr<Room> r)
 {
-    std::lock_guard<std::mutex> lock(rLock);
+    std::lock_guard<std::shared_mutex> lock(rLock);
     room_connections.emplace_back(r);
 }
 void Room::emplace_player(std::shared_ptr<Player>p)
 {
     p->write_reflect();
     {
-        std::lock_guard<std::mutex> lock(rLock);
+        std::lock_guard<std::shared_mutex> lock(rLock);
         p->giveRoom(roomTainer.ROOM_NUMBER);
         player_list.emplace_back(p);
     }
@@ -36,7 +36,7 @@ void Room::emplace_player(std::shared_ptr<Player>p)
         ,p->charTainer.CHARACTER_NAME);
     int fd = p->getFD();
     {
-        std::lock_guard<std::mutex> lock(rLock);
+        std::shared_lock<std::shared_mutex> lock(rLock);
         for(auto t = player_list.begin(); t != player_list.end(); ++t)
         {
             if((*t)->getFD() != fd)
@@ -49,7 +49,7 @@ void Room::emplace_player(std::shared_ptr<Player>p)
 bool Room::isValidConnection(uint16_t r)
 {
     {
-        std::lock_guard<std::mutex> lock(rLock);
+        std::shared_lock<std::shared_mutex> lock(rLock);
         for(auto t = room_connections.begin(); t != room_connections.end(); ++t)
         {
             if((*t)->roomTainer.ROOM_NUMBER == r)
@@ -63,7 +63,7 @@ bool Room::isValidConnection(uint16_t r)
 void Room::emplace_baddie(std::shared_ptr<Baddie> b)
 {
     {
-        std::lock_guard<std::mutex> lock(rLock);
+        std::lock_guard<std::shared_mutex> lock(rLock);
         baddie_list.emplace_back(b);
     }
 }
@@ -72,7 +72,7 @@ void Room::remove_player(std::shared_ptr<Player>p)
     int pfd = p->getFD();
     bool found = false;
     {
-        std::lock_guard<std::mutex> lock(rLock);
+        std::lock_guard<std::shared_mutex> lock(rLock);
         for(auto t = player_list.begin(); t != player_list.end(); ++t)
         {
             int tfd = (*t)->getFD();
@@ -94,7 +94,7 @@ void Room::remove_player(std::shared_ptr<Player>p)
 
     std::string m = fmt::format("{0} has left the room.\n",p->charTainer.CHARACTER_NAME);
     {
-        std::lock_guard<std::mutex> lock(rLock);
+        std::shared_lock<std::shared_mutex> lock(rLock);
         for(auto t = player_list.begin(); t != player_list.end(); ++t)
         {
             (*t)->write_msg(rmpm, m);
@@ -105,7 +105,7 @@ void Room::remove_player(std::shared_ptr<Player>p)
 void Room::inform_connections(std::shared_ptr<Player> p)
 {
     {
-        std::lock_guard<std::mutex> lock(rLock); // TEMPORARY
+        std::shared_lock<std::shared_mutex> lock(rLock); // TEMPORARY
         //inform connections
         for(auto t = room_connections.begin(); t != room_connections.end(); ++t)
         {
@@ -120,7 +120,7 @@ void Room::inform_others_player(std::shared_ptr<Player> p)
         p->giveRoom(room_connections.at(0)->roomTainer.ROOM_NUMBER);
     }
     {
-        std::lock_guard<std::mutex> lock(rLock);
+        std::shared_lock<std::shared_mutex> lock(rLock);
         for(auto t = player_list.begin(); t != player_list.end(); ++t)
         {
             (*t)->write_character(p->charTainer,p->desc);
@@ -132,7 +132,7 @@ void Room::inform_player_friendly(std::shared_ptr<Player> p)
 {// lurk test may not like this REWORK
     int fd = p->getFD();
     {
-        std::lock_guard<std::mutex> lock(rLock);
+        std::shared_lock<std::shared_mutex> lock(rLock);
         for(auto t = player_list.begin(); t != player_list.end(); ++t)
         {
             if(fd != (*t)->getFD())
@@ -145,7 +145,7 @@ void Room::inform_player_friendly(std::shared_ptr<Player> p)
 void Room::inform_baddies(std::shared_ptr<Player> p)
 {// static no rLock but baddie lock(bLock)
     {
-        std::lock_guard<std::mutex> lock(rLock); // TEMPORARY
+        std::shared_lock<std::shared_mutex> lock(rLock); // TEMPORARY
         for(auto t = baddie_list.begin(); t != baddie_list.end(); ++t)
         {
             // std::lock_guard<std::mutex> lock((*t)->bLock);
