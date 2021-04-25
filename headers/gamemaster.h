@@ -14,7 +14,7 @@
 class Gamemaster
 {
     private:
-        unsigned int g_seed;
+        // unsigned int g_seed;
         LURK_GAME gmInfo;
         LURK_VERSION vers;
         LURK_MSG gmpm;
@@ -26,7 +26,7 @@ class Gamemaster
         cm_sizes vsize;
     public:
         //events
-        int fast_rand();
+        // int fast_rand();
         //initializers
         Gamemaster();
         void build_chatter(int, std::vector<std::string>::iterator);
@@ -49,6 +49,7 @@ class Gamemaster
         void proc_changeroom(std::shared_ptr<Player>);
         void proc_msg(std::shared_ptr<Player>);
         void proc_leave(std::shared_ptr<Player>);
+        void proc_fight(std::shared_ptr<Player>);
 
         //helper
         bool check_name(std::shared_ptr<Player>);
@@ -61,6 +62,7 @@ class Gamemaster
         void error_start(std::shared_ptr<Player>);
         void error_changeroom(std::shared_ptr<Player>);
         void error_msg(std::shared_ptr<Player>);
+        void error_fight(std::shared_ptr<Player>);
 };
 
 #endif //GM_H

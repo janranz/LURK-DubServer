@@ -7,7 +7,8 @@
 
 Gamemaster::Gamemaster()
 {
-    g_seed = static_cast<unsigned int>(std::time(NULL));
+    g_seed = static_cast<unsigned int>(std::time(NULL)); // see if that seeds.
+    std::cout << "Current Seed: " << g_seed << std::endl;
     vers.MAJOR = serverStats::GAME_VERSION_MAJOR;
     vers.MINOR = serverStats::GAME_VERSION_MINOR;
     vers.EXTENS_SIZE = serverStats::GAME_VERSION_EXT;
@@ -21,12 +22,12 @@ Gamemaster::Gamemaster()
 }
 
 //events
-int Gamemaster::fast_rand()
-{
-    std::lock_guard<std::mutex> lock(randLock);
-    g_seed = (214013*g_seed+2531011);
-    return (g_seed>>16)&0x7FFF;
-}
+// int Gamemaster::fast_rand()
+// {
+//     std::lock_guard<std::mutex> lock(randLock);
+//     g_seed = (214013*g_seed+2531011);
+//     return (g_seed>>16)&0x7FFF;
+// }
 
 // initializers
 void Gamemaster::build_chatter(int i,std::vector<std::string>::iterator m)
@@ -304,6 +305,9 @@ void Gamemaster::GMController(int fd)
             // std::string m = fmt::format("Walk in the light, {0}...\n",p->charTainer.CHARACTER_NAME);
             // p->write_msg(gmpm,m);
             p->quitPlayer();
+        }else if(type == LURK_TYPES::TYPE_FIGHT)
+        {
+            proc_fight(p);
         }
 
     }
@@ -328,6 +332,21 @@ uint8_t Gamemaster::listener(std::shared_ptr<Player> p)
 }
 
 //type processing
+
+void Gamemaster::proc_fight(std::shared_ptr<Player> p)
+{
+    {
+        std::shared_lock<std::shared_mutex>lock(GMLock);
+        int r = p->charTainer.CURRENT_ROOM_NUMBER;
+        if(master_room_list.at(r)->isValidBaddie() &&
+        !(master_room_list.at(r)->isFightInProgress()))
+        {// baddie alive to fight
+            master_room_list.at(r)->initiate_fight_baddie(p);
+        }else{
+            error_fight(p);
+        }
+    }
+}
 
 void Gamemaster::proc_msg(std::shared_ptr<Player> p)
 {
@@ -439,6 +458,14 @@ void Gamemaster::proc_start(std::shared_ptr<Player> p)
 }
 
 //error handling
+
+void Gamemaster::error_fight(std::shared_ptr<Player> p)
+{
+    LURK_ERROR pkg;
+    pkg.CODE = 3;
+    std::string m = fmt::format("{}: You swing out of your skull, but the baddies are already dead.\n",serverStats::GM_NAME);
+    p->write_error(pkg,m);
+}
 
 void Gamemaster::error_msg(std::shared_ptr<Player> p)
 {

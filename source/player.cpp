@@ -101,6 +101,35 @@ void Player::despawn()
     }
 }
 
+void Player::hurt_player(int16_t h)
+{
+    bool dead = false;
+    {
+        std::lock_guard<std::shared_mutex>lock(pLock);
+        if((charTainer.HEALTH - h) > 0)
+        {
+            charTainer.HEALTH -= h;
+        }else{
+            charTainer.HEALTH = 0;
+            dead = true;
+        }
+    }
+    despawn();
+}
+
+void Player::heal_player(int16_t h)
+{
+    {
+        std::lock_guard<std::shared_mutex>lock(pLock);
+        if((charTainer.HEALTH + h) < serverStats::PLAYER_S_MAX_STAT)
+        {
+            charTainer.HEALTH += h;
+        }else{
+            charTainer.HEALTH = serverStats::PLAYER_S_MAX_STAT;
+        }
+    }
+}
+
 //getter
 int Player::getFD()
 {

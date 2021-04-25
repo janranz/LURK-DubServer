@@ -1,6 +1,7 @@
 #include"../headers/splitter.h"
-// #include<vector>
-// #include<string>
+#include<vector>
+#include<string>
+
 
 std::vector<std::string> splitter(std::string s, std::string delimiter)
 {
@@ -48,3 +49,11 @@ std::string format_vec(const char* fmt, std::vector<unsigned char> args)
         }
     );
 };
+
+// std::mutex randLock;
+int fast_rand()
+{
+    std::lock_guard<std::mutex> lock(randLock);
+    g_seed = (214013*g_seed+2531011);
+    return (g_seed>>16)&0x7FFF;
+}

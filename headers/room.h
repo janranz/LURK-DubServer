@@ -1,6 +1,7 @@
 #ifndef ROOM_H
 #define ROOM_H
 #include"../headers/structs.h"
+#include"../headers/splitter.h"
 #include"../headers/player.h"
 #include<vector>
 #include<string>
@@ -12,11 +13,14 @@
 class Room
 {
     private:
-        char stress_level;
+        uint16_t difficulty;
+        uint16_t firepower;
         std::vector<std::shared_ptr<Room>> room_connections;
         std::vector<std::shared_ptr<Baddie>> baddie_list;
         std::vector<std::shared_ptr<Player>> player_list;
         ssize_t bytes;
+        
+        bool fight_in_progress;
     public:
         LURK_MSG rmpm;
         LURK_ROOM roomTainer;
@@ -29,14 +33,22 @@ class Room
         void emplace_baddie(std::shared_ptr<Baddie>);
         void emplace_player(std::shared_ptr<Player>);
         void remove_player(std::shared_ptr<Player>);
+
         void inform_connections(std::shared_ptr<Player>);    // "static"
         void inform_player_friendly(std::shared_ptr<Player>);  // everyone for everyone
         void inform_others_player(std::shared_ptr<Player>);
         // void inform_others_player_left(std::shared_ptr<Player>);
         void inform_baddies(std::shared_ptr<Player>); // "static"
 
+        void initiate_fight_baddie(std::shared_ptr<Player>);
+        void fight_controller();
+
         //helper
         bool isValidConnection(uint16_t);
+        bool isValidBaddie();
+        bool isFightInProgress();
+        void calculateDiff();
+
         
         //debug
         // size_t room_connection_size();

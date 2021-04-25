@@ -25,15 +25,18 @@ struct serverStats
     static const  uint8_t GAME_VERSION_EXT;
     static const  std::string GAME_GREETING;
     static const  std::string GM_NAME;
+    
+    static constexpr  uint16_t PLAYER_MAX_STAT  = std::numeric_limits<unsigned short>::max();;
+    static constexpr  int16_t PLAYER_S_MAX_STAT = std::numeric_limits<short>::max();;
     static const  uint16_t PLAYER_INIT_POINTS;
-    static const  uint16_t PLAYER_MAX_STAT;
-    static const  int16_t PLAYER_S_MAX_STAT;
-    static const  int16_t PLAYER_BASE_HEALTH;
-    static const  uint8_t BASE_FLAGS;
     static const  uint8_t PLAYER_AFLAGS;
     static const  uint8_t PLAYER_DFLAGS;
     static const  uint16_t PLAYER_MIN_GOLD;
     static const  uint16_t PLAYER_MAX_GOLD;
+    
+    static const  int16_t PLAYER_BASE_HEALTH;
+    static const  uint8_t BASE_FLAGS;
+
     static const  uint8_t BADDIE_AFLAGS;
     static const  uint8_t BADDIE_DFLAGS;
     static const  int16_t BADDIE_MIN_HEALTH;

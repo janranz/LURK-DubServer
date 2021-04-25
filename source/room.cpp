@@ -9,9 +9,26 @@ Room::Room(std::string name,std::string desc,uint16_t num)
     roomTainer.DESC_LENGTH = desc.length();
     std::string m = "The Mysterious Butler";
     strncpy(M_ToCP(rmpm.SENDER_NAME),m.c_str(),sizeof(rmpm.SENDER_NAME));
+    difficulty = 1;
+    firepower = 1;
     
 
 }
+
+void Room::calculateDiff()
+{
+    {
+        std::shared_lock<std::shared_mutex>lock(rLock);
+        if(player_list.empty())
+        {
+            firepower = 1;
+        }else{
+            firepower = player_list.size();
+        }
+    }
+
+}
+
 void Room::emplace_connection(std::shared_ptr<Room> r)
 {
     std::lock_guard<std::shared_mutex> lock(rLock);
@@ -32,8 +49,8 @@ void Room::emplace_player(std::shared_ptr<Player>p)
     inform_connections(p); // may be out of order with baddies. double check
     inform_others_player(p); // call from GM.
     
-    std::string m = fmt::format("{} has joined the room to fight by your side!\n"
-        ,p->charTainer.CHARACTER_NAME);
+    std::string m = fmt::format("{} has joined the room to fight by your side!\nCurrent room strength: {1}\n"
+        ,p->charTainer.CHARACTER_NAME,std::to_string(firepower));
     int fd = p->getFD();
     {
         std::shared_lock<std::shared_mutex> lock(rLock);
@@ -66,7 +83,14 @@ void Room::emplace_baddie(std::shared_ptr<Baddie> b)
         std::lock_guard<std::shared_mutex> lock(rLock);
         baddie_list.emplace_back(b);
     }
+    if(baddie_list.empty())
+    {
+        difficulty = 1;
+    }else{
+        difficulty = baddie_list.size();
+    }
 }
+
 void Room::remove_player(std::shared_ptr<Player>p)
 {// assume this to be called after player(p) has been given a new room.
     int pfd = p->getFD();
@@ -126,6 +150,54 @@ void Room::inform_others_player(std::shared_ptr<Player> p)
             (*t)->write_character(p->charTainer,p->desc);
         }
     }
+}
+
+void Room::initiate_fight_baddie(std::shared_ptr<Player> p)
+{
+    std::string m;
+    {
+        std::shared_lock<std::shared_mutex>lock(rLock);
+        fight_in_progress = true;
+
+        int bDex = (fast_rand() % baddie_list.size());
+        m = fmt::format("{0} grows tired of {1} looking at them with googly eyes and decides to start a fight!\n",
+        p->charTainer.CHARACTER_NAME,baddie_list.at(bDex)->bTainer.CHARACTER_NAME);
+
+        for(auto t = player_list.begin(); t != player_list.end(); ++t)
+        {
+            (*t)->write_msg(rmpm,m);
+        }
+    }
+    fight_in_progress = false;
+    // think about communicating a cleanup routine after death. How will we move them to spawn?
+}
+
+void Room::fight_controller()
+{
+    {
+        //tally 
+    }
+}
+
+bool Room::isFightInProgress()
+{
+    {
+        std::shared_lock<std::shared_mutex>lock(rLock);
+        return fight_in_progress;
+    }
+}
+
+bool Room::isValidBaddie()
+{
+    {
+        std::shared_lock<std::shared_mutex> lock(rLock);
+        for(auto b = baddie_list.begin(); b != baddie_list.end(); ++b)
+        {
+            if((*b)->bTainer.FLAGS == serverStats::BADDIE_AFLAGS)
+                return true;
+        }
+    }
+    return false;
 }
 
 void Room::inform_player_friendly(std::shared_ptr<Player> p)

@@ -38,6 +38,8 @@ class Player
         void giveRoom(uint16_t);
         void respawn();
         void despawn();
+        void hurt_player(int16_t);
+        void heal_player(int16_t);
 
         //getter
         int getFD();

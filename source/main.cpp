@@ -13,6 +13,9 @@
 #include<arpa/inet.h>
 #include<thread>
 
+unsigned int g_seed;
+std::mutex randLock;
+
 int main(int argc, char** argv)
 {
     if(argc != 2)
