@@ -1,6 +1,7 @@
 #ifndef ROOM_H
 #define ROOM_H
 #include"../headers/structs.h"
+#include"../headers/baddie.h"
 #include"../headers/splitter.h"
 #include"../headers/player.h"
 #include<vector>
@@ -40,9 +41,10 @@ class Room
         // void inform_others_player_left(std::shared_ptr<Player>);
         void inform_baddies(std::shared_ptr<Player>); // "static"
 
-        void initiate_fight_baddie(std::shared_ptr<Player>);
+        // fight logic
+        bool initiate_fight_baddie(std::shared_ptr<Player>);
         void fight_controller();
-
+        void slay_baddie(std::shared_ptr<Baddie>);
         //helper
         bool isValidConnection(uint16_t);
         bool isValidBaddie();

@@ -181,12 +181,12 @@ struct LURK_VERSION
     uint16_t EXTENS_SIZE;
 }__attribute__((packed));
 
-struct Baddie
-{
-    LURK_CHARACTER bTainer;
-    std::string desc;
-    std::mutex bLock;
-};
+// struct Baddie
+// {
+//     LURK_CHARACTER bTainer;
+//     std::string desc;
+//     std::mutex bLock;
+// };
 
 #endif // STRUCTS_H
 

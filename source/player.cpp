@@ -72,7 +72,7 @@ void Player::quitPlayer()
         std::string m;
         if(started)
         {
-            m = fmt::format("{} has staged to quit!\n",charTainer.CHARACTER_NAME);
+            m = fmt::format("{0} has staged to quit!\n",charTainer.CHARACTER_NAME);
         }else{
             m = "Unknown player staged to quit!\n";
         }
@@ -92,18 +92,10 @@ void Player::respawn()
         playerAlive = true;
     }
 }
-void Player::despawn()
-{
-    {
-        std::lock_guard<std::shared_mutex> lock(pLock);
-        charTainer.FLAGS = serverStats::PLAYER_DFLAGS;
-        playerAlive = false;
-    }
-}
 
 void Player::hurt_player(int16_t h)
 {
-    bool dead = false;
+    // bool dead = false;
     {
         std::lock_guard<std::shared_mutex>lock(pLock);
         if((charTainer.HEALTH - h) > 0)
@@ -111,10 +103,12 @@ void Player::hurt_player(int16_t h)
             charTainer.HEALTH -= h;
         }else{
             charTainer.HEALTH = 0;
-            dead = true;
+            charTainer.FLAGS = serverStats::PLAYER_DFLAGS;
+            playerAlive = false;
+            
         }
     }
-    despawn();
+    
 }
 
 void Player::heal_player(int16_t h)

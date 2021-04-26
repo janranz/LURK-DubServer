@@ -93,7 +93,7 @@ int main(int argc, char** argv)
 
     int dubSkt = socket(AF_INET,SOCK_STREAM, 0);
     bind(dubSkt, (struct sockaddr *)(&sai),sizeof(struct sockaddr_in));
-    listen(dubSkt,32);
+    listen(dubSkt,128);
 
     int player_fd;
     struct sockaddr_in client_addr;

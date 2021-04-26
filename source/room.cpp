@@ -11,21 +11,23 @@ Room::Room(std::string name,std::string desc,uint16_t num)
     strncpy(M_ToCP(rmpm.SENDER_NAME),m.c_str(),sizeof(rmpm.SENDER_NAME));
     difficulty = 1;
     firepower = 1;
-    
+
 
 }
 
 void Room::calculateDiff()
 {
+    std::unique_lock<std::shared_mutex>QLock(rLock,std::defer_lock);
+    std::shared_lock<std::shared_mutex>SLock(rLock,std::defer_lock);
+    SLock.lock();
+    if(player_list.empty())
     {
-        std::shared_lock<std::shared_mutex>lock(rLock);
-        if(player_list.empty())
-        {
-            firepower = 1;
-        }else{
-            firepower = player_list.size();
-        }
+        firepower = 1;
+    }else{
+        firepower = player_list.size();
     }
+    SLock.unlock();
+    
 
 }
 
@@ -49,7 +51,7 @@ void Room::emplace_player(std::shared_ptr<Player>p)
     inform_connections(p); // may be out of order with baddies. double check
     inform_others_player(p); // call from GM.
     
-    std::string m = fmt::format("{} has joined the room to fight by your side!\nCurrent room strength: {1}\n"
+    std::string m = fmt::format("{0} has joined the room to fight by your side!\nCurrent room strength: {1}\n"
         ,p->charTainer.CHARACTER_NAME,std::to_string(firepower));
     int fd = p->getFD();
     {
@@ -152,31 +154,48 @@ void Room::inform_others_player(std::shared_ptr<Player> p)
     }
 }
 
-void Room::initiate_fight_baddie(std::shared_ptr<Player> p)
-{
+bool Room::initiate_fight_baddie(std::shared_ptr<Player> p)
+{// need a routine for those who get in here but are late to the battle. (passes check in GM, but queued to aquire lock)
+
+    std::unique_lock<std::shared_mutex>QLock(rLock,std::defer_lock);
+    std::shared_lock<std::shared_mutex>SLock(rLock,std::defer_lock);
     std::string m;
+
+    QLock.lock();
+    if(!(isValidBaddie()))
     {
-        std::shared_lock<std::shared_mutex>lock(rLock);
-        fight_in_progress = true;
-
-        int bDex = (fast_rand() % baddie_list.size());
-        m = fmt::format("{0} grows tired of {1} looking at them with googly eyes and decides to start a fight!\n",
-        p->charTainer.CHARACTER_NAME,baddie_list.at(bDex)->bTainer.CHARACTER_NAME);
-
-        for(auto t = player_list.begin(); t != player_list.end(); ++t)
-        {
-            (*t)->write_msg(rmpm,m);
-        }
+        return false;
     }
+    fight_in_progress = true;
+    
+    int bDex = (fast_rand() % baddie_list.size());
+    m = fmt::format("{0} grows tired of {1} looking at them with googly eyes and decides to start a fight!\n",
+    p->charTainer.CHARACTER_NAME,baddie_list.at(bDex)->bTainer.CHARACTER_NAME); // potential UB.
     fight_in_progress = false;
+    
+    fight_controller();
+    QLock.unlock();
+
+
+    // after report
+    SLock.lock();
+    for(auto t = player_list.begin(); t != player_list.end(); ++t)
+    {
+        (*t)->write_msg(rmpm,m);
+    }
+    SLock.unlock();
+
+
+    return true;
     // think about communicating a cleanup routine after death. How will we move them to spawn?
 }
 
 void Room::fight_controller()
-{
-    {
-        //tally 
-    }
+{// locked by unique room lock
+    // for(auto b = baddie_list.begin(); b != baddie_list.end(); ++b)
+    // {// one-for-one randomize. consider uniform distribution. numbers will probably be small.
+        
+    // }
 }
 
 bool Room::isFightInProgress()
@@ -188,14 +207,12 @@ bool Room::isFightInProgress()
 }
 
 bool Room::isValidBaddie()
-{
+{// locked by initiate_fight
+
+    for(auto b = baddie_list.begin(); b != baddie_list.end(); ++b)
     {
-        std::shared_lock<std::shared_mutex> lock(rLock);
-        for(auto b = baddie_list.begin(); b != baddie_list.end(); ++b)
-        {
-            if((*b)->bTainer.FLAGS == serverStats::BADDIE_AFLAGS)
-                return true;
-        }
+        if((*b)->bTainer.FLAGS == serverStats::BADDIE_AFLAGS)
+            return true;
     }
     return false;
 }

@@ -1,6 +1,7 @@
 #ifndef GM_H
 #define GM_H
 #include"../headers/structs.h"
+#include"../headers/baddie.h"
 #include"../headers/splitter.h"
 #include"../headers/fmt/format.h"
 #include"../headers/room.h"

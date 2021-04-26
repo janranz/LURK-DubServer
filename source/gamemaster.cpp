@@ -146,59 +146,63 @@ std::shared_ptr<Baddie> Gamemaster::build_a_baddie(uint16_t roomNumber)
 
     dex = (fast_rand() % c_m.baddie_desc.size());
     b->desc = c_m.baddie_desc.at(dex);
-
-    b->bTainer.FLAGS = serverStats::BADDIE_AFLAGS;
     b->bTainer.CURRENT_ROOM_NUMBER = roomNumber;
     b->bTainer.DESC_LENGTH = b->desc.length();
-
-    b->bTainer.GOLD = (fast_rand() %
-        (serverStats::BADDIE_MAX_GOLD - serverStats::BADDIE_MIN_GOLD)
-        + serverStats::BADDIE_MIN_GOLD);
-
-    b->bTainer.HEALTH = (fast_rand() %
-        (serverStats::BADDIE_MAX_HEALTH - serverStats::BADDIE_MIN_HEALTH)
-        + serverStats::BADDIE_MIN_HEALTH);
     
-    // stat roll
-    int remaining = serverStats::PLAYER_INIT_POINTS;
-    uint16_t attack = 0;
-    uint16_t defense = 0;
-    uint16_t regen = 0;
-    int roll;
-    int i = 0;
-    while(remaining != 0)
-    {
-        switch(i % 3)
-        {
-            case 0:
-            {
-                roll = (fast_rand() % (remaining) + 1);
-                attack += roll;
-                remaining -= roll;
-                break;                
-            }
-            case 1:
-            {
-                roll = (fast_rand() % (remaining) + 1);
-                defense += roll;
-                remaining -= roll;
-                break;
-            }
-            case 2:
-            {
-                roll = (fast_rand() % (remaining) + 1);
-                regen += roll;
-                remaining -= roll;
-                break;
-            }
-        }
-        i++;
-    }
-    b->bTainer.ATTACK = attack;
-    b->bTainer.DEFENSE = defense;
-    b->bTainer.REGEN = regen;
+    b->respawn();
     return b;
 }
+
+    
+//     b->bTainer.FLAGS = serverStats::BADDIE_AFLAGS;
+//     b->bTainer.GOLD = (fast_rand() %
+//         (serverStats::BADDIE_MAX_GOLD - serverStats::BADDIE_MIN_GOLD)
+//         + serverStats::BADDIE_MIN_GOLD);
+
+//     b->bTainer.HEALTH = (fast_rand() %
+//         (serverStats::BADDIE_MAX_HEALTH - serverStats::BADDIE_MIN_HEALTH)
+//         + serverStats::BADDIE_MIN_HEALTH);
+    
+//     // stat roll
+//     int remaining = serverStats::PLAYER_INIT_POINTS;
+//     uint16_t attack = 0;
+//     uint16_t defense = 0;
+//     uint16_t regen = 0;
+//     int roll;
+//     int i = 0;
+//     while(remaining != 0)
+//     {
+//         switch(i % 3)
+//         {
+//             case 0:
+//             {
+//                 roll = (fast_rand() % (remaining) + 1);
+//                 attack += roll;
+//                 remaining -= roll;
+//                 break;                
+//             }
+//             case 1:
+//             {
+//                 roll = (fast_rand() % (remaining) + 1);
+//                 defense += roll;
+//                 remaining -= roll;
+//                 break;
+//             }
+//             case 2:
+//             {
+//                 roll = (fast_rand() % (remaining) + 1);
+//                 regen += roll;
+//                 remaining -= roll;
+//                 break;
+//             }
+//         }
+//         i++;
+//     }
+//     b->bTainer.ATTACK = attack;
+//     b->bTainer.DEFENSE = defense;
+//     b->bTainer.REGEN = regen;
+    
+// }
 
 void Gamemaster::populate_rooms()
 {
@@ -302,12 +306,14 @@ void Gamemaster::GMController(int fd)
             proc_changeroom(p);
         }else if((type == LURK_TYPES::TYPE_LEAVE) || (type == 0))
         {
-            // std::string m = fmt::format("Walk in the light, {0}...\n",p->charTainer.CHARACTER_NAME);
-            // p->write_msg(gmpm,m);
             p->quitPlayer();
         }else if(type == LURK_TYPES::TYPE_FIGHT)
         {
             proc_fight(p);
+        }else{
+            {
+                std::lock_guard<std::mutex>lock(printLock);std::cout << fmt::format("{0} SENT INVALID TYPE: {1}",p->charTainer.CHARACTER_NAME,std::to_string(type));
+            }
         }
 
     }
@@ -338,11 +344,8 @@ void Gamemaster::proc_fight(std::shared_ptr<Player> p)
     {
         std::shared_lock<std::shared_mutex>lock(GMLock);
         int r = p->charTainer.CURRENT_ROOM_NUMBER;
-        if(master_room_list.at(r)->isValidBaddie() &&
-        !(master_room_list.at(r)->isFightInProgress()))
-        {// baddie alive to fight
-            master_room_list.at(r)->initiate_fight_baddie(p);
-        }else{
+        if(!(master_room_list.at(r)->initiate_fight_baddie(p)))
+        {
             error_fight(p);
         }
     }
@@ -463,7 +466,7 @@ void Gamemaster::error_fight(std::shared_ptr<Player> p)
 {
     LURK_ERROR pkg;
     pkg.CODE = 3;
-    std::string m = fmt::format("{}: You swing out of your skull, but the baddies are already dead.\n",serverStats::GM_NAME);
+    std::string m = fmt::format("{0}: You swing out of your skull, but the baddies are already dead.\n",serverStats::GM_NAME);
     p->write_error(pkg,m);
 }
 
@@ -471,7 +474,7 @@ void Gamemaster::error_msg(std::shared_ptr<Player> p)
 {
     LURK_ERROR pkg;
     pkg.CODE = 6;
-    std::string m = fmt::format("{}: You stick your message in the mailbox, but the mailman gets eaten by a baddie!\n",serverStats::GM_NAME);
+    std::string m = fmt::format("{0}: You stick your message in the mailbox, but the mailman gets eaten by a baddie!\n",serverStats::GM_NAME);
     p->write_error(pkg, m);
 }
 
@@ -479,7 +482,7 @@ void Gamemaster::error_changeroom(std::shared_ptr<Player> p)
 {
     LURK_ERROR pkg;
     pkg.CODE = 1;
-    std::string m = fmt::format("{}: You attempt to step through to that room, but you quickly realize that is an error in judgement!\n",
+    std::string m = fmt::format("{0}: You attempt to step through to that room, but you quickly realize that is an error in judgement!\n",
         serverStats::GM_NAME);
         pkg.MSG_LEN = m.length();
         p->write_error(pkg, m);
@@ -494,14 +497,14 @@ void Gamemaster::error_character(std::shared_ptr<Player> p)
         std::shared_lock<std::shared_mutex> lock(GMLock);
         if(p->isStarted())
         {
-            m = fmt::format("{}: Join battle is always on"
+            m = fmt::format("{0}: Join battle is always on"
                 "and is not a choice (yet).\n",serverStats::GM_NAME);
         }else if(!(p->isValidToon()))
         {
-            m = fmt::format("{}: You attempt to set invalid stats.\n",serverStats::GM_NAME);
+            m = fmt::format("{0}: You attempt to set invalid stats.\n",serverStats::GM_NAME);
 
         }else {
-            m = fmt::format("{}: You shouldn't see this. (DEBUG: error_character())\n",serverStats::GM_NAME);
+            m = fmt::format("{0}: You shouldn't see this. (DEBUG: error_character())\n",serverStats::GM_NAME);
         }
     }
     pkg.MSG_LEN = m.length();
