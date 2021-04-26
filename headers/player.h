@@ -16,6 +16,9 @@ class Player
         bool validToon;
         bool freshSpawn;
         bool playerAlive;
+
+        // fight logic
+        uint32_t critDamage;
     
     public:
         LURK_CHARACTER charTainer;
@@ -43,6 +46,7 @@ class Player
 
         //getter
         int getFD();
+        uint16_t getCrit();
         uint16_t getRoomNumber();
 
         //writer

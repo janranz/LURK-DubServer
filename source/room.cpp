@@ -11,24 +11,19 @@ Room::Room(std::string name,std::string desc,uint16_t num)
     strncpy(M_ToCP(rmpm.SENDER_NAME),m.c_str(),sizeof(rmpm.SENDER_NAME));
     difficulty = 1;
     firepower = 1;
-
+    fight_in_progress = false;
 
 }
 
 void Room::calculateDiff()
-{
-    std::unique_lock<std::shared_mutex>QLock(rLock,std::defer_lock);
-    std::shared_lock<std::shared_mutex>SLock(rLock,std::defer_lock);
-    SLock.lock();
+{// lock from outside.
+    
     if(player_list.empty())
     {
         firepower = 1;
     }else{
         firepower = player_list.size();
     }
-    SLock.unlock();
-    
-
 }
 
 void Room::emplace_connection(std::shared_ptr<Room> r)
@@ -36,6 +31,7 @@ void Room::emplace_connection(std::shared_ptr<Room> r)
     std::lock_guard<std::shared_mutex> lock(rLock);
     room_connections.emplace_back(r);
 }
+
 void Room::emplace_player(std::shared_ptr<Player>p)
 {
     p->write_reflect();
@@ -43,14 +39,12 @@ void Room::emplace_player(std::shared_ptr<Player>p)
         std::lock_guard<std::shared_mutex> lock(rLock);
         p->giveRoom(roomTainer.ROOM_NUMBER);
         player_list.emplace_back(p);
+        calculateDiff();
     }
-    p->write_reflect();
-    p->write_room(roomTainer,roomDesc);
-    inform_player_friendly(p);
-    inform_baddies(p);
-    inform_connections(p); // may be out of order with baddies. double check
-    inform_others_player(p); // call from GM.
-    
+    {
+        std::shared_lock<std::shared_mutex>lock(rLock);
+        bundle_update(p);
+    }
     std::string m = fmt::format("{0} has joined the room to fight by your side!\nCurrent room strength: {1}\n"
         ,p->charTainer.CHARACTER_NAME,std::to_string(firepower));
     int fd = p->getFD();
@@ -65,6 +59,45 @@ void Room::emplace_player(std::shared_ptr<Player>p)
         }
     }
 }
+
+void Room::remove_player(std::shared_ptr<Player>p)
+{// assume this to be called after player(p) has been given a new room.
+    int pfd = p->getFD();
+    {
+        std::lock_guard<std::shared_mutex> lock(rLock);
+        for(auto t = player_list.begin(); t != player_list.end(); ++t)
+        {
+            int tfd = (*t)->getFD();
+            if(tfd == pfd)
+            {
+                
+                t = player_list.erase(t);
+                break; // --t;
+            }
+        }
+        calculateDiff();
+    }
+
+    std::string m = fmt::format("{0} has left the room.\n",p->charTainer.CHARACTER_NAME);
+    {
+        std::shared_lock<std::shared_mutex> lock(rLock);
+        for(auto t = player_list.begin(); t != player_list.end(); ++t)
+        {
+            (*t)->write_msg(rmpm, m);
+        }
+    }
+}
+
+void Room::bundle_update(std::shared_ptr<Player> p)
+{// lock from the outside.
+        p->write_reflect();
+        p->write_room(roomTainer,roomDesc);
+        inform_player_friendly(p);
+        inform_baddies(p);
+        inform_connections(p); // may be out of order with baddies. double check
+        inform_others_player(p); // call from GM. ?
+}
+
 bool Room::isValidConnection(uint16_t r)
 {
     {
@@ -93,65 +126,30 @@ void Room::emplace_baddie(std::shared_ptr<Baddie> b)
     }
 }
 
-void Room::remove_player(std::shared_ptr<Player>p)
-{// assume this to be called after player(p) has been given a new room.
-    int pfd = p->getFD();
-    bool found = false;
-    {
-        std::lock_guard<std::shared_mutex> lock(rLock);
-        for(auto t = player_list.begin(); t != player_list.end(); ++t)
-        {
-            int tfd = (*t)->getFD();
-            if(tfd == pfd)
-            {
-                found = true;
-                t = player_list.erase(t);
-                break; // --t;
-            }
-        }
-    }
-    if(found)
-    {
-        
-    }else{
-        std::lock_guard<std::mutex>lock(printLock);std::cout << fmt::format("{0} NOT found in: {1}\n",
-            p->charTainer.CHARACTER_NAME,std::to_string(roomTainer.ROOM_NUMBER));
-    }
-
-    std::string m = fmt::format("{0} has left the room.\n",p->charTainer.CHARACTER_NAME);
-    {
-        std::shared_lock<std::shared_mutex> lock(rLock);
-        for(auto t = player_list.begin(); t != player_list.end(); ++t)
-        {
-            (*t)->write_msg(rmpm, m);
-        }
-    }
-}
-
 void Room::inform_connections(std::shared_ptr<Player> p)
-{
-    {
-        std::shared_lock<std::shared_mutex> lock(rLock); // TEMPORARY
+{// lock from outside.
+    
+        // std::shared_lock<std::shared_mutex> lock(rLock); // TEMPORARY
         //inform connections
-        for(auto t = room_connections.begin(); t != room_connections.end(); ++t)
-        {
-            p->write_connection((*t)->roomTainer,(*t)->roomDesc);
-        }
+    for(auto t = room_connections.begin(); t != room_connections.end(); ++t)
+    {
+        p->write_connection((*t)->roomTainer,(*t)->roomDesc);
     }
+    
 }
 void Room::inform_others_player(std::shared_ptr<Player> p)
-{// inform other players, but assume player has joined the room
+{// inform other players, but assume player has joined the room // lock from outside.
     if(!p->isSktAlive())
     {
         p->giveRoom(room_connections.at(0)->roomTainer.ROOM_NUMBER);
     }
+    // {
+        // std::shared_lock<std::shared_mutex> lock(rLock);
+    for(auto t = player_list.begin(); t != player_list.end(); ++t)
     {
-        std::shared_lock<std::shared_mutex> lock(rLock);
-        for(auto t = player_list.begin(); t != player_list.end(); ++t)
-        {
-            (*t)->write_character(p->charTainer,p->desc);
-        }
+        (*t)->write_character(p->charTainer,p->desc);
     }
+    // }
 }
 
 bool Room::initiate_fight_baddie(std::shared_ptr<Player> p)
@@ -161,41 +159,77 @@ bool Room::initiate_fight_baddie(std::shared_ptr<Player> p)
     std::shared_lock<std::shared_mutex>SLock(rLock,std::defer_lock);
     std::string m;
 
-    QLock.lock();
-    if(!(isValidBaddie()))
+    SLock.lock();
+    if(!(isValidBaddie() && !fight_in_progress))
     {
         return false;
     }
+    SLock.unlock();
+
+    QLock.lock();
     fight_in_progress = true;
     
     int bDex = (fast_rand() % baddie_list.size());
     m = fmt::format("{0} grows tired of {1} looking at them with googly eyes and decides to start a fight!\n",
     p->charTainer.CHARACTER_NAME,baddie_list.at(bDex)->bTainer.CHARACTER_NAME); // potential UB.
-    fight_in_progress = false;
     
-    fight_controller();
-    QLock.unlock();
-
-
-    // after report
-    SLock.lock();
     for(auto t = player_list.begin(); t != player_list.end(); ++t)
     {
         (*t)->write_msg(rmpm,m);
     }
-    SLock.unlock();
+
+    fight_controller();
+    fight_in_progress = false;
+    QLock.unlock();
 
 
+    // after report
+
+    
     return true;
     // think about communicating a cleanup routine after death. How will we move them to spawn?
 }
 
 void Room::fight_controller()
 {// locked by unique room lock
-    // for(auto b = baddie_list.begin(); b != baddie_list.end(); ++b)
+    std::string m;
+    uint32_t crit;
+    uint16_t base;
+    int dex;
+    int roll;
+    
+    for(auto p = player_list.begin(); p != player_list.end(); ++p)
+    {
+        crit = (*p)->getCrit();
+        base = (*p)->charTainer.ATTACK;
+        dex = (fast_rand() % baddie_list.size());
+        if(baddie_list.at(dex)->is_alive())
+        {
+            roll = ((fast_rand() % (crit + 1) - base) + base);
+            baddie_list.at(dex)->hurt_baddie(roll);
+            m = fmt::format("{0} delivers a devastating blow dealing {1} damage to {2}!\n",
+            (*p)->charTainer.CHARACTER_NAME,fmt::to_string(roll),baddie_list.at(dex)->bTainer.CHARACTER_NAME);
+        }else{
+            // baddie rolled is dead. we need to do something else.
+            m = fmt::format("{0} hesitates to attack and instead backs off!\n",(*p)->charTainer.CHARACTER_NAME);
+        }
+        // (*p)->write_room(roomTainer,roomDesc);
+        // (*p)->write_reflect();
+        for(auto pp = player_list.begin(); pp != player_list.end(); ++pp)
+        {
+            // (*pp)->write_character((*p)->charTainer,(*p)->desc);
+            // (*pp)->write_character(baddie_list.at(dex)->bTainer,baddie_list.at(dex)->desc);
+            bundle_update((*pp));
+            (*pp)->write_msg(rmpm,m);
+        }
+
+    }
+
     // {// one-for-one randomize. consider uniform distribution. numbers will probably be small.
-        
-    // }
+        // std::lock_guard<std::mutex>lock(printLock);
+        // int dex = (fast_rand() % baddie_list.size());
+        // std::cout << fmt::format("Random Number:{0} Random Baddie: {1}\n",std::to_string(dex),baddie_list.at(dex)->bTainer.CHARACTER_NAME);
+    
 }
 
 bool Room::isFightInProgress()
@@ -218,27 +252,24 @@ bool Room::isValidBaddie()
 }
 
 void Room::inform_player_friendly(std::shared_ptr<Player> p)
-{// lurk test may not like this REWORK
+{// lock from outside.
     int fd = p->getFD();
+    
+        // std::shared_lock<std::shared_mutex> lock(rLock);
+    for(auto t = player_list.begin(); t != player_list.end(); ++t)
     {
-        std::shared_lock<std::shared_mutex> lock(rLock);
-        for(auto t = player_list.begin(); t != player_list.end(); ++t)
+        if(fd != (*t)->getFD())
         {
-            if(fd != (*t)->getFD())
-            {
-                p->write_character((*t)->charTainer,(*t)->desc);
-            }
+            p->write_character((*t)->charTainer,(*t)->desc);
         }
     }
 }
 void Room::inform_baddies(std::shared_ptr<Player> p)
 {// static no rLock but baddie lock(bLock)
+    
+    for(auto t = baddie_list.begin(); t != baddie_list.end(); ++t)
     {
-        std::shared_lock<std::shared_mutex> lock(rLock); // TEMPORARY
-        for(auto t = baddie_list.begin(); t != baddie_list.end(); ++t)
-        {
-            // std::lock_guard<std::mutex> lock((*t)->bLock);
-            p->write_character((*t)->bTainer,(*t)->desc);
-        }
+        // std::lock_guard<std::mutex> lock((*t)->bLock);
+        p->write_character((*t)->bTainer,(*t)->desc);
     }
 }

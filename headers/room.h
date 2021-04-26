@@ -50,7 +50,7 @@ class Room
         bool isValidBaddie();
         bool isFightInProgress();
         void calculateDiff();
-
+        void bundle_update(std::shared_ptr<Player>);
         
         //debug
         // size_t room_connection_size();

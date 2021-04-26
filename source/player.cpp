@@ -18,6 +18,7 @@ Player::Player(int fd)
     charTainer.GOLD = 0;
     charTainer.CURRENT_ROOM_NUMBER = 0;
     
+    
     desc = "";
 }
 
@@ -62,6 +63,7 @@ void Player::startPlayer()
     {
         std::lock_guard<std::shared_mutex> lock(pLock);
         started = true;
+        critDamage = (charTainer.ATTACK * 3);
     }
 }
 void Player::quitPlayer()
@@ -134,6 +136,11 @@ uint16_t Player::getRoomNumber()
 {
     std::shared_lock<std::shared_mutex>lock(pLock);
     return charTainer.CURRENT_ROOM_NUMBER;
+}
+uint16_t Player::getCrit()
+{
+    std::shared_lock<std::shared_mutex>lock(pLock);
+    return critDamage;
 }
 //writer
 
