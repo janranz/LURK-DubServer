@@ -278,6 +278,9 @@ void Gamemaster::GMController(int fd)
         }else if(type == LURK_TYPES::TYPE_FIGHT)
         {
             proc_fight(p);
+        }else if(type == LURK_TYPES::TYPE_CHARACTER)
+        {
+            error_character(p);
         }else{
             {
                 std::lock_guard<std::mutex>lock(printLock);fmt::print("{0} SENT INVALID TYPE: {1}\n",p->charTainer.CHARACTER_NAME,type);
@@ -481,12 +484,17 @@ void Gamemaster::error_character(std::shared_ptr<Player> p)
     LURK_ERROR pkg;
     pkg.CODE = 4;
     std::string m;
+    std::string n;
     {
         std::shared_lock<std::shared_mutex> lock(GMLock);
         if(p->isStarted())
         {
-            m = fmt::format("{0}: Join battle is always on"
+            m = fmt::format("{0}: Join battle is always on "
                 "and is not a choice (yet).\n",serverStats::GM_NAME);
+            int rm = p->charTainer.CURRENT_ROOM_NUMBER;
+            n = fmt::format("Attention Portal Survivors!\n{0} is attempting to toggle off Join Battle! Go show {1} how you feel about that in {2}!\n",
+            p->charTainer.CHARACTER_NAME,p->gender, master_room_list.at(rm)->roomTainer.ROOM_NAME);
+            write_global(n);
         }else if(!(p->isValidToon()))
         {
             m = fmt::format("{0}: You attempt to set invalid stats.\n",serverStats::GM_NAME);
@@ -593,7 +601,7 @@ void Gamemaster::spawn_player(std::shared_ptr<Player> p)
         }else{
             p->respawn();
             master_room_list.at(0)->emplace_player(p);
-            m = fmt::format("Fresh Meat Sale! {0} just joined in The Portal Room! Go rough them up!\n",p->charTainer.CHARACTER_NAME);
+            m = fmt::format("Fresh Meat Sale! {0} just joined in The Portal Room! Go give {1} a warm welcome!\n",p->charTainer.CHARACTER_NAME,p->gender);
         }
     }
     write_global(m);
