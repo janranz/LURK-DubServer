@@ -253,8 +253,9 @@ void Gamemaster::GMController(int fd)
         if(!(p->isPlayerAlive()))
         {
             spawn_player(p);
-            if(type != LURK_TYPES::TYPE_MSG || type != LURK_TYPES::TYPE_LEAVE)
+            if(type != LURK_TYPES::TYPE_MSG && type != LURK_TYPES::TYPE_LEAVE)
             {
+                {std::lock_guard<std::mutex>lock(printLock);fmt::print("wtf: {}\n",type);}
                 error_dead(p);
                 pump_n_dump(p);
                 continue;
