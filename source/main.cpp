@@ -102,9 +102,9 @@ int main(int argc, char** argv)
     //listener loop.
     while(1)
     {
-        {std::lock_guard<std::mutex> lock(printLock);std::cout << "Listening..." << std::endl;}
+        {std::lock_guard<std::mutex> lock(printLock);fmt::print("Listening...\n");}
         player_fd = accept(dubSkt, (struct sockaddr*)(&client_addr), &address_size);
-        {std::lock_guard<std::mutex> lock(printLock);std::cout << fmt::format("Connection established from {0}\n",inet_ntoa(client_addr.sin_addr));}
+        {std::lock_guard<std::mutex> lock(printLock);fmt::print("Connection established from {0}\n",inet_ntoa(client_addr.sin_addr));}
 
         std::thread t1(&Gamemaster::GMController,&GM,player_fd);
 

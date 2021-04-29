@@ -1,6 +1,6 @@
 #include"../headers/baddie.h"
 
-void Baddie::hurt_baddie(int16_t h)
+bool Baddie::hurt_baddie(int16_t h)
 {
     std::lock_guard<std::shared_mutex>lock(bLock);
     if((bTainer.HEALTH - h) > 0)
@@ -11,6 +11,7 @@ void Baddie::hurt_baddie(int16_t h)
         bTainer.FLAGS = serverStats::BADDIE_DFLAGS;
         alive = false;
     }
+    return alive;
 }
 
 void Baddie::heal_baddie(int16_t h)

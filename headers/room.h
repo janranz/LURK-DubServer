@@ -19,6 +19,7 @@ class Room
         std::vector<std::shared_ptr<Room>> room_connections;
         std::vector<std::shared_ptr<Baddie>> baddie_list;
         std::vector<std::shared_ptr<Player>> player_list;
+        std::vector<int> liveDex;
         ssize_t bytes;
         
         bool fight_in_progress;
@@ -43,14 +44,18 @@ class Room
 
         // fight logic
         bool initiate_fight_baddie(std::shared_ptr<Player>);
-        void fight_controller();
+        void fight_controller(std::shared_ptr<Player>);
         void slay_baddie(std::shared_ptr<Baddie>);
         //helper
         bool isValidConnection(uint16_t);
         bool isValidBaddie();
+        int liveBaddieCount();
+        int LiveBaddieDex();
         bool isFightInProgress();
         void calculateDiff();
         void bundle_update(std::shared_ptr<Player>);
+        void big_bundle_update();
+        void room_write(std::string);
         
         //debug
         // size_t room_connection_size();

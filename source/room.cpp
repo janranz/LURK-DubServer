@@ -98,6 +98,14 @@ void Room::bundle_update(std::shared_ptr<Player> p)
         inform_others_player(p); // call from GM. ?
 }
 
+void Room::big_bundle_update()
+{
+    for(auto b = player_list.begin(); b != player_list.end(); ++b)
+    {
+        bundle_update((*b));
+    }
+}
+
 bool Room::isValidConnection(uint16_t r)
 {
     {
@@ -160,25 +168,16 @@ bool Room::initiate_fight_baddie(std::shared_ptr<Player> p)
     std::string m;
 
     SLock.lock();
-    if(!(isValidBaddie() && !fight_in_progress))
+    if(!(isValidBaddie()) || fight_in_progress)
     {
+        {std::lock_guard<std::mutex>lock(printLock);fmt::print("No baddies!\n");}
         return false;
     }
     SLock.unlock();
 
     QLock.lock();
     fight_in_progress = true;
-    
-    int bDex = (fast_rand() % baddie_list.size());
-    m = fmt::format("{0} grows tired of {1} looking at them with googly eyes and decides to start a fight!\n",
-    p->charTainer.CHARACTER_NAME,baddie_list.at(bDex)->bTainer.CHARACTER_NAME); // potential UB.
-    
-    for(auto t = player_list.begin(); t != player_list.end(); ++t)
-    {
-        (*t)->write_msg(rmpm,m);
-    }
-
-    fight_controller();
+    fight_controller(p);
     fight_in_progress = false;
     QLock.unlock();
 
@@ -190,46 +189,86 @@ bool Room::initiate_fight_baddie(std::shared_ptr<Player> p)
     // think about communicating a cleanup routine after death. How will we move them to spawn?
 }
 
-void Room::fight_controller()
+void Room::fight_controller(std::shared_ptr<Player> inst)
 {// locked by unique room lock
+    
     std::string m;
+    bool next = false;
     uint32_t crit;
     uint16_t base;
-    int dex;
     int roll;
     
+
+    int bDex;
+    
+    bDex = LiveBaddieDex();
+    
+    m = fmt::format("{0} grows tired of {1} looking at them with googly eyes and decides to start a fight!\n",
+    inst->charTainer.CHARACTER_NAME,baddie_list.at(bDex)->bTainer.CHARACTER_NAME); // potential UB.
+
+    room_write(m);
+    // for(auto t = player_list.begin(); t != player_list.end(); ++t)
+    // {
+    //     (*t)->write_msg(rmpm,m);
+    // }
+
     for(auto p = player_list.begin(); p != player_list.end(); ++p)
     {
+        if(!isValidBaddie())
+        {
+            m = fmt::format("{0} and their homies have successfully slain all baddies in the room!\n",(*p)->charTainer.CHARACTER_NAME);
+            room_write(m);
+            break;
+        }else if(next)
+        {
+            next = false;
+            bDex = LiveBaddieDex();
+            {std::lock_guard<std::mutex>lock(printLock);fmt::print("bDex sanity check: {0}\n",bDex);}
+            m = fmt::format("{0} sees their homie deliver the final blow on the last baddie, and locks eyes with {1}!\n"
+                ,(*p)->charTainer.CHARACTER_NAME,baddie_list.at(bDex)->bTainer.CHARACTER_NAME);
+            room_write(m);
+        }
         crit = (*p)->getCrit();
         base = (*p)->charTainer.ATTACK;
-        dex = (fast_rand() % baddie_list.size());
-        if(baddie_list.at(dex)->is_alive())
+
+        if(baddie_list.at(bDex)->is_alive())
         {
             roll = ((fast_rand() % (crit + 1) - base) + base);
-            baddie_list.at(dex)->hurt_baddie(roll);
-            m = fmt::format("{0} delivers a devastating blow dealing {1} damage to {2}!\n",
-            (*p)->charTainer.CHARACTER_NAME,fmt::to_string(roll),baddie_list.at(dex)->bTainer.CHARACTER_NAME);
+            {std::lock_guard<std::mutex>lock(printLock);fmt::print("{0} rolls: {1} damage!\n",(*p)->charTainer.CHARACTER_NAME,roll);}
+            if(!(baddie_list.at(bDex)->hurt_baddie(roll)))
+            {// final blow
+                m = fmt::format("{0} delivers the most savage, and ruthless blow of {1} damage to {2}'s goofy looking head,\ncasting him into the lake of fire with the quickness!\n",
+                (*p)->charTainer.CHARACTER_NAME,roll,baddie_list.at(bDex)->bTainer.CHARACTER_NAME);
+                big_bundle_update();
+                room_write(m);
+                next = true;
+            }else{
+                m = fmt::format("{0} delivers a striking blow, dealing {1} damage to {2}!\n",
+                (*p)->charTainer.CHARACTER_NAME,std::to_string(roll),baddie_list.at(bDex)->bTainer.CHARACTER_NAME);
+                big_bundle_update();
+                room_write(m);
+            }
         }else{
-            // baddie rolled is dead. we need to do something else.
-            m = fmt::format("{0} hesitates to attack and instead backs off!\n",(*p)->charTainer.CHARACTER_NAME);
+            {std::lock_guard<std::mutex>lock(printLock);fmt::print("Baddie dead?: {0}\n",baddie_list.at(bDex)->bTainer.CHARACTER_NAME);}
         }
-        // (*p)->write_room(roomTainer,roomDesc);
-        // (*p)->write_reflect();
-        for(auto pp = player_list.begin(); pp != player_list.end(); ++pp)
-        {
-            // (*pp)->write_character((*p)->charTainer,(*p)->desc);
-            // (*pp)->write_character(baddie_list.at(dex)->bTainer,baddie_list.at(dex)->desc);
-            bundle_update((*pp));
-            (*pp)->write_msg(rmpm,m);
-        }
-
     }
+    int i = liveBaddieCount();
+    if(i)
+    {
+        m = fmt::format("{0} baddies remaining!\n",std::to_string(i));
+    }else{
+        m = fmt::format("No more baddies remain!\n",std::to_string(i));
+    }
+    room_write(m);
 
-    // {// one-for-one randomize. consider uniform distribution. numbers will probably be small.
-        // std::lock_guard<std::mutex>lock(printLock);
-        // int dex = (fast_rand() % baddie_list.size());
-        // std::cout << fmt::format("Random Number:{0} Random Baddie: {1}\n",std::to_string(dex),baddie_list.at(dex)->bTainer.CHARACTER_NAME);
-    
+}
+
+void Room::room_write(std::string m)
+{
+    for(auto p = player_list.begin(); p != player_list.end(); ++p)
+    {
+        (*p)->write_msg(rmpm,m);
+    }
 }
 
 bool Room::isFightInProgress()
@@ -249,6 +288,40 @@ bool Room::isValidBaddie()
             return true;
     }
     return false;
+}
+
+int Room::LiveBaddieDex()
+{
+    liveDex.clear();
+    int i = 0;
+    for(auto b = baddie_list.begin(); b != baddie_list.end(); ++b)
+    {
+        if((*b)->bTainer.FLAGS == serverStats::BADDIE_AFLAGS)
+        {
+            liveDex.emplace_back(i); // value of i DOES matter here.
+        }
+        i++;
+    }
+    {std::lock_guard<std::mutex>lock(printLock);fmt::print("Size of live baddies: {0}\n",liveDex.size());}
+    if(liveDex.size() > 0)
+    {
+        return liveDex.at((fast_rand() % liveDex.size()));
+    }else{
+        return -1; // should never hit.
+    }
+}
+
+int Room::liveBaddieCount()
+{
+    int i = 0;
+    for(auto b = baddie_list.begin(); b != baddie_list.end(); ++b)
+    {
+        if((*b)->bTainer.FLAGS == serverStats::BADDIE_AFLAGS)
+        {
+            i++;
+        }
+    }
+    return i;
 }
 
 void Room::inform_player_friendly(std::shared_ptr<Player> p)

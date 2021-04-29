@@ -64,6 +64,7 @@ class Gamemaster
         void error_changeroom(std::shared_ptr<Player>);
         void error_msg(std::shared_ptr<Player>);
         void error_fight(std::shared_ptr<Player>);
+        void error_invalid(std::shared_ptr<Player>);
 };
 
 #endif //GM_H

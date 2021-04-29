@@ -78,7 +78,7 @@ void Player::quitPlayer()
         }else{
             m = "Unknown player staged to quit!\n";
         }
-        {std::lock_guard<std::mutex> lock(printLock);std::cout << m << std::endl;}
+        {std::lock_guard<std::mutex> lock(printLock);fmt::print("{}\n",m);}
     }
     
 }
@@ -183,10 +183,10 @@ void Player::write_error(LURK_ERROR pkg, std::string msg)
     ssize_t bytes = 0;
     {
         std::lock_guard<std::shared_mutex> lock(pLock);
+        pkg.MSG_LEN = msg.length();
         write(socketFD, &LURK_TYPES::TYPE_ERROR,sizeof(uint8_t));
         write(socketFD, &pkg, sizeof(LURK_ERROR));
         bytes = write(socketFD,msg.c_str(), pkg.MSG_LEN);
-
     }
     if(bytes < 1)
     {

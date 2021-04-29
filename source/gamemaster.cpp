@@ -1,14 +1,14 @@
 #include"../headers/gamemaster.h"
 /* 
     TODO:
-    
+    add a reaper()
 
 */
 
 Gamemaster::Gamemaster()
 {
     g_seed = static_cast<unsigned int>(std::time(NULL)); // see if that seeds.
-    std::cout << "Current Seed: " << g_seed << std::endl;
+    fmt::print("Current Seed: {0}\n",g_seed);
     vers.MAJOR = serverStats::GAME_VERSION_MAJOR;
     vers.MINOR = serverStats::GAME_VERSION_MINOR;
     vers.EXTENS_SIZE = serverStats::GAME_VERSION_EXT;
@@ -53,7 +53,7 @@ void Gamemaster::build_chatter(int i,std::vector<std::string>::iterator m)
         case 15:{c_m.adj.emplace_back(*m);break;}
         case 16:{c_m.noun.emplace_back(*m);break;}
         case 17:{c_m.roomType.emplace_back(*m);break;}
-        default:{std::cout << fmt::format("Failure in buildChatter!\n");}
+        default:{fmt::print("Failure in buildChatter!\n");}
     }
 }
 void Gamemaster::size_vectors()
@@ -238,7 +238,7 @@ void Gamemaster::ragequit(std::shared_ptr<Player> p)
                     t = master_player_list.erase(t);
                     --t;
                     break;
-                    {std::lock_guard<std::mutex> lock(printLock);std::cout << "Found in master_player list. removed!\n";}
+                    {std::lock_guard<std::mutex> lock(printLock);fmt::print("Found in master_player list. removed!\n");}
                 }
             }
             for(auto t = master_player_list.begin(); t != master_player_list.end(); ++t)
@@ -248,8 +248,8 @@ void Gamemaster::ragequit(std::shared_ptr<Player> p)
             int size = master_player_list.size();
             {
                 std::lock_guard<std::mutex> lock(printLock);
-                std::cout << fmt::format("{0} has ragequit.\n Masterlist Size: {1}\n"
-                ,p->charTainer.CHARACTER_NAME, std::to_string(size));
+                fmt::print("{0} has ragequit.\n Masterlist Size: {1}\n"
+                ,p->charTainer.CHARACTER_NAME,size);
             }
         }
     }
@@ -312,7 +312,9 @@ void Gamemaster::GMController(int fd)
             proc_fight(p);
         }else{
             {
-                std::lock_guard<std::mutex>lock(printLock);std::cout << fmt::format("{0} SENT INVALID TYPE: {1}",p->charTainer.CHARACTER_NAME,std::to_string(type));
+                std::lock_guard<std::mutex>lock(printLock);fmt::print("{0} SENT INVALID TYPE: {1}\n",p->charTainer.CHARACTER_NAME,type);
+                error_invalid(p);
+                pump_n_dump(p);
             }
         }
 
@@ -329,7 +331,7 @@ uint8_t Gamemaster::listener(std::shared_ptr<Player> p)
     uint8_t dipByte;
     bytes = recv(p->getFD(), &dipByte,sizeof(uint8_t),MSG_WAITALL);
     if(p->isValidToon())
-        {std::lock_guard<std::mutex>lock(printLock);std::cout << fmt::format("{0} sent type: {1}\n",p->charTainer.CHARACTER_NAME,std::to_string(dipByte));}
+        {std::lock_guard<std::mutex>lock(printLock);fmt::print("{0} sent type: {1}\n",p->charTainer.CHARACTER_NAME,dipByte);}
     if(bytes < 1)
     {
         dipByte = 0;
@@ -452,7 +454,7 @@ void Gamemaster::proc_start(std::shared_ptr<Player> p)
     }
     {
         std::lock_guard<std::mutex> lock(printLock);
-        std::cout << fmt::format("{0} has been added to Master: {1} (size)\n",p->charTainer.CHARACTER_NAME,std::to_string(size));
+        fmt::print("{0} has been added to Master: {1} (size)\n",p->charTainer.CHARACTER_NAME,size);
     }
     p->startPlayer();
     p->write_accept(LURK_TYPES::TYPE_START);
@@ -461,6 +463,14 @@ void Gamemaster::proc_start(std::shared_ptr<Player> p)
 }
 
 //error handling
+
+void Gamemaster::error_invalid(std::shared_ptr<Player> p)
+{
+    LURK_ERROR pkg;
+    pkg.CODE = 0;
+    std::string m = fmt::format("{0}: Under construction... try that in a bit.\n",serverStats::GM_NAME);
+    p->write_error(pkg,m);
+}
 
 void Gamemaster::error_fight(std::shared_ptr<Player> p)
 {
