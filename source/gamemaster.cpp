@@ -420,10 +420,7 @@ void Gamemaster::proc_start(std::shared_ptr<Player> p)
     }
     p->startPlayer();
     p->write_accept(LURK_TYPES::TYPE_START);
-    {
-        std::lock_guard<std::shared_mutex> lck(GMLock);
-        spawn_player(p);
-    }
+    spawn_player(p);
 }
 
 //error handling
@@ -432,7 +429,7 @@ void Gamemaster::error_dead(std::shared_ptr<Player> p)
 {
     LURK_ERROR pkg;
     pkg.CODE = 0;
-    std::string m = fmt::format("{0}: Can't do that when you're dead.. but you're alive now. Do it again!\n");
+    std::string m = fmt::format("{0}: Can't do that when you're dead.. but you're alive now. Do it again!\n",serverStats::GM_NAME);
     p->write_error(pkg,m);
 }
 
