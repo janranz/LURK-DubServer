@@ -17,6 +17,7 @@ class Player
         bool freshSpawn;
         bool playerAlive;
 
+
         // fight logic
         uint32_t critDamage;
         int16_t baseHealth;
@@ -24,6 +25,8 @@ class Player
     public:
         LURK_CHARACTER charTainer;
         std::string desc;
+        std::string gender;
+        std::string genderPos;
         std::shared_mutex pLock;
 
         Player(int);
@@ -36,7 +39,7 @@ class Player
         bool isPlayerAlive();
 
         //state set
-        void startPlayer();
+        void startPlayer(bool);
         void quitPlayer();
         void setValid();
         void giveRoom(uint16_t);

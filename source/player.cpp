@@ -17,8 +17,7 @@ Player::Player(int fd)
     charTainer.REGEN = 0;
     charTainer.GOLD = 0;
     charTainer.CURRENT_ROOM_NUMBER = 0;
-    
-    
+    gender = "a";
     desc = "";
 }
 
@@ -58,7 +57,7 @@ void Player::giveRoom(uint16_t n)
     }
 }
 
-void Player::startPlayer()
+void Player::startPlayer(bool g)
 {
     {
         std::lock_guard<std::shared_mutex> lock(pLock);
@@ -67,6 +66,14 @@ void Player::startPlayer()
         charTainer.FLAGS = serverStats::PLAYER_AFLAGS;
         baseHealth = charTainer.HEALTH;
         critDamage = (charTainer.ATTACK * 3);
+        if(g)
+        {
+            gender = "her";
+            genderPos = "her";
+        }else{
+            gender = "him";
+            genderPos = "his";
+        }
     }
 }
 void Player::quitPlayer()
@@ -121,11 +128,11 @@ void Player::heal_player(int16_t h)
 {
     {
         std::lock_guard<std::shared_mutex>lock(pLock);
-        if((charTainer.HEALTH + h) < serverStats::PLAYER_S_MAX_STAT)
+        if((charTainer.HEALTH + h) <= baseHealth)
         {
             charTainer.HEALTH += h;
         }else{
-            charTainer.HEALTH = serverStats::PLAYER_S_MAX_STAT;
+            charTainer.HEALTH = baseHealth;
         }
     }
 }

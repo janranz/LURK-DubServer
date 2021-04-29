@@ -25,6 +25,7 @@ class Gamemaster
         std::vector<std::shared_ptr<Player>> master_player_list;
         chatter_messages c_m;
         cm_sizes vsize;
+        bool genderBender;
     public:
         //events
         // int fast_rand();

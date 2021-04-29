@@ -17,13 +17,7 @@ Room::Room(std::string name,std::string desc,uint16_t num)
 
 void Room::calculateDiff()
 {// lock from outside.
-    
-    if(player_list.empty())
-    {
-        firepower = 1;
-    }else{
-        firepower = player_list.size();
-    }
+    firepower = player_list.size();
 }
 
 void Room::emplace_connection(std::shared_ptr<Room> r)
@@ -76,6 +70,10 @@ void Room::remove_player(std::shared_ptr<Player>p)
             }
         }
         calculateDiff();
+        if(player_list.size() == 0)
+        {
+            respawn_baddies();
+        }
     }
 
     std::string m = fmt::format("{0} has left the room.\n",p->charTainer.CHARACTER_NAME);
@@ -197,8 +195,9 @@ void Room::fight_controller(std::shared_ptr<Player> inst)
     bool next = false;
     uint32_t crit;
     uint16_t base;
-    int roll;
-    int negate;
+    uint32_t roll;
+    uint32_t negate;
+    uint32_t defMulti;
     
 
     int bDex;
@@ -232,7 +231,8 @@ void Room::fight_controller(std::shared_ptr<Player> inst)
                 ,(*p)->charTainer.CHARACTER_NAME,baddie_list.at(bDex)->bTainer.CHARACTER_NAME);
             room_write(m);
         }
-        crit = (*p)->getCrit();
+        uint32_t multi = 100 * firepower;
+        crit = ((*p)->getCrit()) + multi;
         base = (*p)->charTainer.ATTACK;
 
         if(baddie_list.at(bDex)->is_alive())
@@ -240,7 +240,7 @@ void Room::fight_controller(std::shared_ptr<Player> inst)
             roll = ((fast_rand() % (crit + 1) - base) + base);
             if(roll >= (base * 2))
             {
-                m = fmt::format("CRITICAL DAMAGE INCOMING: {0} CRANKS OUT MASSIVE {1} DAMAGE!\n",(*p)->charTainer.CHARACTER_NAME, roll); // to string?
+                m = fmt::format("FRIENDLY CRITICAL DAMAGE INCOMING: {0} CRANKS OUT MASSIVE {1} DAMAGE!\n",(*p)->charTainer.CHARACTER_NAME, roll); // to string?
                 room_write(m);
             }
             negate = (fast_rand() % (baddie_list.at(bDex)->bTainer.DEFENSE + 1));
@@ -281,14 +281,15 @@ void Room::fight_controller(std::shared_ptr<Player> inst)
             {
                 crit = baddie_list.at(bDex)->getCrit();
                 base = baddie_list.at(bDex)->bTainer.ATTACK;
-
+                defMulti = (*p)->charTainer.DEFENSE + (100 * firepower);
                 roll = ((fast_rand() % (crit + 1) - base) + base);
                 if(roll >= (base * 2))
                 {
-                    m = fmt::format("CRITICAL DAMAGE INCOMING: {0} CRANKS OUT MASSIVE {1} DAMAGE!\n",baddie_list.at(bDex)->bTainer.CHARACTER_NAME, std::to_string(roll));
+                    m = fmt::format("ENEMY CRITICAL DAMAGE INCOMING: {0} CRANKS OUT MASSIVE {1} DAMAGE!\n",baddie_list.at(bDex)->bTainer.CHARACTER_NAME, std::to_string(roll));
                 room_write(m);
                 }
-                negate = (fast_rand() % ((*p)->charTainer.DEFENSE + 1));
+                // negate = (fast_rand() % ((*p)->charTainer.DEFENSE + 1));
+                negate = (fast_rand() % (defMulti + 1));
                 if(negate >= roll)
                 {
                     roll = 0;
@@ -315,6 +316,39 @@ void Room::fight_controller(std::shared_ptr<Player> inst)
         m = fmt::format("All baddies have been cleared, and you live to see another day.\n");
         room_write(m);
     }
+    uint16_t bonus = difficulty - firepower;
+    if((bonus > 0) && isValidBaddie())
+    {
+        bonus = (difficulty * (fast_rand() % (500) + 1));
+        int bDex = LiveBaddieDex();
+        baddie_list.at(bDex)->hurt_baddie(bonus);
+        m = fmt::format("{0} takes unnecessary bonus damage equal to {1}! holy cow!\n",baddie_list.at(bDex)->bTainer.CHARACTER_NAME,bonus);
+        big_bundle_update();
+        room_write(m);
+    }
+    //regenerate
+    int genMulti;
+    //player
+    for(auto p = player_list.begin(); p != player_list.end(); ++p)
+    {
+        if((*p)->isPlayerAlive())
+        {
+            if(difficulty > firepower)
+            {
+                genMulti = 1000;
+            }else{
+                genMulti = 500;
+            }
+            genMulti += (fast_rand() % ((*p)->charTainer.REGEN + 1) + 1);
+            (*p)->heal_player(genMulti);
+            big_bundle_update();
+            
+            m = fmt::format("{0} recovers {1} health!\n",(*p)->charTainer.CHARACTER_NAME,genMulti);
+        }else{
+            m = fmt::format("{0} fails to heal because... well.. they dead.\n",(*p)->charTainer.CHARACTER_NAME);
+        }
+        room_write(m);
+    }
 
     int i = liveBaddieCount();
     if(i)
@@ -324,6 +358,39 @@ void Room::fight_controller(std::shared_ptr<Player> inst)
         m = fmt::format("No more baddies remain!\n",std::to_string(i));
     }
     room_write(m);
+
+    for(auto b = baddie_list.begin(); b != baddie_list.end(); ++b)
+    {
+        if((*b)->is_alive())
+        {
+            if(firepower > difficulty)
+            {
+                genMulti = 500;
+            }else{
+                genMulti = 0;
+            }
+            genMulti += (fast_rand() % ((*b)->bTainer.REGEN + 1) + 1);
+            (*b)->heal_baddie(genMulti);
+            big_bundle_update();
+            
+            m = fmt::format("{0} has recovered {1} health! and is angry as heck\n YIKES!",(*b)->bTainer.CHARACTER_NAME,genMulti);
+        }else{
+            m = fmt::format("{0} lies there, looking ugly as sin.\n Whew...",(*b)->bTainer.CHARACTER_NAME);
+        }
+        room_write(m);
+
+    }
+}
+
+void Room::respawn_baddies()
+{
+    for(auto b = baddie_list.begin(); b != baddie_list.end(); ++b)
+    {
+        if(!(*b)->is_alive())
+        {
+            (*b)->respawn();
+        }
+    }
 }
 
 void Room::room_write(std::string m)

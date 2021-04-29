@@ -16,21 +16,21 @@ uint16_t const  serverStats::PLAYER_INIT_POINTS  = 6000;
 uint8_t  const  serverStats::BASE_FLAGS          = 0b11001000;
 uint8_t  const  serverStats::PLAYER_AFLAGS       = 0b11011000; // force join battle only for now
 uint8_t  const  serverStats::PLAYER_DFLAGS       = 0b01011000; // force join battle only for now
-int16_t  const  serverStats::PLAYER_BASE_HEALTH  = 12000;
+int16_t  const  serverStats::PLAYER_BASE_HEALTH  = 32000;
 uint16_t const  serverStats::PLAYER_MIN_GOLD     = 200;
 uint16_t const  serverStats::PLAYER_MAX_GOLD     = 4000;
 
 uint8_t  const  serverStats::BADDIE_AFLAGS        = 0b11111000;
 uint8_t  const  serverStats::BADDIE_DFLAGS        = 0b01111000;
-int16_t  const  serverStats::BADDIE_MIN_HEALTH    = 100;
+int16_t  const  serverStats::BADDIE_MIN_HEALTH    = 1000;
 int16_t  const  serverStats::BADDIE_MAX_HEALTH    = 24000;
 uint16_t const  serverStats::BADDIE_MIN_GOLD      = 120;
 uint16_t const  serverStats::BADDIE_MAX_GOLD      = 4000;
 uint16_t const  serverStats::BADDIE_MIN_STAT      = 400;
-uint16_t const  serverStats::BADDIE_MAX_STAT      = 8000;
+uint16_t const  serverStats::BADDIE_MAX_STAT      = 16000;
 uint16_t const  serverStats::MAX_BADDIES          = 1000;
 uint16_t const  serverStats::MIN_BADDIES_PER_ROOM = 2;
-uint16_t const  serverStats::MAX_BADDIES_PER_ROOM = 5;
+uint16_t const  serverStats::MAX_BADDIES_PER_ROOM = 6;
 
 uint16_t const  serverStats::MAX_ROOMS = 10;
 uint16_t const  serverStats::BUFF_SIZE = 6000;

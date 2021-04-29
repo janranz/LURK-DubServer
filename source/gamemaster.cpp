@@ -18,6 +18,7 @@ Gamemaster::Gamemaster()
     gmInfo.DESC_LENGTH = serverStats::GAME_GREETING.length();
     //set GM's name
     strncpy(M_ToCP(gmpm.SENDER_NAME),serverStats::GM_NAME.c_str(),sizeof(gmpm.SENDER_NAME));
+    genderBender = false;
     
     
 }
@@ -417,13 +418,13 @@ void Gamemaster::proc_start(std::shared_ptr<Player> p)
         std::lock_guard<std::shared_mutex> lck(GMLock);
         master_player_list.emplace_back(p);
         size = master_player_list.size();
-        
+        genderBender = !genderBender;
     }
     {
         std::lock_guard<std::mutex> lock(printLock);
         fmt::print("{0} has been added to Master: {1} (size)\n",p->charTainer.CHARACTER_NAME,size);
     }
-    p->startPlayer();
+    p->startPlayer(genderBender);
     p->write_accept(LURK_TYPES::TYPE_START);
     spawn_player(p);
 }
@@ -452,6 +453,9 @@ void Gamemaster::error_fight(std::shared_ptr<Player> p)
     pkg.CODE = 3;
     std::string m = fmt::format("{0}: You swing out of your skull, but the baddies are already dead.\n",serverStats::GM_NAME);
     p->write_error(pkg,m);
+    int rm = p->charTainer.CURRENT_ROOM_NUMBER;
+    m = fmt::format("{0} is losing {1} mind in {2}... Kicking random dead baddies. Go set {3} straight!\n",p->charTainer.CHARACTER_NAME,p->genderPos,master_room_list.at(rm)->roomTainer.ROOM_NAME,p->gender);
+    write_global(m);
 }
 
 void Gamemaster::error_msg(std::shared_ptr<Player> p)

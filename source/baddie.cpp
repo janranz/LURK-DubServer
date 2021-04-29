@@ -50,7 +50,8 @@ void Baddie::respawn()
         (serverStats::BADDIE_MAX_HEALTH - serverStats::BADDIE_MIN_HEALTH)
         + serverStats::BADDIE_MIN_HEALTH);
     
-    int remaining = serverStats::PLAYER_INIT_POINTS;
+    // int remaining = serverStats::PLAYER_INIT_POINTS;
+    uint16_t remaining = (fast_rand() % ((serverStats::BADDIE_MAX_STAT + 1) - serverStats::BADDIE_MIN_STAT) + serverStats::BADDIE_MIN_STAT);
     uint16_t attack = 0;
     uint16_t defense = 0;
     uint16_t regen = 0;
