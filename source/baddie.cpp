@@ -25,6 +25,12 @@ void Baddie::heal_baddie(int16_t h)
     }
 }
 
+uint16_t Baddie::getCrit()
+{
+    std::shared_lock<std::shared_mutex>lock(bLock);
+    return critDamage;
+}
+
 bool Baddie::is_alive()
 {
     std::shared_lock<std::shared_mutex>lock(bLock);
@@ -81,4 +87,5 @@ void Baddie::respawn()
     bTainer.ATTACK = attack;
     bTainer.DEFENSE = defense;
     bTainer.REGEN = regen;
+    critDamage = (bTainer.ATTACK * 3);
 }

@@ -63,6 +63,7 @@ void Player::startPlayer()
     {
         std::lock_guard<std::shared_mutex> lock(pLock);
         started = true;
+        baseHealth = charTainer.HEALTH;
         critDamage = (charTainer.ATTACK * 3);
     }
 }
@@ -90,12 +91,13 @@ void Player::respawn()
 {
     {
         std::lock_guard<std::shared_mutex> lock(pLock);
+        charTainer.HEALTH = baseHealth;
         charTainer.FLAGS = serverStats::PLAYER_AFLAGS;
         playerAlive = true;
     }
 }
 
-void Player::hurt_player(int16_t h)
+bool Player::hurt_player(int16_t h)
 {
     // bool dead = false;
     {
@@ -110,7 +112,7 @@ void Player::hurt_player(int16_t h)
             
         }
     }
-    
+    return playerAlive;
 }
 
 void Player::heal_player(int16_t h)

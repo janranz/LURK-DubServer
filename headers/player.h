@@ -19,6 +19,7 @@ class Player
 
         // fight logic
         uint32_t critDamage;
+        int16_t baseHealth;
     
     public:
         LURK_CHARACTER charTainer;
@@ -41,7 +42,7 @@ class Player
         void giveRoom(uint16_t);
         void respawn();
         void despawn();
-        void hurt_player(int16_t);
+        bool hurt_player(int16_t);
         void heal_player(int16_t);
 
         //getter

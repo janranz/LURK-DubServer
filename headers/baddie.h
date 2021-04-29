@@ -14,12 +14,14 @@ class Baddie
 
         std::shared_mutex bLock;
         bool alive;
+        uint16_t critDamage;
 
     public:
         LURK_CHARACTER bTainer;
         std::string desc;
         bool hurt_baddie(int16_t);
         void heal_baddie(int16_t);
+        uint16_t getCrit();
         bool is_alive();
         void respawn();
     

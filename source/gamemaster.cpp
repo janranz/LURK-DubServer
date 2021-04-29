@@ -2,6 +2,7 @@
 /* 
     TODO:
     add a reaper()
+    see if std::to_string() is neccessary.
 
 */
 
@@ -153,57 +154,6 @@ std::shared_ptr<Baddie> Gamemaster::build_a_baddie(uint16_t roomNumber)
     return b;
 }
 
-    
-//     b->bTainer.FLAGS = serverStats::BADDIE_AFLAGS;
-//     b->bTainer.GOLD = (fast_rand() %
-//         (serverStats::BADDIE_MAX_GOLD - serverStats::BADDIE_MIN_GOLD)
-//         + serverStats::BADDIE_MIN_GOLD);
-
-//     b->bTainer.HEALTH = (fast_rand() %
-//         (serverStats::BADDIE_MAX_HEALTH - serverStats::BADDIE_MIN_HEALTH)
-//         + serverStats::BADDIE_MIN_HEALTH);
-    
-//     // stat roll
-//     int remaining = serverStats::PLAYER_INIT_POINTS;
-//     uint16_t attack = 0;
-//     uint16_t defense = 0;
-//     uint16_t regen = 0;
-//     int roll;
-//     int i = 0;
-//     while(remaining != 0)
-//     {
-//         switch(i % 3)
-//         {
-//             case 0:
-//             {
-//                 roll = (fast_rand() % (remaining) + 1);
-//                 attack += roll;
-//                 remaining -= roll;
-//                 break;                
-//             }
-//             case 1:
-//             {
-//                 roll = (fast_rand() % (remaining) + 1);
-//                 defense += roll;
-//                 remaining -= roll;
-//                 break;
-//             }
-//             case 2:
-//             {
-//                 roll = (fast_rand() % (remaining) + 1);
-//                 regen += roll;
-//                 remaining -= roll;
-//                 break;
-//             }
-//         }
-//         i++;
-//     }
-//     b->bTainer.ATTACK = attack;
-//     b->bTainer.DEFENSE = defense;
-//     b->bTainer.REGEN = regen;
-    
-// }
-
 void Gamemaster::populate_rooms()
 {
     for(auto t = master_room_list.begin(); t != master_room_list.end(); ++t)
@@ -259,7 +209,8 @@ void Gamemaster::ragequit(std::shared_ptr<Player> p)
 void Gamemaster::pump_n_dump(std::shared_ptr<Player>p)
 {// don't check bytes on MSG_DONTWAIT
     char dump[1024];
-    recv(p->getFD(), dump, 1024, MSG_DONTWAIT);
+    for(int i = 0; i < 5; i++)
+        recv(p->getFD(), dump, 1024, MSG_DONTWAIT);
 }
 
 
@@ -298,6 +249,17 @@ void Gamemaster::GMController(int fd)
     while(p->isSktAlive())
     {
         uint8_t type = listener(p);
+
+        if(!(p->isPlayerAlive()))
+        {
+            spawn_player(p);
+            if(type != LURK_TYPES::TYPE_MSG || type != LURK_TYPES::TYPE_LEAVE)
+            {
+                error_dead(p);
+                pump_n_dump(p);
+                continue;
+            }
+        }
         if(type == LURK_TYPES::TYPE_MSG)
         {
             proc_msg(p);
@@ -317,7 +279,6 @@ void Gamemaster::GMController(int fd)
                 pump_n_dump(p);
             }
         }
-
     }
     //connection lost.
     ragequit(p);
@@ -445,9 +406,10 @@ void Gamemaster::proc_character(std::shared_ptr<Player> p)
 
 void Gamemaster::proc_start(std::shared_ptr<Player> p)
 {// ADD SEPARATE PORTAL FOR ENTRY AND REWORK CHANGEROOM
+    
     int size = 0;
     {
-        std::lock_guard<std::shared_mutex> lock(GMLock);
+        std::lock_guard<std::shared_mutex> lck(GMLock);
         master_player_list.emplace_back(p);
         size = master_player_list.size();
         
@@ -458,11 +420,21 @@ void Gamemaster::proc_start(std::shared_ptr<Player> p)
     }
     p->startPlayer();
     p->write_accept(LURK_TYPES::TYPE_START);
-    spawn_player(p);
-
+    {
+        std::lock_guard<std::shared_mutex> lck(GMLock);
+        spawn_player(p);
+    }
 }
 
 //error handling
+
+void Gamemaster::error_dead(std::shared_ptr<Player> p)
+{
+    LURK_ERROR pkg;
+    pkg.CODE = 0;
+    std::string m = fmt::format("{0}: Can't do that when you're dead.. but you're alive now. Do it again!\n");
+    p->write_error(pkg,m);
+}
 
 void Gamemaster::error_invalid(std::shared_ptr<Player> p)
 {
@@ -601,8 +573,16 @@ bool Gamemaster::check_stat(std::shared_ptr<Player> p)
 
 void Gamemaster::spawn_player(std::shared_ptr<Player> p)
 {
+    std::lock_guard<std::shared_mutex>lock(GMLock); // double check exclusiveness
+    
+    if(!(p->isPlayerAlive()))
     {
-        std::lock_guard<std::shared_mutex>lock(GMLock);
+        uint16_t rm = p->getRoomNumber();
+        p->respawn();
+        master_room_list.at(rm)->remove_player(p);
+        master_room_list.at(0)->emplace_player(p);
+        master_room_list.at(rm)->inform_others_player(p);
+    }else{
         p->respawn();
         master_room_list.at(0)->emplace_player(p);
     }
