@@ -63,6 +63,8 @@ void Player::startPlayer()
     {
         std::lock_guard<std::shared_mutex> lock(pLock);
         started = true;
+        playerAlive = true;
+        charTainer.FLAGS = serverStats::PLAYER_AFLAGS;
         baseHealth = charTainer.HEALTH;
         critDamage = (charTainer.ATTACK * 3);
     }

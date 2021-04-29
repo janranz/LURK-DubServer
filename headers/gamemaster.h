@@ -57,7 +57,8 @@ class Gamemaster
         bool check_stat(std::shared_ptr<Player>);
         void move_player(std::shared_ptr<Player>,uint16_t);
         void spawn_player(std::shared_ptr<Player>);
-        void respawn_player(std::shared_ptr<Player>);
+        
+        void write_global(std::string);
         // error handling
         void error_character(std::shared_ptr<Player>);
         void error_start(std::shared_ptr<Player>);

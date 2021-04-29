@@ -172,11 +172,13 @@ void Gamemaster::populate_rooms()
 void Gamemaster::ragequit(std::shared_ptr<Player> p)
 {
     int fd = p->getFD();
+    int size = 0;
+    std::string m;
     {
         std::lock_guard<std::shared_mutex> lock(GMLock);
         if(p->isStarted())
         {
-            std::string m = fmt::format("{0} has disconnected from the server!\n",p->charTainer.CHARACTER_NAME);
+            m = fmt::format("{0} has disconnected from the server!\n",p->charTainer.CHARACTER_NAME);
 
             master_room_list.at(p->charTainer.CURRENT_ROOM_NUMBER)->remove_player(p);
             master_room_list.at(p->charTainer.CURRENT_ROOM_NUMBER)->inform_others_player(p);
@@ -191,18 +193,21 @@ void Gamemaster::ragequit(std::shared_ptr<Player> p)
                     {std::lock_guard<std::mutex> lock(printLock);fmt::print("Found in master_player list. removed!\n");}
                 }
             }
-            for(auto t = master_player_list.begin(); t != master_player_list.end(); ++t)
-            {
-                (*t)->write_msg(gmpm,m);
-            }
-            int size = master_player_list.size();
-            {
-                std::lock_guard<std::mutex> lock(printLock);
-                fmt::print("{0} has ragequit.\n Masterlist Size: {1}\n"
-                ,p->charTainer.CHARACTER_NAME,size);
-            }
+            // for(auto t = master_player_list.begin(); t != master_player_list.end(); ++t)
+            // {
+            //     (*t)->write_msg(gmpm,m);
+            // }
         }
+            size = master_player_list.size();
     }
+    {
+        std::lock_guard<std::mutex> lock(printLock);
+        fmt::print("{0} has ragequit.\n Masterlist Size: {1}\n"
+        ,p->charTainer.CHARACTER_NAME,size);
+    }
+    if(p->isStarted())
+        write_global(m);
+
     close(fd);
 }
 
@@ -255,7 +260,6 @@ void Gamemaster::GMController(int fd)
             spawn_player(p);
             if(type != LURK_TYPES::TYPE_MSG && type != LURK_TYPES::TYPE_LEAVE)
             {
-                {std::lock_guard<std::mutex>lock(printLock);fmt::print("wtf: {}\n",type);}
                 error_dead(p);
                 pump_n_dump(p);
                 continue;
@@ -571,18 +575,34 @@ bool Gamemaster::check_stat(std::shared_ptr<Player> p)
 
 void Gamemaster::spawn_player(std::shared_ptr<Player> p)
 {
-    std::lock_guard<std::shared_mutex>lock(GMLock); // double check exclusiveness
-    
-    if(!(p->isPlayerAlive()))
+    std::string m;
     {
-        uint16_t rm = p->getRoomNumber();
-        p->respawn();
-        master_room_list.at(rm)->remove_player(p);
-        master_room_list.at(0)->emplace_player(p);
-        master_room_list.at(rm)->inform_others_player(p);
-    }else{
-        p->respawn();
-        master_room_list.at(0)->emplace_player(p);
+        std::lock_guard<std::shared_mutex>lock(GMLock); // double check exclusiveness
+        if(!(p->isPlayerAlive()))
+        {
+            uint16_t rm = p->getRoomNumber();
+            m = fmt::format("{0} just got smacked up in {1}! How embarrassing!\n",p->charTainer.CHARACTER_NAME,master_room_list.at(rm)->roomTainer.ROOM_NAME);
+            p->respawn();
+            master_room_list.at(rm)->remove_player(p);
+            master_room_list.at(0)->emplace_player(p);
+            master_room_list.at(rm)->inform_others_player(p);
+        }else{
+            p->respawn();
+            master_room_list.at(0)->emplace_player(p);
+            m = fmt::format("Fresh Meat Sale! {0} just joined in The Portal Room! Go rough them up!\n",p->charTainer.CHARACTER_NAME);
+        }
+    }
+    write_global(m);
+}
+
+void Gamemaster::write_global(std::string m)
+{// consider if shared_lock is safe here.
+    LURK_MSG pkg;
+    strncpy(M_ToCP(pkg.SENDER_NAME),serverStats::GM_NAME.c_str(),sizeof(gmpm.SENDER_NAME));
+    std::shared_lock<std::shared_mutex>lock(GMLock);
+    for(auto p = master_player_list.begin(); p != master_player_list.end(); ++p)
+    {
+        (*p)->write_msg(pkg,m);
     }
 }
 
