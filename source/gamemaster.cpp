@@ -1,8 +1,7 @@
 #include"../headers/gamemaster.h"
 /* 
     TODO:
-    add a reaper()
-    see if std::to_string() is neccessary.
+    check coffer collection on dead homies.
 
 */
 

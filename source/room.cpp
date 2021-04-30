@@ -263,6 +263,7 @@ bool Room::pvp_controller(std::shared_ptr<Player> t, unsigned char* target)
         d = fmt::format("{0} proved to be no match for {1}.. but will {0} come back and settle this beef?\n",
         tmp->charTainer.CHARACTER_NAME,t->charTainer.CHARACTER_NAME);
         t->tally_pvp();
+        dead = true;
     }
     big_bundle_update();
     room_write(m);
@@ -278,7 +279,7 @@ bool Room::pvp_controller(std::shared_ptr<Player> t, unsigned char* target)
         room_write(m);
         return true;
     }
-    // regen and get ready for player two's attack.
+    // Player Two's attack now.
     
     return true;
     
