@@ -17,7 +17,9 @@ class Room
         uint16_t difficulty;
         uint16_t firepower;
         uint16_t coffer;
-
+        // uint16_t currentKills;
+        uint16_t totalKills;
+        uint16_t totalDeaths;
         std::vector<std::shared_ptr<Room>> room_connections;
         std::vector<std::shared_ptr<Baddie>> baddie_list;
         std::vector<std::shared_ptr<Player>> player_list;
@@ -37,6 +39,7 @@ class Room
         void emplace_baddie(std::shared_ptr<Baddie>);
         void emplace_player(std::shared_ptr<Player>);
         void remove_player(std::shared_ptr<Player>);
+        
 
         void inform_connections(std::shared_ptr<Player>);    // "static"
         void inform_player_friendly(std::shared_ptr<Player>);  // everyone for everyone
@@ -46,8 +49,11 @@ class Room
 
         // fight logic
         bool initiate_fight_baddie(std::shared_ptr<Player>);
+        bool initiate_fight_player(std::shared_ptr<Player>,unsigned char*);
         void fight_controller(std::shared_ptr<Player>);
         void slay_baddie(std::shared_ptr<Baddie>);
+
+        bool pvp_controller(std::shared_ptr<Player>,unsigned char*);
         //helper
         bool isValidConnection(uint16_t);
         bool isValidBaddie();
@@ -58,9 +64,11 @@ class Room
         void bundle_update(std::shared_ptr<Player>);
         void big_bundle_update();
         void spread_wealth();
-        
+        void tally_kills(uint16_t);
         void room_write(std::string);
         void respawn_baddies();
+        void mass_kill_report();
+        void single_kill_report(std::shared_ptr<Player>);
         
         //debug
         // size_t room_connection_size();

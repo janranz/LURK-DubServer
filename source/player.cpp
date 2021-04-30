@@ -18,7 +18,11 @@ Player::Player(int fd)
     charTainer.GOLD = 0;
     charTainer.CURRENT_ROOM_NUMBER = 0;
     gender = "a";
+    genderPos = "a";
+    genderHeShe = "a";
     desc = "";
+    pvpKills = 0;
+    totalDeaths = 0;
 }
 
 //state check
@@ -47,7 +51,35 @@ bool Player::isPlayerAlive()
     std::shared_lock<std::shared_mutex>lock(pLock);
     return playerAlive;
 }
+
+uint16_t Player::getPVPKills()
+{
+    std::shared_lock<std::shared_mutex>lock(pLock);
+    return pvpKills;
+}
 //state set
+
+void Player::full_restore_health()
+{
+    std::lock_guard<std::shared_mutex>lock(pLock);
+    if(playerAlive)
+    {
+        charTainer.HEALTH = baseHealth;
+    }
+}
+
+void Player::tally_pvp()
+{
+    {
+        std::lock_guard<std::shared_mutex> lock(pLock);
+        if((pvpKills + 1) > serverStats::PLAYER_MAX_STAT)
+        {
+            pvpKills = serverStats::PLAYER_MAX_STAT;
+        }else{
+            pvpKills++;
+        }
+    }
+}
 
 void Player::giveRoom(uint16_t n)
 {
@@ -70,9 +102,11 @@ void Player::startPlayer(bool g)
         {
             gender = "her";
             genderPos = "her";
+            genderHeShe = "she";
         }else{
             gender = "him";
             genderPos = "his";
+            genderHeShe = "he";
         }
     }
 }
@@ -114,6 +148,7 @@ void Player::respawn()
         charTainer.HEALTH = baseHealth;
         charTainer.FLAGS = serverStats::PLAYER_AFLAGS;
         playerAlive = true;
+        currScore = 0;
     }
 }
 
@@ -127,7 +162,9 @@ bool Player::hurt_player(int16_t h)
             charTainer.HEALTH -= h;
         }else{
             charTainer.HEALTH = 0;
+            // currScore = 0;
             charTainer.FLAGS = serverStats::PLAYER_DFLAGS;
+            totalDeaths++;
             playerAlive = false;
             
         }
@@ -159,16 +196,29 @@ void Player::give_gold(uint16_t g)
     }
 }
 
-void Player::take_gold(uint16_t g)
+uint16_t Player::drop_gold()
 {
+    uint16_t drop = 0;
     std::lock_guard<std::shared_mutex>lock(pLock);
-    if((charTainer.GOLD - g) < 0)
+    if(charTainer.GOLD > 0)
     {
-        charTainer.GOLD = 0;
-    }else{
-        charTainer.GOLD -= g;
+        drop = (fast_rand() % ((charTainer.GOLD + 1) - 1) + 1);
+        charTainer.GOLD -= drop;
     }
+    
+    return drop;
 }
+
+// void Player::take_gold(uint16_t g)
+// {// obsolete
+//     std::lock_guard<std::shared_mutex>lock(pLock);
+//     if((charTainer.GOLD - g) < 0)
+//     {
+//         charTainer.GOLD = 0;
+//     }else{
+//         charTainer.GOLD -= g;
+//     }
+// }
 
 //getter
 

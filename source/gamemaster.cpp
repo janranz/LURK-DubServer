@@ -161,7 +161,7 @@ void Gamemaster::populate_rooms()
     {
         int roomNumber = (*t)->roomTainer.ROOM_NUMBER;
         int baddie_count = (fast_rand() %
-            (serverStats::MAX_BADDIES_PER_ROOM - serverStats::MIN_BADDIES_PER_ROOM)
+            ((serverStats::MAX_BADDIES_PER_ROOM + 1) - serverStats::MIN_BADDIES_PER_ROOM)
             + serverStats::MIN_BADDIES_PER_ROOM);
         
         for(int i = 0; i < baddie_count; i++)
@@ -281,6 +281,8 @@ void Gamemaster::GMController(int fd)
         }else if(type == LURK_TYPES::TYPE_CHARACTER)
         {
             error_character(p);
+        }else if(type == LURK_TYPES::TYPE_PVP){
+            proc_pvp(p);
         }else{
             {
                 std::lock_guard<std::mutex>lock(printLock);fmt::print("{0} SENT INVALID TYPE: {1}\n",p->charTainer.CHARACTER_NAME,type);
@@ -310,6 +312,34 @@ uint8_t Gamemaster::listener(std::shared_ptr<Player> p)
 }
 
 //type processing
+
+void Gamemaster::proc_pvp(std::shared_ptr<Player> p)
+{
+    LURK_PVP pkg;
+    ssize_t bytes;
+    std::string m;
+
+    bytes = recv(p->getFD(),&pkg,sizeof(LURK_PVP),MSG_WAITALL);
+    if(bytes < 1)
+    {
+        p->quitPlayer();
+        return;
+    }
+    uint16_t pastPvpKills = p->getPVPKills();
+    {
+        std::shared_lock<std::shared_mutex>lock(GMLock);
+        int r = p->charTainer.CURRENT_ROOM_NUMBER;
+        if(!(master_room_list.at(r)->initiate_fight_player(p,pkg.TARGET)))
+        {
+            error_pvp(p);
+        }else if(p->getPVPKills() > pastPvpKills)
+        {
+            m = fmt::format("BEWARE: {0} is on a PVP rampage!\n{1} PVP kill count has increased: {2} (after killing {3})",p->charTainer.CHARACTER_NAME,p->genderPos,p->getPVPKills(),pkg.TARGET);
+        }else{
+            m = fmt::format("PVP FAILED: {0} just failed to kill {1}!, {1} is on a PVP rampage!\n",p->charTainer.CHARACTER_NAME,pkg.TARGET);
+        }
+    }
+}
 
 void Gamemaster::proc_fight(std::shared_ptr<Player> p)
 {
@@ -451,6 +481,17 @@ void Gamemaster::error_invalid(std::shared_ptr<Player> p)
     p->write_error(pkg,m);
 }
 
+void Gamemaster::error_pvp(std::shared_ptr<Player> p)
+{
+    LURK_ERROR pkg;
+    pkg.CODE = 0;
+    std::string m = fmt::format("{0}: The player may not exist, or is currently involved in a fight.\nCheck the name and try again! (not case sensitive)\n",serverStats::GM_NAME);
+    p->write_error(pkg,m);
+    int rm = p->charTainer.CURRENT_ROOM_NUMBER;
+    m = fmt::format("{0} is looking for a PVP fight in the {1}. Anyone looking to step up to {2}?\n",p->charTainer.CHARACTER_NAME,master_room_list.at(rm)->roomTainer.ROOM_NAME,p->gender);
+    write_global(m);
+}
+
 void Gamemaster::error_fight(std::shared_ptr<Player> p)
 {
     LURK_ERROR pkg;
@@ -558,7 +599,7 @@ bool Gamemaster::check_stat(std::shared_ptr<Player> p)
     
     uint16_t stat = p->charTainer.ATTACK + p->charTainer.DEFENSE + p->charTainer.REGEN;
     p->charTainer.GOLD = (fast_rand() %
-        (serverStats::PLAYER_MAX_GOLD - serverStats::PLAYER_MIN_GOLD) + serverStats::PLAYER_MIN_GOLD);
+        ((serverStats::PLAYER_MAX_GOLD + 1) - serverStats::PLAYER_MIN_GOLD) + serverStats::PLAYER_MIN_GOLD);
     
     if(stat <= serverStats::PLAYER_INIT_POINTS)
     {
@@ -585,6 +626,7 @@ bool Gamemaster::check_stat(std::shared_ptr<Player> p)
     }
     return good;
 }
+
 
 void Gamemaster::spawn_player(std::shared_ptr<Player> p)
 {

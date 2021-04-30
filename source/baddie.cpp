@@ -57,11 +57,11 @@ void Baddie::respawn()
     alive = true;
     bTainer.FLAGS = serverStats::BADDIE_AFLAGS;
     bTainer.GOLD = (fast_rand() %
-        (serverStats::BADDIE_MAX_GOLD - serverStats::BADDIE_MIN_GOLD)
+        ((serverStats::BADDIE_MAX_GOLD + 1) - serverStats::BADDIE_MIN_GOLD)
         + serverStats::BADDIE_MIN_GOLD);
 
     bTainer.HEALTH = (fast_rand() %
-        (serverStats::BADDIE_MAX_HEALTH - serverStats::BADDIE_MIN_HEALTH)
+        ((serverStats::BADDIE_MAX_HEALTH + 1)- serverStats::BADDIE_MIN_HEALTH)
         + serverStats::BADDIE_MIN_HEALTH);
     
     // int remaining = serverStats::PLAYER_INIT_POINTS;
