@@ -2,6 +2,7 @@
 #define PLAYER_H
 
 #include"../headers/structs.h"
+#include"../headers/splitter.h"
 #include"../headers/fmt/format.h"
 #include<shared_mutex>
 #include<iostream>
@@ -16,6 +17,8 @@ class Player
         bool validToon;
         bool freshSpawn;
         bool playerAlive;
+        uint16_t highScore;
+        uint16_t currScore;
 
 
         // fight logic
@@ -47,12 +50,19 @@ class Player
         void despawn();
         bool hurt_player(int16_t);
         void heal_player(int16_t);
+        void tally_curr(uint16_t);
+        void give_gold(uint16_t);
+        void take_gold(uint16_t);
+        
 
         //getter
         int getFD();
         uint16_t getCrit();
         uint16_t getRoomNumber();
-
+        uint16_t getHighScore();
+        uint16_t getCurrScore();
+        uint16_t get_gold();
+        uint16_t loot_me();
         //writer
         void write_msg(LURK_MSG, std::string);
         void write_error(LURK_ERROR, std::string);

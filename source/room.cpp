@@ -12,6 +12,7 @@ Room::Room(std::string name,std::string desc,uint16_t num)
     difficulty = 1;
     firepower = 1;
     fight_in_progress = false;
+    coffer = 0;
 
 }
 
@@ -169,7 +170,7 @@ bool Room::initiate_fight_baddie(std::shared_ptr<Player> p)
     SLock.lock();
     if(!(isValidBaddie()) || fight_in_progress)
     {
-        {std::lock_guard<std::mutex>lock(printLock);fmt::print("No baddies!\n");}
+        // {std::lock_guard<std::mutex>lock(printLock);fmt::print("No baddies!\n");}
         return false;
     }
     SLock.unlock();
@@ -177,6 +178,11 @@ bool Room::initiate_fight_baddie(std::shared_ptr<Player> p)
     QLock.lock();
     fight_in_progress = true;
     fight_controller(p);
+    if(!(isValidBaddie()))
+    {
+        spread_wealth();
+    }
+    
     fight_in_progress = false;
     QLock.unlock();
 
@@ -186,6 +192,32 @@ bool Room::initiate_fight_baddie(std::shared_ptr<Player> p)
     
     return true;
     // think about communicating a cleanup routine after death. How will we move them to spawn?
+}
+
+void Room::spread_wealth()
+{
+    std::string m = fmt::format("Coffer Distribution: {0} gold\n",coffer);
+    std::string n;
+    if(!(player_list.empty()))
+    {
+        int split = player_list.size();
+        while(coffer % split != 0)
+        {
+            coffer++;
+        }
+        uint16_t tempSanity = 0;
+        for(auto b = player_list.begin(); b != player_list.end(); ++b)
+        {
+            uint16_t cut = (coffer / split);
+            (*b)->give_gold(cut);
+            tempSanity += cut;
+            n = fmt::format("{0} obtains {1} gold.\n",(*b)->charTainer.CHARACTER_NAME,cut);
+            m += n;
+        }
+        big_bundle_update();
+        room_write(m);
+        {std::lock_guard<std::mutex>lock(printLock);fmt::print("Coffer: {0}\ntempSanity:{1}",coffer,tempSanity);}
+    }
 }
 
 void Room::fight_controller(std::shared_ptr<Player> inst)
@@ -198,6 +230,7 @@ void Room::fight_controller(std::shared_ptr<Player> inst)
     uint32_t roll;
     uint32_t negate;
     uint32_t defMulti;
+    uint16_t kills = 0;
     
 
     int bDex;
@@ -258,7 +291,8 @@ void Room::fight_controller(std::shared_ptr<Player> inst)
             if(!(baddie_list.at(bDex)->hurt_baddie(roll)))
             {// final blow
                 m = fmt::format("{0} delivers the most savage, and ruthless blow of {1} damage\nto {2}'s goofy looking head, casting him into the lake of fire with the quickness!\n",
-                (*p)->charTainer.CHARACTER_NAME,std::to_string(negate),baddie_list.at(bDex)->bTainer.CHARACTER_NAME);
+                (*p)->charTainer.CHARACTER_NAME,std::to_string(roll),baddie_list.at(bDex)->bTainer.CHARACTER_NAME);
+                coffer += baddie_list.at(bDex)->loot_me();
                 big_bundle_update();
                 room_write(m);
                 next = true;
@@ -383,6 +417,8 @@ void Room::fight_controller(std::shared_ptr<Player> inst)
         room_write(m);
 
     }
+    m = fmt::format("Current Room Coffer: {0} gold!\n",coffer);
+    room_write(m);
 }
 
 void Room::respawn_baddies()

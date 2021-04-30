@@ -16,6 +16,8 @@ class Room
     private:
         uint16_t difficulty;
         uint16_t firepower;
+        uint16_t coffer;
+
         std::vector<std::shared_ptr<Room>> room_connections;
         std::vector<std::shared_ptr<Baddie>> baddie_list;
         std::vector<std::shared_ptr<Player>> player_list;
@@ -55,6 +57,7 @@ class Room
         void calculateDiff();
         void bundle_update(std::shared_ptr<Player>);
         void big_bundle_update();
+        void spread_wealth();
         
         void room_write(std::string);
         void respawn_baddies();

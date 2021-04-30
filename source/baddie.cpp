@@ -37,6 +37,20 @@ bool Baddie::is_alive()
     return alive;
 }
 
+uint16_t Baddie::loot_me()
+{
+    uint16_t drop;
+    std::lock_guard<std::shared_mutex>lock(bLock);
+    if(bTainer.GOLD != 0)
+    {
+        drop = (fast_rand() % (bTainer.GOLD + 1) + 1);
+        bTainer.GOLD -= drop;
+    }else{
+        drop = 0;
+    }
+    return drop;
+}
+
 void Baddie::respawn()
 {
     std::lock_guard<std::shared_mutex>lock(bLock);

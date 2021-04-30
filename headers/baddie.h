@@ -19,11 +19,16 @@ class Baddie
     public:
         LURK_CHARACTER bTainer;
         std::string desc;
+        //set state
         bool hurt_baddie(int16_t);
         void heal_baddie(int16_t);
+        void respawn();
+        uint16_t loot_me();
+        //getter
         uint16_t getCrit();
         bool is_alive();
-        void respawn();
+        
+
     
 
 };

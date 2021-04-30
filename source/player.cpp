@@ -96,6 +96,17 @@ void Player::setValid()
 {
     {std::lock_guard<std::shared_mutex> lock(pLock);validToon = true;}
 }
+
+void Player::tally_curr(uint16_t n)
+{
+    std::lock_guard<std::shared_mutex>lock(pLock);
+    currScore += n;
+    if(currScore > highScore)
+    {
+        highScore = currScore;
+    }
+}
+
 void Player::respawn()
 {
     {
@@ -137,7 +148,48 @@ void Player::heal_player(int16_t h)
     }
 }
 
+void Player::give_gold(uint16_t g)
+{
+    std::lock_guard<std::shared_mutex>lock(pLock);
+    if((charTainer.GOLD + g ) > serverStats::PLAYER_MAX_STAT)
+    {
+        charTainer.GOLD = serverStats::PLAYER_MAX_STAT;
+    }else{
+        charTainer.GOLD += g;
+    }
+}
+
+void Player::take_gold(uint16_t g)
+{
+    std::lock_guard<std::shared_mutex>lock(pLock);
+    if((charTainer.GOLD - g) < 0)
+    {
+        charTainer.GOLD = 0;
+    }else{
+        charTainer.GOLD -= g;
+    }
+}
+
 //getter
+
+uint16_t Player::getHighScore()
+{
+    std::shared_lock<std::shared_mutex>lock(pLock);
+    return highScore;
+}
+
+uint16_t Player::get_gold()
+{
+    std::shared_lock<std::shared_mutex>lock(pLock);
+    return charTainer.GOLD;
+}
+
+uint16_t Player::getCurrScore()
+{
+    std::shared_lock<std::shared_mutex>lock(pLock);
+    return currScore;
+}
+
 int Player::getFD()
 {
     std::shared_lock<std::shared_mutex>lock(pLock);
@@ -153,6 +205,21 @@ uint16_t Player::getCrit()
     std::shared_lock<std::shared_mutex>lock(pLock);
     return critDamage;
 }
+
+uint16_t Player::loot_me()
+{
+    uint16_t drop;
+    std::lock_guard<std::shared_mutex>lock(pLock);
+    if(charTainer.GOLD != 0)
+    {
+        drop = (fast_rand() % (charTainer.GOLD + 1) + 1);
+        charTainer.GOLD -= drop;
+    }else{
+        drop = 0;
+    }
+    return drop;
+}
+
 //writer
 
 void Player::write_reflect()
