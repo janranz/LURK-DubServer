@@ -55,6 +55,7 @@ class Room
         void calculateDiff();
         void bundle_update(std::shared_ptr<Player>);
         void big_bundle_update();
+        
         void room_write(std::string);
         void respawn_baddies();
         

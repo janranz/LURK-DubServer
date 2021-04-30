@@ -30,7 +30,7 @@ uint16_t const  serverStats::BADDIE_MIN_STAT      = 400;
 uint16_t const  serverStats::BADDIE_MAX_STAT      = 16000;
 uint16_t const  serverStats::MAX_BADDIES          = 1000;
 uint16_t const  serverStats::MIN_BADDIES_PER_ROOM = 2;
-uint16_t const  serverStats::MAX_BADDIES_PER_ROOM = 6;
+uint16_t const  serverStats::MAX_BADDIES_PER_ROOM = 5;
 
 uint16_t const  serverStats::MAX_ROOMS = 10;
 uint16_t const  serverStats::BUFF_SIZE = 6000;

@@ -203,12 +203,15 @@ void Room::fight_controller(std::shared_ptr<Player> inst)
     int bDex;
     
     bDex = LiveBaddieDex();
-    
-    m = fmt::format("{0} grows tired of {1} looking at them with googly eyes and decides to start a fight!\n",
-    inst->charTainer.CHARACTER_NAME,baddie_list.at(bDex)->bTainer.CHARACTER_NAME); // potential UB.
-
-    room_write(m);
-
+    if(bDex != -1)
+    {
+        m = fmt::format("{0} grows tired of {1} looking at them with googly eyes and decides to start a fight!\n",
+        inst->charTainer.CHARACTER_NAME,baddie_list.at(bDex)->bTainer.CHARACTER_NAME); // potential UB.
+        room_write(m);
+    }else{
+        std::lock_guard<std::mutex>lock(printLock);
+        fmt::print("bDex crapped out?: {0}",bDex);
+    }
     for(auto p = player_list.begin(); p != player_list.end(); ++p)
     {
         if(!(*p)->isPlayerAlive())

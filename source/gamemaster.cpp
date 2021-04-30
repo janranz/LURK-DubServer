@@ -422,12 +422,13 @@ void Gamemaster::proc_start(std::shared_ptr<Player> p)
         master_player_list.emplace_back(p);
         size = master_player_list.size();
         genderBender = !genderBender;
+        p->startPlayer(genderBender);
     }
     {
         std::lock_guard<std::mutex> lock(printLock);
         fmt::print("{0} has been added to Master: {1} (size)\n",p->charTainer.CHARACTER_NAME,size);
     }
-    p->startPlayer(genderBender);
+    
     p->write_accept(LURK_TYPES::TYPE_START);
     spawn_player(p);
 }
@@ -590,6 +591,7 @@ void Gamemaster::spawn_player(std::shared_ptr<Player> p)
     std::string m;
     {
         std::lock_guard<std::shared_mutex>lock(GMLock); // double check exclusiveness
+        // std::shared_lock<std::shared_mutex>lock(GMLock); // double check exclusiveness
         if(!(p->isPlayerAlive()))
         {
             uint16_t rm = p->getRoomNumber();
@@ -598,6 +600,7 @@ void Gamemaster::spawn_player(std::shared_ptr<Player> p)
             master_room_list.at(rm)->remove_player(p);
             master_room_list.at(0)->emplace_player(p);
             master_room_list.at(rm)->inform_others_player(p);
+            
         }else{
             p->respawn();
             master_room_list.at(0)->emplace_player(p);
