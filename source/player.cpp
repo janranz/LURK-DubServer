@@ -62,10 +62,7 @@ uint16_t Player::getPVPKills()
 void Player::full_restore_health()
 {
     std::lock_guard<std::shared_mutex>lock(pLock);
-    if(playerAlive)
-    {
-        charTainer.HEALTH = baseHealth;
-    }
+    charTainer.HEALTH = serverStats::PLAYER_BASE_HEALTH;
 }
 
 void Player::tally_pvp()
@@ -96,7 +93,7 @@ void Player::startPlayer(bool g)
         started = true;
         playerAlive = true;
         charTainer.FLAGS = serverStats::PLAYER_AFLAGS;
-        baseHealth = charTainer.HEALTH;
+        
         critDamage = (charTainer.ATTACK * 3);
         if(g)
         {
@@ -145,7 +142,7 @@ void Player::respawn()
 {
     {
         std::lock_guard<std::shared_mutex> lock(pLock);
-        charTainer.HEALTH = baseHealth;
+        charTainer.HEALTH = serverStats::PLAYER_BASE_HEALTH;
         charTainer.FLAGS = serverStats::PLAYER_AFLAGS;
         playerAlive = true;
         currScore = 0;
@@ -176,11 +173,11 @@ void Player::heal_player(int16_t h)
 {
     {
         std::lock_guard<std::shared_mutex>lock(pLock);
-        if((charTainer.HEALTH + h) <= baseHealth)
+        if((charTainer.HEALTH + h) <= serverStats::PLAYER_BASE_HEALTH)
         {
             charTainer.HEALTH += h;
         }else{
-            charTainer.HEALTH = baseHealth;
+            charTainer.HEALTH = serverStats::PLAYER_BASE_HEALTH;
         }
     }
 }
@@ -283,6 +280,7 @@ void Player::write_reflect()
     }
     if( bytes < 1)
     {
+        {std::lock_guard<std::mutex>lock(printLock);fmt::print("DEBUG: Line {0} - {1}\n",__LINE__,__FILE__);}
         quitPlayer();
     }
 }
@@ -302,6 +300,7 @@ void Player::write_msg(LURK_MSG pkg, std::string msg)
     }
         if(bytes < 1)
         {
+            {std::lock_guard<std::mutex>lock(printLock);fmt::print("DEBUG: Line {0} - {1}\n",__LINE__,__FILE__);}
             quitPlayer();
         }
     
@@ -318,6 +317,7 @@ void Player::write_error(LURK_ERROR pkg, std::string msg)
     }
     if(bytes < 1)
     {
+        {std::lock_guard<std::mutex>lock(printLock);fmt::print("DEBUG: Line {0} - {1}\n",__LINE__,__FILE__);}
         quitPlayer();
     }
 }
@@ -333,6 +333,7 @@ void Player::write_accept(uint8_t t)
     }
     if(bytes < 1)
     {
+        {std::lock_guard<std::mutex>lock(printLock);fmt::print("DEBUG: Line {0} - {1}\n",__LINE__,__FILE__);}
         quitPlayer();
     }
 }
@@ -347,6 +348,7 @@ void Player::write_room(LURK_ROOM pkg, std::string msg)
     }
     if(bytes < 1)
     {
+        {std::lock_guard<std::mutex>lock(printLock);fmt::print("DEBUG: Line {0} - {1}\n",__LINE__,__FILE__);}
         quitPlayer();
     }
 }
@@ -361,6 +363,7 @@ void Player::write_character(LURK_CHARACTER pkg, std::string msg)
     }
     if(bytes < 1)
     {
+        {std::lock_guard<std::mutex>lock(printLock);fmt::print("DEBUG: Line {0} - {1}\n",__LINE__,__FILE__);}
         quitPlayer();
     }
 }
@@ -375,6 +378,7 @@ void Player::write_game(LURK_GAME pkg, std::string msg)
     }
     if(bytes < 1)
     {
+        {std::lock_guard<std::mutex>lock(printLock);fmt::print("DEBUG: Line {0} - {1}\n",__LINE__,__FILE__);}
         quitPlayer();
     }
 }
@@ -388,6 +392,7 @@ void Player::write_version(LURK_VERSION pkg)
     }
     if(bytes < 1)
     {
+        {std::lock_guard<std::mutex>lock(printLock);fmt::print("DEBUG: Line {0} - {1}\n",__LINE__,__FILE__);}
         quitPlayer();
     }
 }
@@ -402,6 +407,7 @@ void Player::write_connection(LURK_ROOM pkg,std::string msg)
     }
     if(bytes < 1)
     {
+        {std::lock_guard<std::mutex>lock(printLock);fmt::print("DEBUG: Line {0} - {1}\n",__LINE__,__FILE__);}
         quitPlayer();
     }
 }

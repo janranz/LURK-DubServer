@@ -10,8 +10,8 @@ uint8_t  const  serverStats::GAME_VERSION_MAJOR  = 2;
 uint8_t  const  serverStats::GAME_VERSION_MINOR  = 2;
 uint8_t  const  serverStats::GAME_VERSION_EXT    = 0;
 uint16_t const  serverStats::PLAYER_INIT_POINTS  = 6000;
-// uint16_t constexpr  serverStats::PLAYER_MAX_STAT     = std::numeric_limits<unsigned short>::max();
-// int16_t  constexpr  serverStats::PLAYER_S_MAX_STAT   = std::numeric_limits<short>::max();
+uint16_t const  serverStats::PLAYER_MAX_STAT     = 65535;
+int16_t  const  serverStats::PLAYER_S_MAX_STAT   = 32767;
 // uint8_t FLAGS: [ALIVE JOIN_BATTLE MONSTER STARTED READY RES RES RES]
 uint8_t  const  serverStats::BASE_FLAGS          = 0b11001000;
 uint8_t  const  serverStats::PLAYER_AFLAGS       = 0b11011000; // force join battle only for now

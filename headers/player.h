@@ -24,7 +24,6 @@ class Player
 
         // fight logic
         uint32_t critDamage;
-        int16_t baseHealth;
         uint32_t totalDeaths;
     
     public:

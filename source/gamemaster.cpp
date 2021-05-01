@@ -257,11 +257,13 @@ void Gamemaster::GMController(int fd)
 
         if(!(p->isPlayerAlive()))
         {
-            spawn_player(p);
+            // spawn_player(p);
             if(type != LURK_TYPES::TYPE_MSG && type != LURK_TYPES::TYPE_LEAVE)
             {
+                {std::lock_guard<std::mutex>lock(printLock);fmt::print("DEBUG: Line {0} - {1}\n",__LINE__,__FILE__);}
                 error_dead(p);
                 pump_n_dump(p);
+                spawn_player(p);
                 continue;
             }
         }
@@ -273,6 +275,7 @@ void Gamemaster::GMController(int fd)
             proc_changeroom(p);
         }else if((type == LURK_TYPES::TYPE_LEAVE) || (type == 0))
         {
+            {std::lock_guard<std::mutex>lock(printLock);fmt::print("DEBUG: Line {0} - {1}\n",__LINE__,__FILE__);}
             p->quitPlayer();
         }else if(type == LURK_TYPES::TYPE_FIGHT)
         {
@@ -321,6 +324,7 @@ void Gamemaster::proc_pvp(std::shared_ptr<Player> p)
     bytes = recv(p->getFD(),&pkg,sizeof(LURK_PVP),MSG_WAITALL);
     if(bytes < 1)
     {
+        {std::lock_guard<std::mutex>lock(printLock);fmt::print("DEBUG: Line {0} - {1}\n",__LINE__,__FILE__);}
         p->quitPlayer();
         return;
     }
@@ -372,6 +376,7 @@ void Gamemaster::proc_msg(std::shared_ptr<Player> p)
 
     if(bytes < 1)
     {
+        {std::lock_guard<std::mutex>lock(printLock);fmt::print("DEBUG: Line {0} - {1}\n",__LINE__,__FILE__);}
         p->quitPlayer();
         return;
     }
@@ -402,6 +407,7 @@ void Gamemaster::proc_changeroom(std::shared_ptr<Player> p)
     bytes = recv(p->getFD(),&roomReq,sizeof(uint16_t),MSG_WAITALL);
     if( bytes < 1)
     {
+        {std::lock_guard<std::mutex>lock(printLock);fmt::print("DEBUG: Line {0} - {1}\n",__LINE__,__FILE__);}
         p->quitPlayer();
         return;
     }
@@ -424,6 +430,7 @@ void Gamemaster::proc_character(std::shared_ptr<Player> p)
 
     if(bytes < 1)
     {
+        {std::lock_guard<std::mutex>lock(printLock);fmt::print("DEBUG: Line {0} - {1}\n",__LINE__,__FILE__);}
         p->quitPlayer();
         return;
     }
@@ -602,10 +609,14 @@ bool Gamemaster::check_stat(std::shared_ptr<Player> p)
     
     if(stat <= serverStats::PLAYER_INIT_POINTS)
     {
-        uint16_t remaining = serverStats::PLAYER_INIT_POINTS - stat;
-        p->charTainer.HEALTH = (serverStats::PLAYER_BASE_HEALTH + remaining);
+        // uint16_t remaining = serverStats::PLAYER_INIT_POINTS - stat;
+        p->full_restore_health();
         good = true;
         p->charTainer.CURRENT_ROOM_NUMBER = 0;
+        // giving a bonus point to alleviate any chance of Div By 0.
+        p->charTainer.ATTACK  += 1;
+        p->charTainer.DEFENSE += 1;
+        p->charTainer.REGEN   += 1;
     }
     p->charTainer.DESC_LENGTH = p->desc.length();
 
