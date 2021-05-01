@@ -20,8 +20,8 @@ class Baddie
         LURK_CHARACTER bTainer;
         std::string desc;
         //set state
-        bool hurt_baddie(int16_t);
-        void heal_baddie(int16_t);
+        bool hurt_baddie(int32_t);
+        void heal_baddie(int32_t);
         void respawn();
         uint16_t loot_me();
         //getter

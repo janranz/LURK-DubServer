@@ -18,7 +18,7 @@ uint8_t  const  serverStats::PLAYER_AFLAGS       = 0b11011000; // force join bat
 uint8_t  const  serverStats::PLAYER_DFLAGS       = 0b01011000; // force join battle only for now
 int16_t  const  serverStats::PLAYER_BASE_HEALTH  = 32000;
 uint16_t const  serverStats::PLAYER_MIN_GOLD     = 200;
-uint16_t const  serverStats::PLAYER_MAX_GOLD     = 4000;
+uint16_t const  serverStats::PLAYER_MAX_GOLD     = 14000;
 
 uint8_t  const  serverStats::BADDIE_AFLAGS        = 0b11111000;
 uint8_t  const  serverStats::BADDIE_DFLAGS        = 0b01111000;

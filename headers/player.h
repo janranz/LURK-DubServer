@@ -50,10 +50,10 @@ class Player
         void giveRoom(uint16_t);
         void respawn();
         void despawn();
-        bool hurt_player(int16_t);
-        void heal_player(int16_t);
-        void tally_curr(uint16_t);
-        void give_gold(uint16_t);
+        bool hurt_player(int32_t);
+        void heal_player(int32_t);
+        void tally_curr(uint32_t);
+        void give_gold(uint32_t);
         // void take_gold(uint16_t);
         
         void tally_pvp();

@@ -1,6 +1,6 @@
 #include"../headers/baddie.h"
 
-bool Baddie::hurt_baddie(int16_t h)
+bool Baddie::hurt_baddie(int32_t h)
 {
     std::lock_guard<std::shared_mutex>lock(bLock);
     if((bTainer.HEALTH - h) > 0)
@@ -14,7 +14,7 @@ bool Baddie::hurt_baddie(int16_t h)
     return alive;
 }
 
-void Baddie::heal_baddie(int16_t h)
+void Baddie::heal_baddie(int32_t h)
 {
     std::lock_guard<std::shared_mutex>lock(bLock);
     if((bTainer.HEALTH + h) > serverStats::BADDIE_MAX_HEALTH)
@@ -64,43 +64,54 @@ void Baddie::respawn()
         ((serverStats::BADDIE_MAX_HEALTH + 1)- serverStats::BADDIE_MIN_HEALTH)
         + serverStats::BADDIE_MIN_HEALTH);
     
-    // int remaining = serverStats::PLAYER_INIT_POINTS;
-    uint16_t remaining = (fast_rand() % ((serverStats::BADDIE_MAX_STAT + 1) - serverStats::BADDIE_MIN_STAT) + serverStats::BADDIE_MIN_STAT);
-    uint16_t attack = 0;
-    uint16_t defense = 0;
-    uint16_t regen = 0;
-    int roll;
-    int i = 0;
-    while(remaining != 0)
-    {
-        switch(i % 3)
-        {
-            case 0:
-            {
-                roll = (fast_rand() % (remaining) + 1);
-                attack += roll;
-                remaining -= roll;
-                break;                
-            }
-            case 1:
-            {
-                roll = (fast_rand() % (remaining) + 1);
-                defense += roll;
-                remaining -= roll;
-                break;
-            }
-            case 2:
-            {
-                roll = (fast_rand() % (remaining) + 1);
-                regen += roll;
-                remaining -= roll;
-                break;
-            }
-        }
-        i++;
+    bTainer.ATTACK = (fast_rand() % ((serverStats::BADDIE_MAX_STAT + 1) - serverStats::BADDIE_MIN_STAT) + serverStats::BADDIE_MIN_STAT);
+    bTainer.DEFENSE = (fast_rand() % ((serverStats::BADDIE_MAX_STAT + 1) - serverStats::BADDIE_MIN_STAT) + serverStats::BADDIE_MIN_STAT);
+    bTainer.REGEN = (fast_rand() % ((serverStats::BADDIE_MAX_STAT + 1) - serverStats::BADDIE_MIN_STAT) + serverStats::BADDIE_MIN_STAT);
+    
+    if((bTainer.ATTACK * 3) >= serverStats::BADDIE_MAX_STAT)
+    {// YIKES
+        critDamage = 1;
+    }else{
+        critDamage = bTainer.ATTACK * 3;
     }
-    bTainer.ATTACK = attack;
-    bTainer.DEFENSE = defense;
-    bTainer.REGEN = regen;
-    critDamage = (bTainer.ATTACK * 3);
+    
+    // int remaining = serverStats::PLAYER_INIT_POINTS;
+    // uint16_t remaining = (fast_rand() % ((serverStats::BADDIE_MAX_STAT + 1) - serverStats::BADDIE_MIN_STAT) + serverStats::BADDIE_MIN_STAT);
+    // uint16_t attack = 0;
+    // uint16_t defense = 0;
+    // uint16_t regen = 0;
+    // int roll;
+    // int i = 0;
+    // while(remaining != 0)
+    // {
+    //     switch(i % 3)
+    //     {
+    //         case 0:
+    //         {
+    //             roll = (fast_rand() % (remaining) + 1);
+    //             attack += roll;
+    //             remaining -= roll;
+    //             break;                
+    //         }
+    //         case 1:
+    //         {
+    //             roll = (fast_rand() % (remaining) + 1);
+    //             defense += roll;
+    //             remaining -= roll;
+    //             break;
+    //         }
+    //         case 2:
+    //         {
+    //             roll = (fast_rand() % (remaining) + 1);
+    //             regen += roll;
+    //             remaining -= roll;
+    //             break;
+    //         }
+    //     }
+    //     i++;
+    // }
+    // bTainer.ATTACK = attack;
+    // bTainer.DEFENSE = defense;
+    // bTainer.REGEN = regen;
+    // critDamage = (bTainer.ATTACK * 3);
 }

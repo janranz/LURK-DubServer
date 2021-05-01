@@ -177,8 +177,8 @@ bool Room::initiate_fight_player(std::shared_ptr<Player> p, unsigned char* targe
         return false;
     }
     SLock.unlock();
-    bool found = false;
-
+    
+    bool found;
     QLock.lock();
     fight_in_progress = true;
     // pvp controller
@@ -187,7 +187,7 @@ bool Room::initiate_fight_player(std::shared_ptr<Player> p, unsigned char* targe
     mass_kill_report();
     fight_in_progress = false;
     QLock.unlock();
-    return true;
+    return found;
 
 }
 
@@ -223,8 +223,8 @@ bool Room::pvp_controller(std::shared_ptr<Player> t, unsigned char* target)
     uint32_t roll;
     uint32_t negate;
     uint32_t def;
-    uint32_t regen;
-    uint16_t gold;
+    // uint32_t regen;
+    uint32_t gold;
     bool dead = false;
     m = fmt::format("{0} shoots a piercing-dagger look at {1} as {2} reaches for {3} bat. Look out!\n",
         t->charTainer.CHARACTER_NAME,tmp->charTainer.CHARACTER_NAME,t->genderHeShe,t->genderPos);
@@ -343,7 +343,7 @@ void Room::spread_wealth()
             
             for(auto b = player_list.begin(); b != player_list.end(); ++b)
             {
-                uint16_t cut = (coffer / split);
+                uint32_t cut = (coffer / split);
                 (*b)->give_gold(cut);
                 n = fmt::format("{0} obtains {1} gold\n",(*b)->charTainer.CHARACTER_NAME,cut);
                 m += n;
@@ -364,12 +364,12 @@ void Room::fight_controller(std::shared_ptr<Player> inst)
     std::string m;
     bool next = false;
     uint32_t crit;
-    uint16_t base;
+    uint32_t base;
     uint32_t roll;
     uint32_t negate;
     uint32_t defMulti;
     uint16_t kills = 0;
-    int16_t h = 0;
+    uint16_t h = 0;
     std::string after_action = "\n========== FIGHT SUMMARY ==========\n";
     // std::string aa_ap;
     int bDex;
@@ -410,11 +410,13 @@ void Room::fight_controller(std::shared_ptr<Player> inst)
             }
             
             uint32_t multi = 100 * firepower;
-            crit = ((*p)->getCrit()) + multi;
+            // crit = ((*p)->getCrit()) + multi;
             base = (*p)->charTainer.ATTACK;
             
             if(baddie_list.at(bDex)->is_alive())
-            {
+            {// balance issues
+                uint32_t halfDef = (baddie_list.at(bDex)->bTainer.DEFENSE / 2);
+                crit = ((*p)->getCrit()) + (multi + halfDef);
                 after_action += "-PLAYER FIGHT DATA: ";
                 after_action += fmt::format("[ FIGHTER: {0} | HEALTH: {1} ] vs ",(*p)->charTainer.CHARACTER_NAME,h);
                 h = baddie_list.at(bDex)->bTainer.HEALTH;
@@ -440,7 +442,7 @@ void Room::fight_controller(std::shared_ptr<Player> inst)
 
                 if(!(baddie_list.at(bDex)->hurt_baddie(roll)))
                 {// final blow
-                    uint16_t loot = baddie_list.at(bDex)->loot_me();
+                    uint32_t loot = baddie_list.at(bDex)->loot_me();
                     collect_donations(loot);
                     kills++;
                     big_bundle_update();
@@ -469,11 +471,9 @@ void Room::fight_controller(std::shared_ptr<Player> inst)
                 {
                     collect_donations(1500);
                     after_action += fmt::format("ENEMY FATALITY(BONUS): {0} takes unnecessary bonus damage equal to {1}! Good Googly Moogly!!\n",baddie_list.at(bDex)->bTainer.CHARACTER_NAME,bonus);
-                    
                     kills++;
                 }else{
                     after_action += fmt::format("ENEMY WOUNDED(BONUS): {0} takes unnecessary bonus damage equal to {1}! holy cow!\n",baddie_list.at(bDex)->bTainer.CHARACTER_NAME,bonus);
-                    collect_donations(1500);
                 }
 
                 big_bundle_update();
@@ -503,7 +503,7 @@ void Room::fight_controller(std::shared_ptr<Player> inst)
                         after_action += fmt::format("[ TARGET: {0} | HEALTH: {1} ]\n\n",(*p)->charTainer.CHARACTER_NAME,h);
                         crit = baddie_list.at(bDex)->getCrit();
                         base = baddie_list.at(bDex)->bTainer.ATTACK;
-                        defMulti = (*p)->charTainer.DEFENSE + (100 * firepower);
+                        defMulti = (*p)->charTainer.DEFENSE + (1000 * firepower);
                         roll = (fast_rand() % ((crit + 1) - base) + base);
                         if(roll >= (base * 2))
                         {
@@ -553,7 +553,7 @@ void Room::fight_controller(std::shared_ptr<Player> inst)
         if((*p)->isPlayerAlive())
         {
 
-            genMulti = (fast_rand() % ((serverStats::PLAYER_BASE_HEALTH + 1) - (*p)->charTainer.REGEN) + (*p)->charTainer.REGEN);
+            genMulti = (fast_rand() % ((serverStats::PLAYER_BASE_HEALTH + 1) - ((*p)->charTainer.REGEN) / 2) + ((*p)->charTainer.REGEN) / 2);
             (*p)->heal_player(genMulti);
             big_bundle_update();
             
@@ -565,41 +565,42 @@ void Room::fight_controller(std::shared_ptr<Player> inst)
         // room_write(m);
     }
     after_action += "\n-BADDIE REGEN DATA:\n";
-    for(auto b = baddie_list.begin(); b != baddie_list.end(); ++b)
+    if(baddie_list.at(bDex)->is_alive())
     {
-        if((*b)->is_alive())
-        {
-            if(firepower > difficulty)
-            {
-                genMulti = 500;
-            }else{
-                genMulti = 0;
-            }
-            // genMulti += (fast_rand() % ((*b)->bTainer.REGEN + 1) + 1);
-            genMulti = (fast_rand() % ((serverStats::BADDIE_MAX_HEALTH + 1) - (*b)->bTainer.REGEN) + (*b)->bTainer.REGEN);
-            (*b)->heal_baddie(genMulti);
-            big_bundle_update();
-            
-            after_action += fmt::format("{0} has recovered {1} health! and is angry as heck. YIKES!\n",(*b)->bTainer.CHARACTER_NAME,genMulti);
-            // after_action += fmt::format("{0} recovers {1} health.\n",(*b)->bTainer.CHARACTER_NAME,genMulti);
-        }else{
-            after_action += fmt::format("{0} lies there, looking ugly as sin. Whew... at least it didn't heal\n",(*b)->bTainer.CHARACTER_NAME);            
-        }
-        // room_write(m);
+        genMulti = (fast_rand() % (baddie_list.at(bDex)->bTainer.REGEN + 1) + 1);
+        baddie_list.at(bDex)->heal_baddie(genMulti);
+        after_action += fmt::format("{0} has recovered {1} health! and is angry as heck. YIKES!\n",baddie_list.at(bDex)->bTainer.CHARACTER_NAME,genMulti);
+        big_bundle_update();
+    }else{
+        //does this ever hit?
+        after_action += fmt::format("{0} lies there, looking ugly as sin. Whew... at least it didn't heal\n",baddie_list.at(bDex)->bTainer.CHARACTER_NAME);
     }
+    
+    // for(auto b = baddie_list.begin(); b != baddie_list.end(); ++b)
+    // {
+    //     if((*b)->is_alive())
+    //     {
+    //         if(firepower > difficulty)
+    //         {
+    //             genMulti = 500;
+    //         }else{
+    //             genMulti = 0;
+    //         }
+    //         // genMulti += (fast_rand() % ((*b)->bTainer.REGEN + 1) + 1);
+    //         genMulti = (fast_rand() % (serverStats::BADDIE_MAX_HEALTH + 1) + 1);
+    //         (*b)->heal_baddie(genMulti);
+    //         big_bundle_update();
+            
+    //         after_action += fmt::format("{0} has recovered {1} health! and is angry as heck. YIKES!\n",(*b)->bTainer.CHARACTER_NAME,genMulti);
+    //         // after_action += fmt::format("{0} recovers {1} health.\n",(*b)->bTainer.CHARACTER_NAME,genMulti);
+    //     }else{
+    //         after_action += fmt::format("{0} lies there, looking ugly as sin. Whew... at least it didn't heal\n",(*b)->bTainer.CHARACTER_NAME);            
+    //     }
+    //     // room_write(m);
+    // }
     after_action += "==========\n";
     room_write(after_action);
-    // mass_kill_report();
-    // int i = liveBaddieCount();
-    // if(i)
-    // {
-    //     m = fmt::format("{0} baddies remaining!\n",std::to_string(i));
-    // }else{
-    //     m = fmt::format("No more baddies remain!\n",std::to_string(i));
-    // }
-    // room_write(m);
-    // m = fmt::format("Current Room Coffer: {0} gold!\n",coffer);
-    // room_write(m);
+
 }
 
 void Room::tally_kills(uint16_t k)
@@ -629,7 +630,8 @@ void Room::mass_kill_report()
     std::string n;
     for(auto p = player_list.begin(); p != player_list.end(); ++p)
     {
-        n = fmt::format("{0}: Current Kills: {1} | High Score: {2}\n",(*p)->charTainer.CHARACTER_NAME,(*p)->getCurrScore(),(*p)->getHighScore());
+        n = fmt::format("[ {0}: Current PVE Kills: {1} | High Score(PVE): {2} | PVP Kills: {3} ]\n",
+            (*p)->charTainer.CHARACTER_NAME,(*p)->getCurrScore(),(*p)->getHighScore(),(*p)->getPVPKills());
         m += n;
     }
     int i = liveBaddieCount();
@@ -640,10 +642,9 @@ void Room::mass_kill_report()
     }else{
         o = fmt::format("No baddies remain... but they will be back.\n");
     }
-    n = fmt::format("========== CURRENT ROOM STATS ==========\nTotal Kills: {0}\nCoffer:{1} gold\n{2}",totalKills,coffer,o);
+    n = fmt::format("========== CURRENT ROOM STATS ==========\nTotal Baddies Killed: {0}\nTotal Player Deaths: {1}\nCoffer:{2} gold\n{3}",totalKills,totalDeaths,coffer,o);
     m += n;
     room_write(m);
-
 }
 
 void Room::single_kill_report(std::shared_ptr<Player> b)
@@ -652,7 +653,8 @@ void Room::single_kill_report(std::shared_ptr<Player> b)
     std::string n;
     for(auto p = player_list.begin(); p != player_list.end(); ++p)
     {
-        n = fmt::format("{0}: Current Kills: {1} | High Score: {2}\n",(*p)->charTainer.CHARACTER_NAME,(*p)->getCurrScore(),(*p)->getHighScore());
+        n = fmt::format("[ {0}: Current PVE Kills: {1} | High Score(PVE): {2} | PVP Kills: {3} ]\n",
+            (*p)->charTainer.CHARACTER_NAME,(*p)->getCurrScore(),(*p)->getHighScore(),(*p)->getPVPKills());
         m += n;
     }
     int i = liveBaddieCount();
@@ -663,7 +665,8 @@ void Room::single_kill_report(std::shared_ptr<Player> b)
     }else{
         o = fmt::format("No baddies remain... but they will be back.\n");
     }
-    n = fmt::format("========== CURRENT ROOM STATS ==========\nTotal Kills: {0}\nCoffer:{1} gold\n{2}",totalKills,coffer,o);
+    n = fmt::format("========== CURRENT ROOM STATS ==========\nTotal Baddies Killed: {0}\nTotal Player Deaths: {1}\nCoffer:{2} gold\n{3}",
+        totalKills,totalDeaths,coffer,o);
     m += n;
     b->write_msg(rmpm,m);
 

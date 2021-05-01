@@ -128,14 +128,20 @@ void Player::setValid()
     {std::lock_guard<std::shared_mutex> lock(pLock);validToon = true;}
 }
 
-void Player::tally_curr(uint16_t n)
+void Player::tally_curr(uint32_t n)
 {
     std::lock_guard<std::shared_mutex>lock(pLock);
-    currScore += n;
+    if((currScore + n) > std::numeric_limits<uint16_t>::max())
+    {
+        currScore += n;
+    }else{
+        currScore = std::numeric_limits<uint16_t>::max();
+    }
     if(currScore > highScore)
     {
         highScore = currScore;
     }
+
 }
 
 void Player::respawn()
@@ -149,7 +155,7 @@ void Player::respawn()
     }
 }
 
-bool Player::hurt_player(int16_t h)
+bool Player::hurt_player(int32_t h)
 {
     // bool dead = false;
     {
@@ -169,7 +175,7 @@ bool Player::hurt_player(int16_t h)
     return playerAlive;
 }
 
-void Player::heal_player(int16_t h)
+void Player::heal_player(int32_t h)
 {
     {
         std::lock_guard<std::shared_mutex>lock(pLock);
@@ -182,7 +188,7 @@ void Player::heal_player(int16_t h)
     }
 }
 
-void Player::give_gold(uint16_t g)
+void Player::give_gold(uint32_t g)
 {
     std::lock_guard<std::shared_mutex>lock(pLock);
     if((charTainer.GOLD + g ) > serverStats::PLAYER_MAX_STAT)
