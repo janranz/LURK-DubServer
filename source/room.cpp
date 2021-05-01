@@ -374,7 +374,13 @@ void Room::fight_controller(std::shared_ptr<Player> inst)
     // std::string aa_ap;
     int bDex;
     // after_action += "-PLAYER FIGHT DATA: ";
-    bDex = LiveBaddieDex();
+    if(isValidBaddie())
+    {
+        bDex = LiveBaddieDex();
+    }else{
+        {std::lock_guard<std::mutex>lock(printLock);fmt::print("BAD DEX: Line {0} - {1}\n",__LINE__,__FILE__);}
+    }
+        
     if(bDex != -1)
     {
         // m = fmt::format("{0} grows tired of {1} looking at them with googly eyes and decides to start a fight!\n",
@@ -712,6 +718,7 @@ bool Room::isValidBaddie()
 
 int Room::LiveBaddieDex()
 {
+
     liveDex.clear();
     int i = 0;
     for(auto b = baddie_list.begin(); b != baddie_list.end(); ++b)
@@ -723,11 +730,13 @@ int Room::LiveBaddieDex()
         i++;
     }
     {std::lock_guard<std::mutex>lock(printLock);fmt::print("Size of live baddies: {0}\n",liveDex.size());}
-    if(liveDex.size() > 0)
+    if(liveDex.empty())
     {
-        return liveDex.at((fast_rand() % liveDex.size()));
+        {std::lock_guard<std::mutex>lock(printLock);fmt::print("PROBLEM WITH LIVEDEX: Line {0} - {1}\n",__LINE__,__FILE__);}
+        return -1;
     }else{
-        return -1; // should never hit.
+        int dex = (fast_rand() % liveDex.size());
+        return liveDex.at(dex);
     }
 }
 
