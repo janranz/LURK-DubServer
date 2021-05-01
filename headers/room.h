@@ -69,6 +69,7 @@ class Room
         void respawn_baddies();
         void mass_kill_report();
         void single_kill_report(std::shared_ptr<Player>);
+        void collect_donations(uint16_t);
         
         //debug
         // size_t room_connection_size();
