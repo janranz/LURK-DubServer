@@ -23,6 +23,8 @@ Player::Player(int fd)
     desc = "";
     pvpKills = 0;
     totalDeaths = 0;
+    currScore = 0;
+    highScore = 0;
 }
 
 //state check
@@ -303,6 +305,7 @@ void Player::write_msg(LURK_MSG pkg, std::string msg)
         write(socketFD,&LURK_TYPES::TYPE_MSG,sizeof(uint8_t));
         write(socketFD, &pkg, sizeof(LURK_MSG));
         bytes = write(socketFD,msg.c_str(), pkg.MSG_LEN);
+        {std::lock_guard<std::mutex>lock(printLock);fmt::print("PLAYER: {0} BYTES:{1} -> Line {2} - {3}\nMESSAGE:{4}\n",charTainer.CHARACTER_NAME,bytes,__LINE__,__FILE__,msg);}
     }
         if(bytes < 1)
         {
