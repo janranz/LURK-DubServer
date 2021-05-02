@@ -285,6 +285,9 @@ void Gamemaster::GMController(int fd)
             error_character(p);
         }else if(type == LURK_TYPES::TYPE_PVP){
             proc_pvp(p);
+        }else if(type == LURK_TYPES::TYPE_LOOT)
+        {
+            proc_loot(p);
         }else{
             {
                 std::lock_guard<std::mutex>lock(printLock);fmt::print("{0} SENT INVALID TYPE: {1}\n",p->charTainer.CHARACTER_NAME,type);
@@ -315,6 +318,35 @@ uint8_t Gamemaster::listener(std::shared_ptr<Player> p)
 
 //type processing
 
+void Gamemaster::proc_loot(std::shared_ptr<Player> p)
+{
+    LURK_LOOT pkg;
+    ssize_t bytes;
+    std::string m;
+
+    bytes = recv(p->getFD(),&pkg,sizeof(LURK_PVP),MSG_WAITALL);
+    if(bytes < 1)
+    {
+        {std::lock_guard<std::mutex>lock(printLock);fmt::print("DEBUG: Line {0} - {1}\n",__LINE__,__FILE__);}
+        p->quitPlayer();
+        return;
+    }
+    {
+        std::shared_lock<std::shared_mutex>lock(GMLock);
+        int r = p->charTainer.CURRENT_ROOM_NUMBER;
+        uint16_t pastGold = p->get_gold();
+        if(!(master_room_list.at(r)->initiate_loot_sequence(p,pkg.TARGET)))
+        {
+            error_loot(p);
+        }else if(p->get_gold() > pastGold)
+        {// successfully looted
+
+        }else{
+            //failed to loot
+        }
+    }
+}
+
 void Gamemaster::proc_pvp(std::shared_ptr<Player> p)
 {
     LURK_PVP pkg;
@@ -328,20 +360,23 @@ void Gamemaster::proc_pvp(std::shared_ptr<Player> p)
         p->quitPlayer();
         return;
     }
-    uint16_t pastPvpKills = p->getPVPKills();
+
     {
         std::shared_lock<std::shared_mutex>lock(GMLock);
         int r = p->charTainer.CURRENT_ROOM_NUMBER;
+        uint16_t pastPvpKills = p->getPVPKills();
+        uint16_t pastDeaths = p->get_deaths();
         if(!(master_room_list.at(r)->initiate_fight_player(p,pkg.TARGET)))
         {
             error_pvp(p);
         }else if(p->getPVPKills() > pastPvpKills)
         {
-            m = fmt::format("BEWARE: {0} is on a PVP rampage!\n{1} PVP kill count has increased: {2} (after killing {3})",p->charTainer.CHARACTER_NAME,p->genderPos,p->getPVPKills(),pkg.TARGET);
-        }else{
-            m = fmt::format("PVP FAILED: {0} just failed to kill {1}!, {1} is on a PVP rampage!\n",p->charTainer.CHARACTER_NAME,pkg.TARGET);
+            m = fmt::format("\nBEWARE: {0} is on a PVP rampage!\n{1} PVP kill count has increased: {2} (after killing {3})",p->charTainer.CHARACTER_NAME,p->genderPos,p->getPVPKills(),pkg.TARGET);
+        }else if(p->get_deaths() > pastDeaths){
+            m = fmt::format("\nPVP FAILED: {0} just failed to kill {1}!, {1} is on a PVP rampage!\n",p->charTainer.CHARACTER_NAME,pkg.TARGET);
         }
     }
+    write_global(m);
 }
 
 void Gamemaster::proc_fight(std::shared_ptr<Player> p)

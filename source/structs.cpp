@@ -2,9 +2,19 @@
 
 std::mutex printLock;
 // std::mutex randLock;
-std::string const  serverStats::GAME_GREETING = "Welcome to the portal room.."
-    " the source of all great things!\n"
-    "Go wherever your heart desires, or start off from the beginning.\n";
+// std::string const  serverStats::GAME_GREETING = "Welcome to the portal room.."
+//     " the source of all great things!\n"
+//     "Go wherever your heart desires, or start off from the beginning.\n";
+std::string const  serverStats::GAME_GREETING = "\nWelcome to...\n\n"
+R"(
+ ______  _     _ ______  _______ _______  ______ _    _
+ |     \ |     | |_____] |______ |______ |_____/  \  / 
+ |_____/ |_____| |_____] ______| |______ |    \_   \/  
+                                                       
+)" "\nThe source of all great things.\n"
+"Set a high score... obliterate your besties... get smacked up by some power-creep baddies.\n" 
+"Go whever your heart desires, or start off from the beginning.\n If you die (you probably will),"
+" it's fine... do some action and I'll bring you back to life.\n";
 std::string const serverStats::GM_NAME = "Gamemaster Dubs (Server)";
 uint8_t  const  serverStats::GAME_VERSION_MAJOR  = 2;
 uint8_t  const  serverStats::GAME_VERSION_MINOR  = 2;

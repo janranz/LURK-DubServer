@@ -227,6 +227,12 @@ uint16_t Player::drop_gold()
 
 //getter
 
+uint16_t Player::get_deaths()
+{
+    std::shared_lock<std::shared_mutex>lock(pLock);
+    return totalDeaths;
+}
+
 uint16_t Player::getHighScore()
 {
     std::shared_lock<std::shared_mutex>lock(pLock);

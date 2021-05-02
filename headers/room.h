@@ -50,6 +50,8 @@ class Room
         // fight logic
         bool initiate_fight_baddie(std::shared_ptr<Player>);
         bool initiate_fight_player(std::shared_ptr<Player>,unsigned char*);
+        bool initiate_loot_sequence(std::shared_ptr<Player>,unsigned char*);
+        
         void fight_controller(std::shared_ptr<Player>);
         void slay_baddie(std::shared_ptr<Baddie>);
 

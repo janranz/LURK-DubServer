@@ -53,6 +53,7 @@ class Gamemaster
         void proc_leave(std::shared_ptr<Player>);
         void proc_fight(std::shared_ptr<Player>);
         void proc_pvp(std::shared_ptr<Player>);
+        void proc_loot(std::shared_ptr<Player>);
 
         //helper
         bool check_name(std::shared_ptr<Player>);
@@ -70,6 +71,7 @@ class Gamemaster
         void error_invalid(std::shared_ptr<Player>);
         void error_dead(std::shared_ptr<Player>);
         void error_pvp(std::shared_ptr<Player>);
+        void error_loot(std::shared_ptr<Player>);
 };
 
 #endif //GM_H

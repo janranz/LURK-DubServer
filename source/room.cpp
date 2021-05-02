@@ -163,6 +163,11 @@ void Room::inform_others_player(std::shared_ptr<Player> p)
     // }
 }
 
+bool Room::initiate_loot_sequence(std::shared_ptr<Player> p, unsigned char* target)
+{
+    
+}
+
 
 bool Room::initiate_fight_player(std::shared_ptr<Player> p, unsigned char* target)
 {
@@ -250,14 +255,15 @@ bool Room::pvp_controller(std::shared_ptr<Player> t, unsigned char* target)
     if(negate >= roll)
     {
         roll = 0;
-        after_action += fmt::format("TARGET NEGATES(FULL): {0} manages to negate all {1} points, taking absolutely {0} damage!\n",tmp->charTainer.CHARACTER_NAME,negate,roll);
+        int16_t netNeg = abs(negate-roll);
+        after_action += fmt::format("TARGET NEGATES(FULL): {0} manages to negate all {1} points, taking absolutely {0} damage!\n",tmp->charTainer.CHARACTER_NAME,netNeg,roll);
     }else if((roll - negate) <= 100){
         roll -= negate;
         after_action += fmt::format("TARGET NEGATES(PARTIAL): {0} takes some of the blows to {1} body,\nblocking {2} points and taking {3} damage!\n",
             tmp->charTainer.CHARACTER_NAME,tmp->genderPos,negate,roll);
     }else if(negate < 50){
         roll -= negate;
-        after_action += fmt::format("TARGET NEGATES(MINIMAL): {0} just stands there dumbfounded as {1} wails on {2} like a rented mule!\nDamage Taken:{3}\tDamage Negated{4}",
+        after_action += fmt::format("TARGET NEGATES(MINIMAL): {0} just stands there dumbfounded as {1} wails on {2} like a rented mule!\nDamage Taken:{3}\tDamage Negated:{4}\n",
             tmp->charTainer.CHARACTER_NAME,t->charTainer.CHARACTER_NAME,tmp->gender,roll,negate);
     }else{
         after_action += fmt::format("TARGET NEGATES: {0} takes a boppin', soaking up {1} points of {2}'s {3} damage. Wow.\n",tmp->charTainer.CHARACTER_NAME,negate,t->charTainer.CHARACTER_NAME,roll);
@@ -268,6 +274,7 @@ bool Room::pvp_controller(std::shared_ptr<Player> t, unsigned char* target)
         after_action += fmt::format("TARGET WOUNDED(FATAL): {0} proved to be no match for {1}.. but will {0} come back and settle this beef?\n",
         tmp->charTainer.CHARACTER_NAME,t->charTainer.CHARACTER_NAME);
         t->tally_pvp();
+        totalDeaths++;
         dead = true;
     }else{
         after_action += fmt::format("TARGET WOUNDED: {0} was able to survive the daunting blow, leaving {1} at {2} HP! MEDIC!\n",tmp->charTainer.CHARACTER_NAME,tmp->genderPos,static_cast<int16_t>(tmp->charTainer.HEALTH));
@@ -315,14 +322,15 @@ bool Room::pvp_controller(std::shared_ptr<Player> t, unsigned char* target)
         if(negate >= roll)
         {
             roll = 0;
-            after_action += fmt::format("TARGET NEGATES(FULL): {0} manages to negate all {1} points, taking absolutely {0} damage!\n",t->charTainer.CHARACTER_NAME,negate,roll);
+            int16_t netNeg = abs(negate-roll);
+            after_action += fmt::format("TARGET NEGATES(FULL): {0} manages to negate all {1} points, taking absolutely {2} damage!\n",t->charTainer.CHARACTER_NAME,netNeg,roll);
         }else if((roll - negate) <= 100){
             roll -= negate;
             after_action += fmt::format("TARGET NEGATES(PARTIAL): {0} takes some of the blows to {1} body,\nblocking {2} points and taking {3} damage!\n",
                 t->charTainer.CHARACTER_NAME,t->genderPos,negate,roll);
         }else if(negate < 50){
             roll -= negate;
-            after_action += fmt::format("TARGET NEGATES(MINIMAL): {0} just stands there dumbfounded as {1} wails on {2} like a rented mule!\nDamage Taken:{3}\tDamage Negated{4}",
+            after_action += fmt::format("TARGET NEGATES(MINIMAL): {0} just stands there dumbfounded as {1} wails on {2} like a rented mule!\nDamage Taken:{3}\tDamage Negated:{4}\n",
                 t->charTainer.CHARACTER_NAME,tmp->charTainer.CHARACTER_NAME,t->gender,roll,negate);
         }else{
             after_action += fmt::format("TARGET NEGATES: {0} takes a boppin', soaking up {1} points of {2}'s {3} damage. Wow.\n",t->charTainer.CHARACTER_NAME,negate,tmp->charTainer.CHARACTER_NAME,roll);
@@ -349,6 +357,7 @@ bool Room::pvp_controller(std::shared_ptr<Player> t, unsigned char* target)
             tmp->full_restore_health();
             big_bundle_update();
             room_write(after_action);
+            totalDeaths++;
             return true;
         }
         after_action += "\n-PLAYER REGEN DATA:\n";
@@ -365,6 +374,7 @@ bool Room::pvp_controller(std::shared_ptr<Player> t, unsigned char* target)
         tmp->heal_player(genMulti);
         after_action += fmt::format("{0} squashes the beef, and recovers {1} points to {2} past {3} health, restoring {4}self to {5} HP!\n",
         tmp->charTainer.CHARACTER_NAME,genMulti,tmp->genderHeShe,pastH,tmp->gender,static_cast<int16_t>(tmp->charTainer.HEALTH));
+        big_bundle_update();
         room_write(after_action);
         /// HERE STOP
     }
@@ -459,7 +469,7 @@ void Room::fight_controller(std::shared_ptr<Player> inst)
     uint16_t h = 0;
     std::string after_action = "\n========== FIGHT SUMMARY ==========\n";
     // std::string aa_ap;
-    int bDex;
+    int bDex = -1;
     // after_action += "-PLAYER FIGHT DATA: ";
     if(isValidBaddie())
     {
@@ -527,7 +537,8 @@ void Room::fight_controller(std::shared_ptr<Player> inst)
                 if(negate >= roll)
                 {
                     roll = 0;
-                    after_action += fmt::format("ENEMY NEGATES(FULL): {0} manages to cheat death, negating all {1} points of that damage (net {2} damage).\n",baddie_list.at(bDex)->bTainer.CHARACTER_NAME,negate,roll);
+                    int16_t netNeg = abs(negate-roll);
+                    after_action += fmt::format("ENEMY NEGATES(FULL): {0} manages to cheat death, negating all {1} points of that damage (net {2} damage).\n",baddie_list.at(bDex)->bTainer.CHARACTER_NAME,netNeg,roll);
                 }else{
                     roll -= negate;
                     after_action += fmt::format("ENEMY NEGATES(PARTIAL): {0} manages to negate {1} points of that damage (net {2} damage).\n",baddie_list.at(bDex)->bTainer.CHARACTER_NAME,negate,roll);
@@ -611,7 +622,8 @@ void Room::fight_controller(std::shared_ptr<Player> inst)
                         if(negate >= roll)
                         {
                             roll = 0;
-                            after_action += fmt::format("FRIENDLY NEGATES(FULL): {0} manages to cheat death, negating all {1} points of that damage (net {2} damage).\n",(*p)->charTainer.CHARACTER_NAME,negate,roll);
+                            int16_t netNeg = abs(negate-roll);
+                            after_action += fmt::format("FRIENDLY NEGATES(FULL): {0} manages to cheat death, negating all {1} points of that damage (net {2} damage).\n",(*p)->charTainer.CHARACTER_NAME,netNeg,roll);
                         }else{
                             roll -= negate;
                             after_action += fmt::format("FRIENDLY NEGATES(PARTIAL): {0} manages to negate {1} points of that damage (net {2} damage).\n",(*p)->charTainer.CHARACTER_NAME,negate,roll);

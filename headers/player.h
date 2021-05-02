@@ -70,6 +70,7 @@ class Player
         uint16_t loot_me();
         uint16_t getPVPKills();
         uint16_t drop_gold();
+        uint16_t get_deaths();
         //writer
         void write_msg(LURK_MSG, std::string);
         void write_error(LURK_ERROR, std::string);
