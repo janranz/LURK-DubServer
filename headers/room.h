@@ -47,15 +47,20 @@ class Room
         // void inform_others_player_left(std::shared_ptr<Player>);
         void inform_baddies(std::shared_ptr<Player>); // "static"
 
-        // fight logic
+        // initiators
         bool initiate_fight_baddie(std::shared_ptr<Player>);
         bool initiate_fight_player(std::shared_ptr<Player>,unsigned char*);
         bool initiate_loot_sequence(std::shared_ptr<Player>,unsigned char*);
+
         
-        void fight_controller(std::shared_ptr<Player>);
         void slay_baddie(std::shared_ptr<Baddie>);
 
+        // controllers
         bool pvp_controller(std::shared_ptr<Player>,unsigned char*);
+        bool loot_controller(std::shared_ptr<Player>,unsigned char*);
+        void fight_controller(std::shared_ptr<Player>);
+        
+
         //helper
         bool isValidConnection(uint16_t);
         bool isValidBaddie();

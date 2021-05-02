@@ -214,16 +214,16 @@ uint16_t Player::drop_gold()
     return drop;
 }
 
-// void Player::take_gold(uint16_t g)
-// {// obsolete
-//     std::lock_guard<std::shared_mutex>lock(pLock);
-//     if((charTainer.GOLD - g) < 0)
-//     {
-//         charTainer.GOLD = 0;
-//     }else{
-//         charTainer.GOLD -= g;
-//     }
-// }
+void Player::take_gold(uint16_t g)
+{// for refunding
+    std::lock_guard<std::shared_mutex>lock(pLock);
+    if((charTainer.GOLD - g) < 0)
+    {
+        charTainer.GOLD = 0;
+    }else{
+        charTainer.GOLD -= g;
+    }
+}
 
 //getter
 

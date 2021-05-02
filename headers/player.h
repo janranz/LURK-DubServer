@@ -54,7 +54,7 @@ class Player
         void heal_player(int32_t);
         void tally_curr(uint32_t);
         void give_gold(uint32_t);
-        // void take_gold(uint16_t);
+        void take_gold(uint16_t); // refund
         
         void tally_pvp();
         void full_restore_health();

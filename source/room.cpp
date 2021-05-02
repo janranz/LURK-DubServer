@@ -165,16 +165,133 @@ void Room::inform_others_player(std::shared_ptr<Player> p)
 
 bool Room::initiate_loot_sequence(std::shared_ptr<Player> p, unsigned char* target)
 {
-    
+    std::unique_lock<std::shared_mutex>QLock(rLock,std::defer_lock);
+    std::shared_lock<std::shared_mutex>SLock(rLock,std::defer_lock);
+    SLock.lock();
+    if(fight_in_progress)
+    {
+        return false;
+    }
+    SLock.unlock();
+
+    bool found;
+    QLock.lock();
+    fight_in_progress = true;
+    found = loot_controller(p,target);
+    fight_in_progress = false;
+    QLock.unlock();
+    return found;
 }
 
+bool Room::loot_controller(std::shared_ptr<Player> t, unsigned char* target)
+{// locked from the outside.
+    bool success = false;
+    bool player = false;
+    std::shared_ptr<Player> pTmp;
+    std::shared_ptr<Baddie> bTmp;
+    
+    for(auto p = player_list.begin(); p != player_list.end(); ++p)
+    {
+        if(compare_to_lowers(M_ToCP((*p)->charTainer.CHARACTER_NAME),M_ToCP(target)))
+        {
+            pTmp = (*p);
+            success = true;
+            player = true;
+            break;
+        }
+    }
+    if(!success)
+    {
+        for(auto b = baddie_list.begin(); b != baddie_list.end(); ++b)
+        {
+            bTmp = (*b);
+            success = true;
+            player = false;
+            break;
+        }
+    }
+    if(!success)
+    {
+        return success;
+    }
+    std::string m;
+    uint16_t loot;
+    int smack;
+    int16_t damage = (fast_rand() % (10000 - 500) + 500);
+    int fiddy = fast_rand() & 1;
+    if(fiddy && player)
+    {// succeeds player
+
+        m = fmt::format("\n\nAmongst the chaos, {0} glances over at {1}, and sees {2} coin pouch...\n",t->charTainer.CHARACTER_NAME,pTmp->charTainer.CHARACTER_NAME,pTmp->genderPos);
+        if(loot > 0)
+        {
+            m += fmt::format("Failing to resist the temptation, {0} grabs the coin pouch, spilling {1} coins on the floor!\nSweeping it up, {2} attempts to make good his escape!\n",
+            t->charTainer.CHARACTER_NAME,loot,t->genderHeShe);
+        }else{
+            m += fmt::format("After close examination, {0} quickly realizes {1} has like... {2} coins...\n Wasn't worth the beef anyways.\n",
+            t->charTainer.CHARACTER_NAME,pTmp->charTainer.CHARACTER_NAME,loot);
+        }
+        smack = fast_rand() & 1;
+        if(smack)
+        {// smack succeeds
+            m += fmt::format("But {0} doesn't appreciate {1} sizing {2} up like that!\n Going off like Coke and Mentos, {0} reaches for {3} trusty bat and delivers the most savage and ruthless blow to\nthe back of {4}'s goofy dome!\n",
+            pTmp->charTainer.CHARACTER_NAME,t->charTainer.CHARACTER_NAME,pTmp->gender,pTmp->genderPos,t->charTainer.CHARACTER_NAME);
+            if(!(t->hurt_player(damage)))
+            {// player died.
+                m += fmt::format("With {0} points of blind-sided damage, {1} folds like a laundromat! RIP!\n{2} claims {3} refund of {4} gold!\n",
+                damage,t->charTainer.CHARACTER_NAME,pTmp->charTainer.CHARACTER_NAME,pTmp->genderPos,loot);
+                t->take_gold(loot);
+                pTmp->give_gold(loot);
+            }else{
+                m += fmt::format("With {0} points of blind-sided damage, {1} manages to hobble away with {2} coins from {3}'s pouch...\nWhat a rat!\n",
+                damage,t->charTainer.CHARACTER_NAME,loot,pTmp->charTainer.CHARACTER_NAME);
+            }
+        }else{
+            m += fmt::format("As blind as a mole, {0} feels nothing as {1} makes good with {3} loot!\n",
+            pTmp->charTainer.CHARACTER_NAME,t->charTainer.CHARACTER_NAME,pTmp->genderPos);
+        }
+    }else if(fiddy && !player)
+    {//succeeds baddie
+        loot = bTmp->loot_me();
+        m = fmt::format("\n\nLike an absolute psycho, {0} locks eyes onto a coin pouch stuck to the side of {1}! {3}'s not about to do what I think--\n",t->charTainer.CHARACTER_NAME);
+        smack = fast_rand() & 1;
+        if(loot > 0)
+        {
+            m += fmt::format("Failing to resist the temptation, {0} makes a dash for the coin pouch, managing to spill {1} coins on the floor!\nSweeping it up, {0} attempts to dip out!\n",
+            t->charTainer.CHARACTER_NAME,loot);
+            t->give_gold(loot);
+        }else{
+            m += fmt::format("After closer inspection, {0} consumes some water and re-thinks that decision.\n Would have gotten bopped for like {0} coins!\n",
+            t->charTainer.CHARACTER_NAME,loot);
+        }
+        if(smack)
+        {
+            m += fmt::format("But {0} manages to put two-and-two together... In fact, it looks rather hungry!\nWith a haste, {0} delivers a painful blow of {1} damage to the back of {2}'s noggin!\n",
+            bTmp->bTainer.CHARACTER_NAME,damage,t->charTainer.CHARACTER_NAME);
+            if(!(t->hurt_player(damage)))
+            {
+                m += fmt::format("With {0} points of blind-sided damage, {1} folds like one of those fancy ironing boards (that are like... built into the walls).\nSince Baddies are into Crypto and not fiat, {2} puts the coins in the room's coffer.\n",
+                damage,t->charTainer.CHARACTER_NAME,bTmp->bTainer.CHARACTER_NAME);
+                collect_donations(loot);
+                t->take_gold(loot);
+            }
+        }
+
+    }else if(!fiddy && player)
+    {//fails player
+        
+    }else if(!fiddy && !player)
+    {//fails baddie
+
+    }
+}
 
 bool Room::initiate_fight_player(std::shared_ptr<Player> p, unsigned char* target)
 {
     //if(compare_to_lowers(M_ToCP(t),M_ToCP((*p)->charTainer.CHARACTER_NAME)))
     std::unique_lock<std::shared_mutex>QLock(rLock,std::defer_lock);
     std::shared_lock<std::shared_mutex>SLock(rLock,std::defer_lock);
-    std::string m;
+
 
     SLock.lock();
     if(fight_in_progress)
