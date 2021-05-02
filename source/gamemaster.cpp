@@ -340,9 +340,12 @@ void Gamemaster::proc_loot(std::shared_ptr<Player> p)
             error_loot(p);
         }else if(p->get_gold() > pastGold)
         {// successfully looted
-
+            m = fmt::format("\nTHIEF ALERT: {0} just stole from {1} in {2}!\nGo show {3} what happens to thieves!\n",
+            p->charTainer.CHARACTER_NAME,master_room_list.at(r)->roomTainer.ROOM_NAME,pkg.TARGET,p->gender);
         }else{
             //failed to loot
+            m = fmt::format("\nTHIEF ATTEMPT: {0} attempted to steal from {1} in {2}, but failed!\n Go show {3} what happens to thieves!\n",
+            p->charTainer.CHARACTER_NAME,master_room_list.at(r)->roomTainer.ROOM_NAME,p->gender);
         }
     }
 }

@@ -227,6 +227,7 @@ bool Room::loot_controller(std::shared_ptr<Player> t, unsigned char* target)
         {
             m += fmt::format("Failing to resist the temptation, {0} grabs the coin pouch, spilling {1} coins on the floor!\nSweeping it up, {2} attempts to make good his escape!\n",
             t->charTainer.CHARACTER_NAME,loot,t->genderHeShe);
+            t->give_gold(loot);
         }else{
             m += fmt::format("After close examination, {0} quickly realizes {1} has like... {2} coins...\n Wasn't worth the beef anyways.\n",
             t->charTainer.CHARACTER_NAME,pTmp->charTainer.CHARACTER_NAME,loot);
@@ -275,15 +276,72 @@ bool Room::loot_controller(std::shared_ptr<Player> t, unsigned char* target)
                 collect_donations(loot);
                 t->take_gold(loot);
             }
+        }else{
+            m += fmt::format("I don't actually believe it! {0} manages to escape with {1}'s gold unscathed! Bet {2} won't try that again. (For violence-sake, let's hope {2} does!)\n",
+            t->charTainer.CHARACTER_NAME,bTmp->bTainer.CHARACTER_NAME,t->genderHeShe);
         }
 
     }else if(!fiddy && player)
     {//fails player
-        
+        loot = t->loot_me();
+        m += fmt::format("\n\nAbout as silent as a strategic bomber, {0} reaches for {1}'s coin pouch...\nonly to get elbow-dropped from the Stratosphere as {2} delivers a brutal {3} damage!\n",
+        t->charTainer.CHARACTER_NAME,pTmp->charTainer.CHARACTER_NAME, pTmp->genderHeShe, damage);
+
+        if(loot <= 0)
+        {// My bad!
+            m += fmt::format("\n\STOP WAIT!! Uhh, okay... Time freezes.. {0}'s life flashes before {1} eyes.. {2} sees that the server author failed to check if {2} had gold on line {3} of {4}!\n",
+            t->charTainer.CHARACTER_NAME,t->genderPos,t->genderHeShe,__LINE__,__FILE__);
+            loot = 1500;
+            m += fmt::format("{0} decides to do what any loyal portal enthusiast would do, and takes out a loan of {1} coins before climbing back into {2}'s arms so {3} can finish the beatdown!\nWow.",
+            t->charTainer.CHARACTER_NAME,loot,pTmp->charTainer.CHARACTER_NAME, pTmp->genderHeShe);
+        }
+        if(!(t->hurt_player(damage)))
+        {
+            m += fmt::format("Unfortunately for {0}, the damage was too much for {1} to endure, smacking {1} back to the portal.\n Turning the tables like a hidden Uno card, {2} claims their bounty of {3} coins from {0}'s coin pouch\nThat's how mafia works!",
+            t->charTainer.CHARACTER_NAME,t->gender,pTmp->charTainer.CHARACTER_NAME,loot);
+            
+        }else{
+            m += fmt::format("Feeling embarrassed, {0} winds up taking {1} damage in exchange for {2} of {3} coins...\nWhich goes straight into {4}'s pouch!\nBetter luck next time. THIEF.\n",
+            t->charTainer.CHARACTER_NAME,damage,loot,t->genderPos,pTmp->charTainer.CHARACTER_NAME);
+        }
+        pTmp->give_gold(loot);
+
     }else if(!fiddy && !player)
     {//fails baddie
+        m += fmt::format("\n\nJust as {0} reaches for {1}'s coin pouch, \n {2} trips over a broom and makes {1} very... VERY angry...\n",
+        t->charTainer.CHARACTER_NAME,bTmp->bTainer.CHARACTER_NAME,t->genderHeShe);
+        loot = t->loot_me();
+        if(!(t->hurt_player(damage)))
+        {
+            m += fmt::format("Just as one would expect to happen (messing with a big ol' ugly baddie), {0} succumbs to {1} injuries after {2} delivers a whopping {3}!\n",
+            t->charTainer.CHARACTER_NAME,t->genderPos,bTmp->bTainer.CHARACTER_NAME,damage);
+            if(loot)
+            {
+                m += fmt::format("{0} scoops up {1} coins from {2}'s banged up body and casually distributes it in the coffer.\n",
+                bTmp->bTainer.CHARACTER_NAME,loot,t->charTainer.CHARACTER_NAME);
+                collect_donations(loot);
+            }else{
+                m += fmt::format("{0} walks over to {1}'s banged up body to collect gold for the coffer, but is left with nothing.\n",
+                bTmp->bTainer.CHARACTER_NAME,t->charTainer.CHARACTER_NAME);
+            }
+        }else{
+            if(loot)
+            {
+                m += fmt::format("After getting roughed up some, {0} manages to break free from {1} deadly grasp, dropping {2} coins in the process.\n",
+                t->charTainer.CHARACTER_NAME,bTmp->bTainer.CHARACTER_NAME,loot);
+                collect_donations(loot);
+            }else{
+                m += fmt::format("After getting roughed up some, {0} manages to break free from {1} deadly grasp! At least {2} has no coins to drop!\n",
+                t->charTainer.CHARACTER_NAME,bTmp->bTainer.CHARACTER_NAME,t->genderHeShe);
+            }
 
+        }
+    }else{
+        {std::lock_guard<std::mutex>lock(printLock);fmt::print("DEBUG LOOT (hit unexpected else block): Line {0} - {1}\n",__LINE__,__FILE__);}
     }
+    room_write(m);
+    big_bundle_update();
+    return success;
 }
 
 bool Room::initiate_fight_player(std::shared_ptr<Player> p, unsigned char* target)
