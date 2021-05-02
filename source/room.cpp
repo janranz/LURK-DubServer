@@ -352,13 +352,15 @@ bool Room::pvp_controller(std::shared_ptr<Player> t, unsigned char* target)
             return true;
         }
         after_action += "\n-PLAYER REGEN DATA:\n";
-        int16_t genMulti = (fast_rand() % (((serverStats::PLAYER_BASE_HEALTH + 1) - (t->charTainer.REGEN) / 2)) + (t->charTainer.REGEN / 2));
+        // int16_t genMulti = (fast_rand() % (((serverStats::PLAYER_BASE_HEALTH + 1) - (t->charTainer.REGEN) / 2)) + (t->charTainer.REGEN / 2));
+        int16_t genMulti = (fast_rand() % ((((t->charTainer.REGEN) + 1) - (t->charTainer.REGEN) / 2)) + (t->charTainer.REGEN / 2));
         int16_t pastH = t->charTainer.HEALTH;
         t->heal_player(genMulti);
         after_action += fmt::format("{0} dresses {1} wounds, recovering {2} points to {1} past {3} health, restoring {4} to {5} HP!\n",
         t->charTainer.CHARACTER_NAME,t->genderPos,genMulti,pastH,t->gender,static_cast<int16_t>(t->charTainer.HEALTH));
         
-        genMulti = (fast_rand() % (((serverStats::PLAYER_BASE_HEALTH + 1) - (tmp->charTainer.REGEN) / 2)) + (tmp->charTainer.REGEN / 2));
+        // genMulti = (fast_rand() % (((serverStats::PLAYER_BASE_HEALTH + 1) - (tmp->charTainer.REGEN) / 2)) + (tmp->charTainer.REGEN / 2));
+        genMulti = (fast_rand() % ((((t->charTainer.REGEN) + 1) - (tmp->charTainer.REGEN) / 2)) + (tmp->charTainer.REGEN / 2));
         pastH = tmp->charTainer.HEALTH;
         tmp->heal_player(genMulti);
         after_action += fmt::format("{0} squashes the beef, and recovers {1} points to {2} past {3} health, restoring {4}self to {5} HP!\n",

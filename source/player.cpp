@@ -133,7 +133,7 @@ void Player::setValid()
 void Player::tally_curr(uint32_t n)
 {
     std::lock_guard<std::shared_mutex>lock(pLock);
-    if((currScore + n) > std::numeric_limits<uint16_t>::max())
+    if((currScore + n) < std::numeric_limits<uint16_t>::max())
     {
         currScore += n;
     }else{
