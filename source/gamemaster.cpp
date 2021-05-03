@@ -503,7 +503,7 @@ void Gamemaster::proc_msg(std::shared_ptr<Player> p)
             if(compare_to_lowers(M_ToCP(pkg.CEIVER_NAME),M_ToCP((*t)->charTainer.CHARACTER_NAME)))
             {
                 (*t)->write_accept(LURK_TYPES::TYPE_MSG);                
-                (*t)->write_msg(pkg,m,__LINE__);
+                (*t)->write_msg(pkg,m);
                 found = true;
                 break;
             }
@@ -752,7 +752,7 @@ bool Gamemaster::check_stat(std::shared_ptr<Player> p)
                 good = false;
                 std::string m = fmt::format("Sorry, {0} is actively playing! Pick a different name and go rough them up in Room #{1}!\n",
                 (*t)->charTainer.CHARACTER_NAME, std::to_string((*t)->charTainer.CURRENT_ROOM_NUMBER));
-                p->write_msg(gmpm,m,__LINE__);
+                p->write_msg(gmpm,m);
                 break;
             }
         }
@@ -792,7 +792,7 @@ void Gamemaster::write_global(std::string m)
     std::shared_lock<std::shared_mutex>lock(GMLock);
     for(auto p = master_player_list.begin(); p != master_player_list.end(); ++p)
     {
-        (*p)->write_msg(pkg,m,__LINE__);
+        (*p)->write_msg(pkg,m);
     }
 }
 
