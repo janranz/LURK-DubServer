@@ -264,7 +264,7 @@ void Gamemaster::GMController(int fd)
             // spawn_player(p);
             if(type != LURK_TYPES::TYPE_MSG && type != LURK_TYPES::TYPE_LEAVE && type != 0)
             {
-                {std::lock_guard<std::mutex>lock(printLock);fmt::print("DEBUG: Line {0} - {1}\n",__LINE__,__FILE__);}
+                // {std::lock_guard<std::mutex>lock(printLock);fmt::print("DEBUG: Line {0} - {1}\n",__LINE__,__FILE__);}
                 error_dead(p);
                 pump_n_dump(p);
                 spawn_player(p);
@@ -279,7 +279,7 @@ void Gamemaster::GMController(int fd)
             proc_changeroom(p);
         }else if((type == LURK_TYPES::TYPE_LEAVE) || (type == 0))
         {
-            {std::lock_guard<std::mutex>lock(printLock);fmt::print("DEBUG: Line {0} - {1}\n",__LINE__,__FILE__);}
+            // {std::lock_guard<std::mutex>lock(printLock);fmt::print("DEBUG: Line {0} - {1}\n",__LINE__,__FILE__);}
             p->quitPlayer();
         }else if(type == LURK_TYPES::TYPE_FIGHT)
         {
@@ -299,11 +299,11 @@ void Gamemaster::GMController(int fd)
                 pump_n_dump(p);
             }
         }
-        
+
         if(p->isHighScore())
         {
             check_pveHighScore(M_ToCP(p->charTainer.CHARACTER_NAME),p->getCurrScore());
-            check_pvpHighScore(M_ToCP(p->charTainer.CHARACTER_NAME),p->getCurrScore());
+            check_pvpHighScore(M_ToCP(p->charTainer.CHARACTER_NAME),p->getPVPKills());
             p->HSchecked();
         }
     }
@@ -361,7 +361,7 @@ void Gamemaster::check_pvpHighScore(char* name, uint32_t score)
     if(newLeader)
     {
         std::string m = "\n\n" R"(
-            _______      _______     _____ _    _          __  __ _____ _____ ____  _   _ 
+             _______      _______     _____ _    _          __  __ _____ _____ ____  _   _ 
             |  __ \ \    / /  __ \   / ____| |  | |   /\   |  \/  |  __ \_   _/ __ \| \ | |
             | |__) \ \  / /| |__) | | |    | |__| |  /  \  | \  / | |__) || || |  | |  \| |
             |  ___/ \ \/ / |  ___/  | |    |  __  | / /\ \ | |\/| |  ___/ | || |  | | . ` |
@@ -382,7 +382,7 @@ uint8_t Gamemaster::listener(std::shared_ptr<Player> p)
     uint8_t dipByte;
     bytes = recv(p->getFD(), &dipByte,sizeof(uint8_t),MSG_WAITALL);
     if(p->isValidToon())
-        {std::lock_guard<std::mutex>lock(printLock);fmt::print("{0} sent type: {1}\n",p->charTainer.CHARACTER_NAME,dipByte);}
+        // {std::lock_guard<std::mutex>lock(printLock);fmt::print("{0} sent type: {1}\n",p->charTainer.CHARACTER_NAME,dipByte);}
     if(bytes < 1)
     {
         dipByte = 0;
@@ -401,11 +401,11 @@ void Gamemaster::proc_loot(std::shared_ptr<Player> p)
     bytes = recv(p->getFD(),&pkg,sizeof(LURK_PVP),MSG_WAITALL);
     if(bytes < 1)
     {
-        {std::lock_guard<std::mutex>lock(printLock);fmt::print("DEBUG: Line {0} - {1}\n",__LINE__,__FILE__);}
+        // {std::lock_guard<std::mutex>lock(printLock);fmt::print("DEBUG: Line {0} - {1}\n",__LINE__,__FILE__);}
         p->quitPlayer();
         return;
     }
-    {std::lock_guard<std::mutex>lock(printLock);fmt::print("DEBUG proc_loot target:{0}: Line {1} - {2}\n",pkg.TARGET,__LINE__,__FILE__);}
+    // {std::lock_guard<std::mutex>lock(printLock);fmt::print("DEBUG proc_loot target:{0}: Line {1} - {2}\n",pkg.TARGET,__LINE__,__FILE__);}
     {
         std::shared_lock<std::shared_mutex>lock(GMLock);
         int r = p->charTainer.CURRENT_ROOM_NUMBER;
@@ -434,7 +434,7 @@ void Gamemaster::proc_pvp(std::shared_ptr<Player> p)
     bytes = recv(p->getFD(),&pkg,sizeof(LURK_PVP),MSG_WAITALL);
     if(bytes < 1)
     {
-        {std::lock_guard<std::mutex>lock(printLock);fmt::print("DEBUG: Line {0} - {1}\n",__LINE__,__FILE__);}
+        // {std::lock_guard<std::mutex>lock(printLock);fmt::print("DEBUG: Line {0} - {1}\n",__LINE__,__FILE__);}
         p->quitPlayer();
         return;
     }
@@ -491,7 +491,7 @@ void Gamemaster::proc_msg(std::shared_ptr<Player> p)
 
     if(bytes < 1)
     {
-        {std::lock_guard<std::mutex>lock(printLock);fmt::print("DEBUG: Line {0} - {1}\n",__LINE__,__FILE__);}
+        // {std::lock_guard<std::mutex>lock(printLock);fmt::print("DEBUG: Line {0} - {1}\n",__LINE__,__FILE__);}
         p->quitPlayer();
         return;
     }
@@ -522,7 +522,7 @@ void Gamemaster::proc_changeroom(std::shared_ptr<Player> p)
     bytes = recv(p->getFD(),&roomReq,sizeof(uint16_t),MSG_WAITALL);
     if( bytes < 1)
     {
-        {std::lock_guard<std::mutex>lock(printLock);fmt::print("DEBUG: Line {0} - {1}\n",__LINE__,__FILE__);}
+        // {std::lock_guard<std::mutex>lock(printLock);fmt::print("DEBUG: Line {0} - {1}\n",__LINE__,__FILE__);}
         p->quitPlayer();
         return;
     }
@@ -545,7 +545,7 @@ void Gamemaster::proc_character(std::shared_ptr<Player> p)
 
     if(bytes < 1)
     {
-        {std::lock_guard<std::mutex>lock(printLock);fmt::print("DEBUG: Line {0} - {1}\n",__LINE__,__FILE__);}
+        // {std::lock_guard<std::mutex>lock(printLock);fmt::print("DEBUG: Line {0} - {1}\n",__LINE__,__FILE__);}
         p->quitPlayer();
         return;
     }

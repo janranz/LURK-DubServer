@@ -75,7 +75,7 @@ class Player
         uint16_t drop_gold();
         uint16_t get_deaths();
         //writer
-        void write_msg(LURK_MSG, std::string,int);
+        void write_msg(LURK_MSG, std::string);
         void write_error(LURK_ERROR, std::string);
         void write_accept(uint8_t);
         void write_room(LURK_ROOM,std::string);

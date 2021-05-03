@@ -52,7 +52,7 @@ void Room::emplace_player(std::shared_ptr<Player>p)
         {
             if((*t)->getFD() != fd)
             {
-                (*t)->write_msg(rmpm,m,__LINE__);
+                (*t)->write_msg(rmpm,m);
             }
         }
     }
@@ -85,7 +85,7 @@ void Room::remove_player(std::shared_ptr<Player>p)
         std::shared_lock<std::shared_mutex> lock(rLock);
         for(auto t = player_list.begin(); t != player_list.end(); ++t)
         {
-            (*t)->write_msg(rmpm, m,__LINE__);
+            (*t)->write_msg(rmpm, m);
         }
     }
     
@@ -1115,7 +1115,7 @@ void Room::tally_PVE_kill()
 void Room::inform_death(std::shared_ptr<Player> p)
 {
     std::string m = fmt::format("\nHello. This is your friendly butler here. Looks like you got SMACKED up!\nFeel Free to just lie here while everyone else is doing their thing, or you can send any action to respawn!");
-    p->write_msg(rmpm,m,__LINE__);
+    p->write_msg(rmpm,m);
 }
 
 void Room::collect_donations(uint16_t p)
@@ -1172,7 +1172,7 @@ void Room::single_kill_report(std::shared_ptr<Player> b)
     n = fmt::format("========== CURRENT ROOM STATS ==========\nTotal Baddies Killed: {0}\nTotal Player Deaths: {1}\nCoffer:{2} gold\n{3}",
         totalKills,totalDeaths,coffer,o);
     m += n;
-    b->write_msg(rmpm,m,__LINE__);
+    b->write_msg(rmpm,m);
 
 }
 
@@ -1191,7 +1191,7 @@ void Room::room_write(std::string m)
 {
     for(auto p = player_list.begin(); p != player_list.end(); ++p)
     {
-        (*p)->write_msg(rmpm,m,__LINE__);
+        (*p)->write_msg(rmpm,m);
     }
 }
 

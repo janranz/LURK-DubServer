@@ -37,7 +37,7 @@ bool Player::isSktAlive()
 bool Player::isHighScore()
 {
     std::shared_lock<std::shared_mutex>lock(pLock);
-    return !flagHS;
+    return flagHS;
 }
 bool Player::isStarted()
 {
@@ -308,12 +308,12 @@ void Player::write_reflect()
     }
     if( bytes < 1)
     {
-        {std::lock_guard<std::mutex>lock(printLock);fmt::print("DEBUG: Line {0} - {1}\n",__LINE__,__FILE__);}
+        // {std::lock_guard<std::mutex>lock(printLock);fmt::print("DEBUG: Line {0} - {1}\n",__LINE__,__FILE__);}
         quitPlayer();
     }
 }
 
-void Player::write_msg(LURK_MSG pkg, std::string msg,int called)
+void Player::write_msg(LURK_MSG pkg, std::string msg)
 {
     ssize_t bytes = 0;
     {
@@ -325,11 +325,11 @@ void Player::write_msg(LURK_MSG pkg, std::string msg,int called)
         write(socketFD,&LURK_TYPES::TYPE_MSG,sizeof(uint8_t));
         write(socketFD, &pkg, sizeof(LURK_MSG));
         bytes = write(socketFD,msg.c_str(), pkg.MSG_LEN);
-        {std::lock_guard<std::mutex>lock(printLock);fmt::print("PLAYER: {0} BYTES:{1} -> Line {2} - {3}\nMESSAGE:{4}\nCALLED FROM LINE: {5}\n",charTainer.CHARACTER_NAME,bytes,__LINE__,__FILE__,msg,called);}
+        // {std::lock_guard<std::mutex>lock(printLock);fmt::print("PLAYER: {0} BYTES:{1} -> Line {2} - {3}\nMESSAGE:{4}\nCALLED FROM LINE: {5}\n",charTainer.CHARACTER_NAME,bytes,__LINE__,__FILE__,msg,called);}
     }
         if(bytes < 1)
         {
-            {std::lock_guard<std::mutex>lock(printLock);fmt::print("DEBUG: Line {0} - {1}\n",__LINE__,__FILE__);}
+            // {std::lock_guard<std::mutex>lock(printLock);fmt::print("DEBUG: Line {0} - {1}\n",__LINE__,__FILE__);}
             quitPlayer();
         }
     
@@ -346,7 +346,7 @@ void Player::write_error(LURK_ERROR pkg, std::string msg)
     }
     if(bytes < 1)
     {
-        {std::lock_guard<std::mutex>lock(printLock);fmt::print("DEBUG: Line {0} - {1}\n",__LINE__,__FILE__);}
+        // {std::lock_guard<std::mutex>lock(printLock);fmt::print("DEBUG: Line {0} - {1}\n",__LINE__,__FILE__);}
         quitPlayer();
     }
 }
@@ -362,7 +362,7 @@ void Player::write_accept(uint8_t t)
     }
     if(bytes < 1)
     {
-        {std::lock_guard<std::mutex>lock(printLock);fmt::print("DEBUG: Line {0} - {1}\n",__LINE__,__FILE__);}
+        // {std::lock_guard<std::mutex>lock(printLock);fmt::print("DEBUG: Line {0} - {1}\n",__LINE__,__FILE__);}
         quitPlayer();
     }
 }
@@ -377,7 +377,7 @@ void Player::write_room(LURK_ROOM pkg, std::string msg)
     }
     if(bytes < 1)
     {
-        {std::lock_guard<std::mutex>lock(printLock);fmt::print("DEBUG: Line {0} - {1}\n",__LINE__,__FILE__);}
+        // {std::lock_guard<std::mutex>lock(printLock);fmt::print("DEBUG: Line {0} - {1}\n",__LINE__,__FILE__);}
         quitPlayer();
     }
 }
@@ -392,7 +392,7 @@ void Player::write_character(LURK_CHARACTER pkg, std::string msg)
     }
     if(bytes < 1)
     {
-        {std::lock_guard<std::mutex>lock(printLock);fmt::print("DEBUG: Line {0} - {1}\n",__LINE__,__FILE__);}
+        // {std::lock_guard<std::mutex>lock(printLock);fmt::print("DEBUG: Line {0} - {1}\n",__LINE__,__FILE__);}
         quitPlayer();
     }
 }
@@ -407,7 +407,7 @@ void Player::write_game(LURK_GAME pkg, std::string msg)
     }
     if(bytes < 1)
     {
-        {std::lock_guard<std::mutex>lock(printLock);fmt::print("DEBUG: Line {0} - {1}\n",__LINE__,__FILE__);}
+        // {std::lock_guard<std::mutex>lock(printLock);fmt::print("DEBUG: Line {0} - {1}\n",__LINE__,__FILE__);}
         quitPlayer();
     }
 }
@@ -421,7 +421,7 @@ void Player::write_version(LURK_VERSION pkg)
     }
     if(bytes < 1)
     {
-        {std::lock_guard<std::mutex>lock(printLock);fmt::print("DEBUG: Line {0} - {1}\n",__LINE__,__FILE__);}
+        // {std::lock_guard<std::mutex>lock(printLock);fmt::print("DEBUG: Line {0} - {1}\n",__LINE__,__FILE__);}
         quitPlayer();
     }
 }
@@ -436,7 +436,7 @@ void Player::write_connection(LURK_ROOM pkg,std::string msg)
     }
     if(bytes < 1)
     {
-        {std::lock_guard<std::mutex>lock(printLock);fmt::print("DEBUG: Line {0} - {1}\n",__LINE__,__FILE__);}
+        // {std::lock_guard<std::mutex>lock(printLock);fmt::print("DEBUG: Line {0} - {1}\n",__LINE__,__FILE__);}
         quitPlayer();
     }
 }
