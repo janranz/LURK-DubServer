@@ -221,7 +221,7 @@ bool Room::loot_controller(std::shared_ptr<Player> t, unsigned char* target)
     int fiddy = fast_rand() & 1;
     if(fiddy && player)
     {// succeeds player
-
+        loot = pTmp->loot_me();
         m = fmt::format("\n\nAmongst the chaos, {0} glances over at {1}, and sees {2} coin pouch...\n",t->charTainer.CHARACTER_NAME,pTmp->charTainer.CHARACTER_NAME,pTmp->genderPos);
         if(loot > 0)
         {
@@ -243,18 +243,21 @@ bool Room::loot_controller(std::shared_ptr<Player> t, unsigned char* target)
                 damage,t->charTainer.CHARACTER_NAME,pTmp->charTainer.CHARACTER_NAME,pTmp->genderPos,loot);
                 t->take_gold(loot);
                 pTmp->give_gold(loot);
+                inform_death(t);
+                collect_donations(t->loot_me());
             }else{
                 m += fmt::format("With {0} points of blind-sided damage, {1} manages to hobble away with {2} coins from {3}'s pouch...\nWhat a rat!\n",
                 damage,t->charTainer.CHARACTER_NAME,loot,pTmp->charTainer.CHARACTER_NAME);
             }
         }else{
-            m += fmt::format("As blind as a mole, {0} feels nothing as {1} makes good with {3} loot!\n",
+            m += fmt::format("As blind as a mole, {0} feels nothing as {1} makes good with {2} loot!\n",
             pTmp->charTainer.CHARACTER_NAME,t->charTainer.CHARACTER_NAME,pTmp->genderPos);
         }
     }else if(fiddy && !player)
     {//succeeds baddie
         loot = bTmp->loot_me();
-        m = fmt::format("\n\nLike an absolute psycho, {0} locks eyes onto a coin pouch stuck to the side of {1}! {3}'s not about to do what I think--\n",t->charTainer.CHARACTER_NAME);
+        m = fmt::format("\n\nLike an absolute psycho, {0} locks eyes onto a coin pouch stuck to the side of {1}! {2}'s not about to do what I think--\n",
+        t->charTainer.CHARACTER_NAME,bTmp->bTainer.CHARACTER_NAME,t->genderHeShe);
         smack = fast_rand() & 1;
         if(loot > 0)
         {
@@ -262,7 +265,7 @@ bool Room::loot_controller(std::shared_ptr<Player> t, unsigned char* target)
             t->charTainer.CHARACTER_NAME,loot);
             t->give_gold(loot);
         }else{
-            m += fmt::format("After closer inspection, {0} consumes some water and re-thinks that decision.\n Would have gotten bopped for like {0} coins!\n",
+            m += fmt::format("After closer inspection, {0} consumes some water and re-thinks that decision.\n Would have gotten bopped for like {1} coins!\n",
             t->charTainer.CHARACTER_NAME,loot);
         }
         if(smack)
@@ -275,6 +278,7 @@ bool Room::loot_controller(std::shared_ptr<Player> t, unsigned char* target)
                 damage,t->charTainer.CHARACTER_NAME,bTmp->bTainer.CHARACTER_NAME);
                 collect_donations(loot);
                 t->take_gold(loot);
+                inform_death(t);
             }
         }else{
             m += fmt::format("I don't actually believe it! {0} manages to escape with {1}'s gold unscathed! Bet {2} won't try that again. (For violence-sake, let's hope {2} does!)\n",
@@ -289,16 +293,18 @@ bool Room::loot_controller(std::shared_ptr<Player> t, unsigned char* target)
 
         if(loot <= 0)
         {// My bad!
-            m += fmt::format("\n\STOP WAIT!! Uhh, okay... Time freezes.. {0}'s life flashes before {1} eyes.. {2} sees that the server author failed to check if {2} had gold on line {3} of {4}!\n",
+            m += fmt::format("\n\nSTOP WAIT!! Uhh, okay... Time freezes.. {0}'s life flashes before {1} eyes.. {2} sees that the server author failed to check if {2} had gold on line {3} of {4}!\n",
             t->charTainer.CHARACTER_NAME,t->genderPos,t->genderHeShe,__LINE__,__FILE__);
             loot = 1500;
-            m += fmt::format("{0} decides to do what any loyal portal enthusiast would do, and takes out a loan of {1} coins before climbing back into {2}'s arms so {3} can finish the beatdown!\nWow.",
+            m += fmt::format("{0} decides to do what any loyal portal enthusiast would do, and takes out a loan of {1} coins before climbing back into {2}'s arms so {3} can finish the beatdown!\nWow.\n\n",
             t->charTainer.CHARACTER_NAME,loot,pTmp->charTainer.CHARACTER_NAME, pTmp->genderHeShe);
         }
         if(!(t->hurt_player(damage)))
         {
             m += fmt::format("Unfortunately for {0}, the damage was too much for {1} to endure, smacking {1} back to the portal.\n Turning the tables like a hidden Uno card, {2} claims their bounty of {3} coins from {0}'s coin pouch\nThat's how mafia works!",
             t->charTainer.CHARACTER_NAME,t->gender,pTmp->charTainer.CHARACTER_NAME,loot);
+            collect_donations(t->loot_me());
+            inform_death(t);
             
         }else{
             m += fmt::format("Feeling embarrassed, {0} winds up taking {1} damage in exchange for {2} of {3} coins...\nWhich goes straight into {4}'s pouch!\nBetter luck next time. THIEF.\n",
@@ -324,6 +330,7 @@ bool Room::loot_controller(std::shared_ptr<Player> t, unsigned char* target)
                 m += fmt::format("{0} walks over to {1}'s banged up body to collect gold for the coffer, but is left with nothing.\n",
                 bTmp->bTainer.CHARACTER_NAME,t->charTainer.CHARACTER_NAME);
             }
+            inform_death(t);
         }else{
             if(loot)
             {
@@ -450,7 +457,9 @@ bool Room::pvp_controller(std::shared_ptr<Player> t, unsigned char* target)
         tmp->charTainer.CHARACTER_NAME,t->charTainer.CHARACTER_NAME);
         t->tally_pvp();
         totalDeaths++;
+        collect_donations(tmp->loot_me());
         dead = true;
+        inform_death(t);
     }else{
         after_action += fmt::format("TARGET WOUNDED: {0} was able to survive the daunting blow, leaving {1} at {2} HP! MEDIC!\n",tmp->charTainer.CHARACTER_NAME,tmp->genderPos,static_cast<int16_t>(tmp->charTainer.HEALTH));
     }
@@ -517,6 +526,8 @@ bool Room::pvp_controller(std::shared_ptr<Player> t, unsigned char* target)
             t->charTainer.CHARACTER_NAME,tmp->charTainer.CHARACTER_NAME);
             tmp->tally_pvp();
             dead = true;
+            collect_donations(t->loot_me());
+            inform_death(t);
         }else{
             after_action += fmt::format("TARGET WOUNDED: {0} was able to survive the daunting blow, leaving {1} at {2} HP! MEDIC!\n",t->charTainer.CHARACTER_NAME,t->genderPos,static_cast<int16_t>(t->charTainer.HEALTH));
         }
@@ -533,6 +544,7 @@ bool Room::pvp_controller(std::shared_ptr<Player> t, unsigned char* target)
             big_bundle_update();
             room_write(after_action);
             totalDeaths++;
+            collect_donations(t->loot_me());
             return true;
         }
         after_action += "\n-PLAYER REGEN DATA:\n";
@@ -566,27 +578,32 @@ bool Room::initiate_fight_baddie(std::shared_ptr<Player> p)
     std::unique_lock<std::shared_mutex>QLock(rLock,std::defer_lock);
     std::shared_lock<std::shared_mutex>SLock(rLock,std::defer_lock);
     std::string m;
-
     SLock.lock();
-    if(!(isValidBaddie()) || fight_in_progress) // Double check logic here
+    // if(!(isValidBaddie()) || fight_in_progress) // Double check logic here
+    if(fight_in_progress) // Double check logic here
     {
-        // {std::lock_guard<std::mutex>lock(printLock);fmt::print("No baddies!\n");}
         return false;
     }
     SLock.unlock();
 
     QLock.lock();
     fight_in_progress = true;
-    fight_controller(p);
-    mass_kill_report();
-    if(!(isValidBaddie()))
+    if(isValidBaddie())
     {
-        spread_wealth();
+        fight_controller(p);
+        mass_kill_report();
+        //assume a fight has been fought and no baddies remain... distribute wealth:
+        if(!(isValidBaddie()))
+        {
+            spread_wealth();
+        }
+    }else{
+        fight_in_progress = false;
+        return fight_in_progress;
     }
     fight_in_progress = false;
     QLock.unlock();
-
-
+    return !fight_in_progress;
     // after report
 
     
@@ -600,7 +617,7 @@ void Room::spread_wealth()
     std::string n;
     if(!(player_list.empty()))
     {
-        int split = 0;
+        uint16_t split = 0;
         for(auto p = player_list.begin(); p != player_list.end(); ++p)
         {
             if((*p)->isPlayerAlive())
@@ -615,59 +632,129 @@ void Room::spread_wealth()
             
             for(auto b = player_list.begin(); b != player_list.end(); ++b)
             {
-                uint32_t cut = (coffer / split);
-                (*b)->give_gold(cut);
-                n = fmt::format("{0} obtains {1} gold\n",(*b)->charTainer.CHARACTER_NAME,cut);
-                m += n;
+                if((*b)->isPlayerAlive())
+                {
+                    uint32_t cut = (coffer / split);
+                    (*b)->give_gold(cut);
+                    n = fmt::format("{0} obtains {1} gold\n",(*b)->charTainer.CHARACTER_NAME,cut);
+                    m += n;
+                }else{
+                    m += fmt::format("{0} gets no share of the cut, because {1}'s dead! (send an action to respawn)",(*b)->charTainer.CHARACTER_NAME,(*b)->genderHeShe);
+                }
             }
         coffer = 0;
         }else{
             n = fmt::format("Nobody survived to distribute.\n");
             m += n;
         }
-        big_bundle_update();
         room_write(m);
+        big_bundle_update();
     }
 }
 
 void Room::fight_controller(std::shared_ptr<Player> inst)
-{// locked by unique room lock
+{// locked by unique room lock. We assert through calling this function that at least one baddie is alive.
     
     std::string m;
     bool next = false;
-    uint32_t crit;
-    uint32_t base;
+    bool roomCleared = false;
+    bool playerDead = false;
+    uint32_t playerCrit;
+    uint32_t FPmulti;
+    uint32_t baseAttack;
+    uint32_t halfDef;
     uint32_t roll;
     uint32_t negate;
     uint32_t defMulti;
+    uint16_t baddieDef;
     uint16_t kills = 0;
     uint16_t h = 0;
     std::string after_action = "\n========== FIGHT SUMMARY ==========\n";
-    // std::string aa_ap;
-    int bDex = -1;
-    // after_action += "-PLAYER FIGHT DATA: ";
-    if(isValidBaddie())
+
+    std::shared_ptr<Baddie> BADDIE(nullptr);
+    BADDIE = retrieve_a_baddie();
+    if(BADDIE == nullptr)
     {
-        bDex = LiveBaddieDex();
-    }else{
-        {std::lock_guard<std::mutex>lock(printLock);fmt::print("BAD DEX: Line {0} - {1}\n",__LINE__,__FILE__);}
+        {std::lock_guard<std::mutex>lock(printLock);fmt::print("DEBUG fight_controller (Initial live baddie not found!): Line {0} - {1}\n",__LINE__,__FILE__);}
+        return;
     }
-        
-    if(bDex != -1)
-    {
-        // m = fmt::format("{0} grows tired of {1} looking at them with googly eyes and decides to start a fight!\n",
-        // inst->charTainer.CHARACTER_NAME,baddie_list.at(bDex)->bTainer.CHARACTER_NAME); // potential UB.
-        // room_write(m);
-        after_action += fmt::format("Instigator: {0}\n",inst->charTainer.CHARACTER_NAME);
-        after_action += fmt::format("{0} grows tired of {1} looking at them with googly eyes and decides to start a fight!\n\n",
-        inst->charTainer.CHARACTER_NAME,baddie_list.at(bDex)->bTainer.CHARACTER_NAME);
-    }else{
-        std::lock_guard<std::mutex>lock(printLock);
-        fmt::print("bDex crapped out?: {0}",bDex);
-    }
+    after_action += fmt::format("Instigator: {0}\n",inst->charTainer.CHARACTER_NAME);
+    after_action += fmt::format("{0} grows tired of {1} looking at them with googly eyes and decides to start a fight!\n\n",
+    inst->charTainer.CHARACTER_NAME,BADDIE->bTainer.CHARACTER_NAME);
 
     for(auto p = player_list.begin(); p != player_list.end(); ++p)
     {
+        if(next)
+        {
+            BADDIE = retrieve_a_baddie();
+            if(BADDIE == nullptr)
+            {// room cleared!
+                roomCleared = true;
+                after_action += fmt::format("{0} sees their homie deliver the final blow on the last baddie... The room looks clear!\n\n",(*p)->charTainer.CHARACTER_NAME);
+                // break;
+            }
+        }
+
+        if(!roomCleared)
+        {
+            h = (*p)->charTainer.HEALTH;
+            if(h == 0)
+            {// player dead
+                after_action += fmt::format("Status (Deceased): {0} grows cold...",(*p)->charTainer.CHARACTER_NAME);
+                playerDead = true;
+            }else{
+                {std::lock_guard<std::mutex>lock(printLock);fmt::print("Baddie sanity check: {0}\n",BADDIE->bTainer.CHARACTER_NAME);}
+                after_action += fmt::format("{0} sees their homie deliver the final blow on the last baddie, and locks eyes with {1}!\n\n"
+                    ,(*p)->charTainer.CHARACTER_NAME,BADDIE->bTainer.CHARACTER_NAME);
+                    playerDead = false;
+            }
+        }
+
+        if(!roomCleared && !playerDead)
+        {// fight sequence one player strikes one baddie
+            FPmulti = 100 * firepower;
+            halfDef = (BADDIE->bTainer.DEFENSE / 2);
+            playerCrit = ((*p)->getCrit() + (FPmulti + halfDef));
+            baseAttack = (*p)->charTainer.ATTACK;
+
+            after_action += fmt::format("-PLAYER FIGHT DATA: [ATTACKER: {0} | HEALTH: {1}] vs [BADDIE: {0} | HEALTH: {1}]\n\n",
+            (*p)->charTainer.CHARACTER_NAME,static_cast<int16_t>((*p)->charTainer.HEALTH,BADDIE->bTainer.CHARACTER_NAME,BADDIE->bTainer.HEALTH));
+
+            baddieDef = BADDIE->bTainer.DEFENSE;
+
+            if((*p)->charTainer.ATTACK < BADDIE->bTainer.DEFENSE)
+            {
+                baddieDef = (BADDIE->bTainer.DEFENSE / difficulty);
+            }
+            roll = fight_roll(playerCrit,baseAttack,baddieDef);
+
+            if(roll > (*p)->charTainer.ATTACK)
+            {
+                after_action += fmt::format("{0} delivers CRITICAL damage of {1} straight to the dome of {2}! That's a lot of damage!\n",
+                (*p)->charTainer.CHARACTER_NAME,roll,BADDIE->bTainer.CHARACTER_NAME);
+            }
+        }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
         if(isValidBaddie())
         {
             h = (*p)->charTainer.HEALTH;
@@ -681,20 +768,27 @@ void Room::fight_controller(std::shared_ptr<Player> inst)
             if(next)
             {// I think it is safe to assume a baddie is alive. double check though. consider parent condition (line 393)
                 next = false;
-                bDex = LiveBaddieDex();
-                {std::lock_guard<std::mutex>lock(printLock);fmt::print("bDex sanity check: {0}\n",bDex);}
-                after_action += fmt::format("{0} sees their homie deliver the final blow on the last baddie, and locks eyes with {1}!\n\n"
-                    ,(*p)->charTainer.CHARACTER_NAME,baddie_list.at(bDex)->bTainer.CHARACTER_NAME);
+                BADDIE = retrieve_a_baddie();
+                if(BADDIE == nullptr)
+                {
+                    roomCleared = true;
+                    after_action += fmt::format("{0} sees their homie deliver the final blow on the last baddie... The room looks clear!\n\n",(*p)->charTainer.CHARACTER_NAME);
+                }else{
+                    {std::lock_guard<std::mutex>lock(printLock);fmt::print("Baddie sanity check: {0}\n",BADDIE->bTainer.CHARACTER_NAME);}
+                    after_action += fmt::format("{0} sees their homie deliver the final blow on the last baddie, and locks eyes with {1}!\n\n"
+                        ,(*p)->charTainer.CHARACTER_NAME,BADDIE->bTainer.CHARACTER_NAME);
+                }
             }
             
-            uint32_t multi = 100 * firepower;
-            // crit = ((*p)->getCrit()) + multi;
-            base = (*p)->charTainer.ATTACK;
+            // FPmulti = 100 * firepower;
+            // halfDef = (BADDIE->bTainer.DEFENSE / 2);
+            // playerCrit = ((*p)->getCrit()) + (FPmulti + halfDef);
+            // baseAttack = (*p)->charTainer.ATTACK;
             
             if(baddie_list.at(bDex)->is_alive())
             {// balance issues
                 uint32_t halfDef = (baddie_list.at(bDex)->bTainer.DEFENSE / 2);
-                crit = ((*p)->getCrit()) + (multi + halfDef);
+                playerCrit = ((*p)->getCrit()) + (multi + halfDef);
                 after_action += "-PLAYER FIGHT DATA: ";
                 after_action += fmt::format("[ FIGHTER: {0} | HEALTH: {1} ] vs ",(*p)->charTainer.CHARACTER_NAME,h);
                 h = baddie_list.at(bDex)->bTainer.HEALTH;
@@ -809,6 +903,8 @@ void Room::fight_controller(std::shared_ptr<Player> inst)
                             // m = fmt::format("ENEMY FATAL DAMAGE INCOMING:{0} delivers a fatal blow to {1}...\nslap, chop, smacking them back to the Portal Room! Yikes!\n({2} damage, {3} negated)\n"
                             //     ,baddie_list.at(bDex)->bTainer.CHARACTER_NAME, (*p)->charTainer.CHARACTER_NAME,roll,negate);
                             totalDeaths++;
+                            collect_donations((*p)->loot_me());
+                            inform_death((*p));
                             after_action += fmt::format("FRIENDLY WOUNDED(FATAL): {0} fatally wounds {1} with a final damage amount of {2} - Slap, chop, smacking {3} back to the Portal Room with the quickness! Yikes\n",baddie_list.at(bDex)->bTainer.CHARACTER_NAME,(*p)->charTainer.CHARACTER_NAME,roll,(*p)->gender);
                         }else{
                             after_action += fmt::format("FRIENDLY WOUNDED: {0} delivers a painful {1} points of damage to {2}.\n",baddie_list.at(bDex)->bTainer.CHARACTER_NAME,roll,(*p)->charTainer.CHARACTER_NAME);
@@ -857,31 +953,24 @@ void Room::fight_controller(std::shared_ptr<Player> inst)
         after_action += fmt::format("{0} lies there, looking ugly as sin. Whew... at least it didn't heal\n",baddie_list.at(bDex)->bTainer.CHARACTER_NAME);
     }
     
-    // for(auto b = baddie_list.begin(); b != baddie_list.end(); ++b)
-    // {
-    //     if((*b)->is_alive())
-    //     {
-    //         if(firepower > difficulty)
-    //         {
-    //             genMulti = 500;
-    //         }else{
-    //             genMulti = 0;
-    //         }
-    //         // genMulti += (fast_rand() % ((*b)->bTainer.REGEN + 1) + 1);
-    //         genMulti = (fast_rand() % (serverStats::BADDIE_MAX_HEALTH + 1) + 1);
-    //         (*b)->heal_baddie(genMulti);
-    //         big_bundle_update();
-            
-    //         after_action += fmt::format("{0} has recovered {1} health! and is angry as heck. YIKES!\n",(*b)->bTainer.CHARACTER_NAME,genMulti);
-    //         // after_action += fmt::format("{0} recovers {1} health.\n",(*b)->bTainer.CHARACTER_NAME,genMulti);
-    //     }else{
-    //         after_action += fmt::format("{0} lies there, looking ugly as sin. Whew... at least it didn't heal\n",(*b)->bTainer.CHARACTER_NAME);            
-    //     }
-    //     // room_write(m);
-    // }
     after_action += "==========\n";
     room_write(after_action);
 
+}
+
+uint32_t Room::fight_roll(uint32_t crit, uint32_t base,uint32_t def)
+{
+    if(crit - base < 1)
+    {
+        return 0;
+    }
+    if(!def)
+    {
+        def = 1;
+    }
+    uint32_t dmg = (fast_rand() % ((crit + 1) - base) + base );
+    uint32_t negate = (fast_rand() % def);
+    return (dmg - negate);
 }
 
 void Room::tally_kills(uint16_t k)
@@ -893,6 +982,12 @@ void Room::tally_kills(uint16_t k)
                 (*p)->tally_curr(k);
             }
         }
+}
+
+void Room::inform_death(std::shared_ptr<Player> p)
+{
+    std::string m = fmt::format("\nHello. This is your friendly butler here. Looks like you got SMACKED up!\nFeel Free to just lie here while everyone else is doing their thing, or you can send any action to respawn!");
+    p->write_msg(rmpm,m);
 }
 
 void Room::collect_donations(uint16_t p)
@@ -991,28 +1086,23 @@ bool Room::isValidBaddie()
     return false;
 }
 
-int Room::LiveBaddieDex()
-{
-
-    liveDex.clear();
+std::shared_ptr<Baddie> Room::retrieve_a_baddie()
+{// always lock from the outside.
+    std::shared_ptr<Baddie> bTmp(nullptr);
     int i = 0;
     for(auto b = baddie_list.begin(); b != baddie_list.end(); ++b)
     {
         if((*b)->bTainer.FLAGS == serverStats::BADDIE_AFLAGS)
         {
-            liveDex.emplace_back(i); // value of i DOES matter here.
+            bTmp = (*b);
+            break;
         }
         i++;
     }
-    {std::lock_guard<std::mutex>lock(printLock);fmt::print("Size of live baddies: {0}\n",liveDex.size());}
-    if(liveDex.empty())
-    {
-        {std::lock_guard<std::mutex>lock(printLock);fmt::print("PROBLEM WITH LIVEDEX: Line {0} - {1}\n",__LINE__,__FILE__);}
-        return -1;
-    }else{
-        int dex = (fast_rand() % liveDex.size());
-        return liveDex.at(dex);
-    }
+    if(bTmp != nullptr)
+        {std::lock_guard<std::mutex>lock(printLock);fmt::print("bTmp sanity check: {0}\n",bTmp->bTainer.CHARACTER_NAME);}
+    
+    return bTmp;
 }
 
 int Room::liveBaddieCount()

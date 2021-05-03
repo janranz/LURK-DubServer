@@ -269,14 +269,15 @@ uint16_t Player::getCrit()
 
 uint16_t Player::loot_me()
 {
-    uint16_t drop;
+    uint16_t drop = 0;
     std::lock_guard<std::shared_mutex>lock(pLock);
-    if(charTainer.GOLD != 0)
+    if(charTainer.GOLD > 0)
     {
-        drop = (fast_rand() % (charTainer.GOLD + 1) + 1);
+        drop = (fast_rand() % (charTainer.GOLD) + 1);
         charTainer.GOLD -= drop;
-    }else{
-        drop = 0;
+    }else if(charTainer.GOLD == 1){
+        drop = 1;
+        charTainer.GOLD -= drop;
     }
     return drop;
 }
@@ -311,7 +312,7 @@ void Player::write_msg(LURK_MSG pkg, std::string msg)
         write(socketFD,&LURK_TYPES::TYPE_MSG,sizeof(uint8_t));
         write(socketFD, &pkg, sizeof(LURK_MSG));
         bytes = write(socketFD,msg.c_str(), pkg.MSG_LEN);
-        {std::lock_guard<std::mutex>lock(printLock);fmt::print("PLAYER: {0} BYTES:{1} -> Line {2} - {3}\nMESSAGE:{4}\n",charTainer.CHARACTER_NAME,bytes,__LINE__,__FILE__,msg);}
+        // {std::lock_guard<std::mutex>lock(printLock);fmt::print("PLAYER: {0} BYTES:{1} -> Line {2} - {3}\nMESSAGE:{4}\n",charTainer.CHARACTER_NAME,bytes,__LINE__,__FILE__,msg);}
     }
         if(bytes < 1)
         {

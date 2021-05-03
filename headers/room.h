@@ -23,7 +23,7 @@ class Room
         std::vector<std::shared_ptr<Room>> room_connections;
         std::vector<std::shared_ptr<Baddie>> baddie_list;
         std::vector<std::shared_ptr<Player>> player_list;
-        std::vector<int> liveDex;
+        
         ssize_t bytes;
         
         bool fight_in_progress;
@@ -65,7 +65,7 @@ class Room
         bool isValidConnection(uint16_t);
         bool isValidBaddie();
         int liveBaddieCount();
-        int LiveBaddieDex();
+        std::shared_ptr<Baddie> retrieve_a_baddie();
         bool isFightInProgress();
         void calculateDiff();
         void bundle_update(std::shared_ptr<Player>);
@@ -77,6 +77,8 @@ class Room
         void mass_kill_report();
         void single_kill_report(std::shared_ptr<Player>);
         void collect_donations(uint16_t);
+        void inform_death(std::shared_ptr<Player>);
+        uint32_t fight_roll(uint32_t,uint32_t,uint32_t);
         
         //debug
         // size_t room_connection_size();

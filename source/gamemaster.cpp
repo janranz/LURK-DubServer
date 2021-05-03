@@ -331,6 +331,7 @@ void Gamemaster::proc_loot(std::shared_ptr<Player> p)
         p->quitPlayer();
         return;
     }
+    {std::lock_guard<std::mutex>lock(printLock);fmt::print("DEBUG proc_loot target:{0}: Line {1} - {2}\n",pkg.TARGET,__LINE__,__FILE__);}
     {
         std::shared_lock<std::shared_mutex>lock(GMLock);
         int r = p->charTainer.CURRENT_ROOM_NUMBER;
@@ -345,7 +346,7 @@ void Gamemaster::proc_loot(std::shared_ptr<Player> p)
         }else{
             //failed to loot
             m = fmt::format("\nTHIEF ATTEMPT: {0} attempted to steal from {1} in {2}, but failed!\n Go show {3} what happens to thieves!\n",
-            p->charTainer.CHARACTER_NAME,master_room_list.at(r)->roomTainer.ROOM_NAME,p->gender);
+            p->charTainer.CHARACTER_NAME,pkg.TARGET,master_room_list.at(r)->roomTainer.ROOM_NAME,p->gender);
         }
     }
 }
@@ -508,6 +509,14 @@ void Gamemaster::proc_start(std::shared_ptr<Player> p)
 }
 
 //error handling
+
+void Gamemaster::error_loot(std::shared_ptr<Player> p)
+{
+    LURK_ERROR pkg;
+    pkg.CODE = 6;
+    std::string m = fmt::format("{0}: You attempt to loot, but I couldn't find who your target. Try again?\n",serverStats::GM_NAME);
+    p->write_error(pkg,m);
+}
 
 void Gamemaster::error_dead(std::shared_ptr<Player> p)
 {
