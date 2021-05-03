@@ -26,6 +26,11 @@ class Gamemaster
         chatter_messages c_m;
         cm_sizes vsize;
         bool genderBender;
+        std::string pveLeader;
+        std::string pvpLeader;
+        uint32_t pveHighScore;
+        uint32_t pvpHighScore;
+
     public:
         //events
         // int fast_rand();
@@ -60,6 +65,8 @@ class Gamemaster
         bool check_stat(std::shared_ptr<Player>);
         void move_player(std::shared_ptr<Player>,uint16_t);
         void spawn_player(std::shared_ptr<Player>);
+        void check_pveHighScore(char*,uint32_t);
+        void check_pvpHighScore(char*,uint32_t);
         
         void write_global(std::string);
         // error handling

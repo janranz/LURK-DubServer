@@ -662,6 +662,7 @@ void Room::fight_controller(std::shared_ptr<Player> inst)
 {// locked by unique room lock. We assert through calling this function that at least one baddie is alive.
     
     std::string m; // = "\n========== FIGHT SUMMARY ==========\n";
+    bool initial = true;
     bool next = false;
     bool roomCleared = false;
     bool playerDead = false;
@@ -684,14 +685,14 @@ void Room::fight_controller(std::shared_ptr<Player> inst)
         {std::lock_guard<std::mutex>lock(printLock);fmt::print("DEBUG fight_controller (Initial live baddie not found!): Line {0} - {1}\n",__LINE__,__FILE__);}
         return;
     }
-    m += fmt::format("Instigator: {0}\n",inst->charTainer.CHARACTER_NAME);
-    m += fmt::format("{0} grows tired of {1} looking at them with googly eyes and decides to start a fight!\n\n",
-    inst->charTainer.CHARACTER_NAME,BADDIE->bTainer.CHARACTER_NAME);
+    m += fmt::format("{0} grows tired of {1} looking at {2} with googly eyes and decides to start a fight!\n\n",
+    inst->charTainer.CHARACTER_NAME,BADDIE->bTainer.CHARACTER_NAME, inst->gender);
     room_write(m);
     std::string after_action;
     for(auto p = player_list.begin(); p != player_list.end(); ++p)
     {
-        after_action = "";
+        after_action = fmt::format("Instigator: {0}\n",inst->charTainer.CHARACTER_NAME);;
+        playerDead = false;
         if(next)
         {
             BADDIE = retrieve_a_baddie();
@@ -710,11 +711,13 @@ void Room::fight_controller(std::shared_ptr<Player> inst)
             {// player dead
                 after_action += fmt::format("Status (Deceased): {0} grows cold...\n",(*p)->charTainer.CHARACTER_NAME);
                 playerDead = true;
-            }else{
+            }else if(next){
                 // {std::lock_guard<std::mutex>lock(printLock);fmt::print("Baddie sanity check: {0}\n",BADDIE->bTainer.CHARACTER_NAME);}
                 after_action += fmt::format("{0} sees their homie deliver the final blow on the last baddie, and locks eyes with {1}!\n\n"
                     ,(*p)->charTainer.CHARACTER_NAME,BADDIE->bTainer.CHARACTER_NAME);
                     playerDead = false;
+            }else{
+                {std::lock_guard<std::mutex>lock(printLock);fmt::print("DEBUG fight_controller (hit else block!): Line {0} - {1}\n",__LINE__,__FILE__);}
             }
         }
 
@@ -758,7 +761,8 @@ void Room::fight_controller(std::shared_ptr<Player> inst)
                 }
                 next = true;
                 collect_donations(BADDIE->loot_me());
-                tally_PVE_kill();
+                // tally_PVE_kill(); // maybe unique kill
+                (*p)->tally_PVE_kill();
                 (*p)->full_restore_health();
                 after_action += fmt::format("{0} gets a huuuuge morale boost after smacking that baddie into the lake of fire, and {1} manages to restore full health!\n",
                 (*p)->charTainer.CHARACTER_NAME,(*p)->genderHeShe);
@@ -834,11 +838,12 @@ void Room::fight_controller(std::shared_ptr<Player> inst)
                 {
                     roll = heal_roll((*p)->charTainer.REGEN,(*p)->charTainer.HEALTH);
                     (*p)->heal_player(roll);
-                    after_action += fmt::format("{0} takes a moment to get {1} Bearing Strait and restores {2} points of health.\n",
-                    (*p)->charTainer.CHARACTER_NAME,(*p)->genderHeShe,roll);
+                    after_action += fmt::format("{0} takes a moment to get {1} Bering Strait and restores {2} points of health.\n",
+                    (*p)->charTainer.CHARACTER_NAME,(*p)->genderPos,roll);
                 }
             }
-        
+        }else if(!roomCleared && playerDead){
+            after_action += fmt::format("{0} lies there like a rug! RIP!\n", (*p)->charTainer.CHARACTER_NAME);
         }
         room_write(after_action);
         big_bundle_update();

@@ -25,6 +25,7 @@ Player::Player(int fd)
     totalDeaths = 0;
     currPVEScore = 0;
     highPVEScore = 0;
+    flagHS = false;
 }
 
 //state check
@@ -32,6 +33,11 @@ bool Player::isSktAlive()
 {
     std::shared_lock<std::shared_mutex>lock(pLock);
     return sktAlive;
+}
+bool Player::isHighScore()
+{
+    std::shared_lock<std::shared_mutex>lock(pLock);
+    return !flagHS;
 }
 bool Player::isStarted()
 {
@@ -61,6 +67,12 @@ uint16_t Player::getPVPKills()
 }
 //state set
 
+void Player::HSchecked()
+{
+    std::lock_guard<std::shared_mutex>lock(pLock);
+    flagHS = false;
+}
+
 void Player::full_restore_health()
 {
     std::lock_guard<std::shared_mutex>lock(pLock);
@@ -77,6 +89,7 @@ void Player::tally_pvp()
         }else{
             pvpKills++;
         }
+        flagHS = true;
     }
 }
 
@@ -143,7 +156,7 @@ void Player::tally_PVE_kill()
     {
         highPVEScore = currPVEScore;
     }
-
+    flagHS = true;
 }
 
 void Player::respawn()

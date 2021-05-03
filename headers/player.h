@@ -17,9 +17,11 @@ class Player
         bool validToon;
         bool freshSpawn;
         bool playerAlive;
+        bool flagHS;
         uint16_t highPVEScore;
         uint16_t currPVEScore;
         uint16_t pvpKills;
+
 
 
         // fight logic
@@ -42,7 +44,7 @@ class Player
         bool isValidToon();
         bool isFreshSpawn();
         bool isPlayerAlive();
-
+        bool isHighScore();
         //state set
         void startPlayer(bool);
         void quitPlayer();
@@ -56,6 +58,7 @@ class Player
         void give_gold(uint32_t);
         void take_gold(uint16_t); // refund
         
+        void HSchecked();
         void tally_pvp();
         void full_restore_health();
         

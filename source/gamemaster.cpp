@@ -18,6 +18,10 @@ Gamemaster::Gamemaster()
     //set GM's name
     strncpy(M_ToCP(gmpm.SENDER_NAME),serverStats::GM_NAME.c_str(),sizeof(gmpm.SENDER_NAME));
     genderBender = false;
+    pveLeader = "";
+    pvpLeader = "";
+    pveHighScore = 0;
+    pvpHighScore = 0;
     
     
 }
@@ -295,12 +299,82 @@ void Gamemaster::GMController(int fd)
                 pump_n_dump(p);
             }
         }
+        
+        if(p->isHighScore())
+        {
+            check_pveHighScore(M_ToCP(p->charTainer.CHARACTER_NAME),p->getCurrScore());
+            check_pvpHighScore(M_ToCP(p->charTainer.CHARACTER_NAME),p->getCurrScore());
+            p->HSchecked();
+        }
     }
     //connection lost.
     ragequit(p);
 }
 //END network******************************************************************************************************
 
+void Gamemaster::check_pveHighScore(char* name, uint32_t score)
+{
+    bool newLeader = false;
+    {
+        std::lock_guard<std::shared_mutex>lock(GMLock);
+        if(score > pveHighScore)
+        {
+            pveLeader = std::string(name);
+            pveHighScore = score;
+            newLeader = true;
+        }
+    }
+    if(newLeader)
+    {
+    std::string m = "\n\n" R"(
+         _______      ________    _____ _    _          __  __ _____ _____ ____  _   _ 
+        |  __ \ \    / /  ____|  / ____| |  | |   /\   |  \/  |  __ \_   _/ __ \| \ | |
+        | |__) \ \  / /| |__    | |    | |__| |  /  \  | \  / | |__) || || |  | |  \| |
+        |  ___/ \ \/ / |  __|   | |    |  __  | / /\ \ | |\/| |  ___/ | || |  | | . ` |
+        | |      \  /  | |____  | |____| |  | |/ ____ \| |  | | |    _| || |__| | |\  |
+        |_|       \/   |______|  \_____|_|  |_/_/    \_\_|  |_|_|   |_____\____/|_| \_|
+                                                                                    
+    )" "\n\n";
+
+    m += fmt::format("NEW PvE Leader: {0} PvE Kills: {1}\n",
+    pveLeader,pveHighScore);
+    write_global(m);
+    }
+
+
+    
+}
+void Gamemaster::check_pvpHighScore(char* name, uint32_t score)
+{
+    bool newLeader = false;
+
+
+    {
+        std::lock_guard<std::shared_mutex>lock(GMLock);
+        if(score > pvpHighScore)
+        {
+            pvpLeader = std::string(name);
+            pvpHighScore = score;
+            newLeader = true;
+        }
+    }
+    if(newLeader)
+    {
+        std::string m = "\n\n" R"(
+            _______      _______     _____ _    _          __  __ _____ _____ ____  _   _ 
+            |  __ \ \    / /  __ \   / ____| |  | |   /\   |  \/  |  __ \_   _/ __ \| \ | |
+            | |__) \ \  / /| |__) | | |    | |__| |  /  \  | \  / | |__) || || |  | |  \| |
+            |  ___/ \ \/ / |  ___/  | |    |  __  | / /\ \ | |\/| |  ___/ | || |  | | . ` |
+            | |      \  /  | |      | |____| |  | |/ ____ \| |  | | |    _| || |__| | |\  |
+            |_|       \/   |_|       \_____|_|  |_/_/    \_\_|  |_|_|   |_____\____/|_| \_|
+                                                                                        
+        )" "\n\n";
+        m += fmt::format("NEW PvP Leader: {0} PvP Kills: {1}\n",
+        pvpLeader,pvpHighScore);
+        write_global(m);
+    }
+
+}
 
 uint8_t Gamemaster::listener(std::shared_ptr<Player> p)
 {
