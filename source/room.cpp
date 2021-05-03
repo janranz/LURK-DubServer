@@ -716,9 +716,10 @@ void Room::fight_controller(std::shared_ptr<Player> inst)
                 after_action += fmt::format("{0} sees their homie deliver the final blow on the last baddie, and locks eyes with {1}!\n\n"
                     ,(*p)->charTainer.CHARACTER_NAME,BADDIE->bTainer.CHARACTER_NAME);
                     playerDead = false;
-            }else{
-                {std::lock_guard<std::mutex>lock(printLock);fmt::print("DEBUG fight_controller (hit else block!): Line {0} - {1}\n",__LINE__,__FILE__);}
             }
+            // else{
+            //     {std::lock_guard<std::mutex>lock(printLock);fmt::print("DEBUG fight_controller (hit else block!): Line {0} - {1}\n",__LINE__,__FILE__);}
+            // }
         }
 
         if(!roomCleared && !playerDead)
