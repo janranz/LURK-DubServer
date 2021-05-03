@@ -52,7 +52,7 @@ void Room::emplace_player(std::shared_ptr<Player>p)
         {
             if((*t)->getFD() != fd)
             {
-                (*t)->write_msg(rmpm,m);
+                (*t)->write_msg(rmpm,m,__LINE__);
             }
         }
     }
@@ -85,7 +85,7 @@ void Room::remove_player(std::shared_ptr<Player>p)
         std::shared_lock<std::shared_mutex> lock(rLock);
         for(auto t = player_list.begin(); t != player_list.end(); ++t)
         {
-            (*t)->write_msg(rmpm, m);
+            (*t)->write_msg(rmpm, m,__LINE__);
         }
     }
     
@@ -195,9 +195,12 @@ bool Room::loot_controller(std::shared_ptr<Player> t, unsigned char* target)
         if(compare_to_lowers(M_ToCP((*p)->charTainer.CHARACTER_NAME),M_ToCP(target)))
         {
             pTmp = (*p);
-            success = true;
-            player = true;
-            break;
+            if(pTmp->getFD() != t->getFD())
+            {
+                success = true;
+                player = true;
+                break;
+            }
         }
     }
     if(!success)
@@ -387,8 +390,11 @@ bool Room::pvp_controller(std::shared_ptr<Player> t, unsigned char* target)
         if(compare_to_lowers(M_ToCP((*p)->charTainer.CHARACTER_NAME),M_ToCP(target)))
         {
             tmp = (*p);
-            success = true;
-            break;
+            if(tmp->getFD() != t->getFD())
+            {
+                success = true;
+                break;
+            }
         }
     }
     if(!success)
@@ -529,7 +535,7 @@ bool Room::pvp_controller(std::shared_ptr<Player> t, unsigned char* target)
             collect_donations(t->loot_me());
             inform_death(t);
         }else{
-            after_action += fmt::format("TARGET WOUNDED: {0} was able to survive the daunting blow, leaving {1} at {2} HP! MEDIC!\n",t->charTainer.CHARACTER_NAME,t->genderPos,static_cast<int16_t>(t->charTainer.HEALTH));
+            after_action += fmt::format("TARGET WOUNDED: {0} was able to survive the daunting blow, leaving {1} at {2} HP! MEDIC!\n",t->charTainer.CHARACTER_NAME,t->gender,static_cast<int16_t>(t->charTainer.HEALTH));
         }
         big_bundle_update();
         // room_write(m);
@@ -574,19 +580,19 @@ bool Room::pvp_controller(std::shared_ptr<Player> t, unsigned char* target)
 }
 bool Room::initiate_fight_baddie(std::shared_ptr<Player> p)
 {// need a routine for those who get in here but are late to the battle. (passes check in GM, but queued to aquire lock)
-
-    std::unique_lock<std::shared_mutex>QLock(rLock,std::defer_lock);
-    std::shared_lock<std::shared_mutex>SLock(rLock,std::defer_lock);
+    std::lock_guard<std::shared_mutex>lock(rLock);
+    // std::unique_lock<std::shared_mutex>QLock(rLock,std::defer_lock);
+    // std::shared_lock<std::shared_mutex>SLock(rLock,std::defer_lock);
     std::string m;
-    SLock.lock();
+    // SLock.lock();
     // if(!(isValidBaddie()) || fight_in_progress) // Double check logic here
     if(fight_in_progress) // Double check logic here
     {
         return false;
     }
-    SLock.unlock();
+    // SLock.unlock();
 
-    QLock.lock();
+    // QLock.lock();
     fight_in_progress = true;
     if(isValidBaddie())
     {
@@ -602,7 +608,7 @@ bool Room::initiate_fight_baddie(std::shared_ptr<Player> p)
         return fight_in_progress;
     }
     fight_in_progress = false;
-    QLock.unlock();
+    // QLock.unlock();
     return !fight_in_progress;
     // after report
 
@@ -655,7 +661,7 @@ void Room::spread_wealth()
 void Room::fight_controller(std::shared_ptr<Player> inst)
 {// locked by unique room lock. We assert through calling this function that at least one baddie is alive.
     
-    std::string m;
+    std::string m; // = "\n========== FIGHT SUMMARY ==========\n";
     bool next = false;
     bool roomCleared = false;
     bool playerDead = false;
@@ -664,12 +670,12 @@ void Room::fight_controller(std::shared_ptr<Player> inst)
     uint32_t baseAttack;
     uint32_t halfDef;
     uint32_t roll;
-    uint32_t negate;
-    uint32_t defMulti;
+    // uint32_t negate;
+    // uint32_t defMulti;
     uint16_t defenderDef;
-    uint16_t kills = 0;
-    uint16_t h = 0;
-    std::string m; // = "\n========== FIGHT SUMMARY ==========\n";
+    // uint16_t kills = 0;
+    int16_t h = 0;
+    
 
     std::shared_ptr<Baddie> BADDIE(nullptr);
     BADDIE = retrieve_a_baddie();
@@ -682,10 +688,10 @@ void Room::fight_controller(std::shared_ptr<Player> inst)
     m += fmt::format("{0} grows tired of {1} looking at them with googly eyes and decides to start a fight!\n\n",
     inst->charTainer.CHARACTER_NAME,BADDIE->bTainer.CHARACTER_NAME);
     room_write(m);
-
+    std::string after_action;
     for(auto p = player_list.begin(); p != player_list.end(); ++p)
     {
-        std::string after_action;
+        after_action = "";
         if(next)
         {
             BADDIE = retrieve_a_baddie();
@@ -705,7 +711,7 @@ void Room::fight_controller(std::shared_ptr<Player> inst)
                 after_action += fmt::format("Status (Deceased): {0} grows cold...\n",(*p)->charTainer.CHARACTER_NAME);
                 playerDead = true;
             }else{
-                {std::lock_guard<std::mutex>lock(printLock);fmt::print("Baddie sanity check: {0}\n",BADDIE->bTainer.CHARACTER_NAME);}
+                // {std::lock_guard<std::mutex>lock(printLock);fmt::print("Baddie sanity check: {0}\n",BADDIE->bTainer.CHARACTER_NAME);}
                 after_action += fmt::format("{0} sees their homie deliver the final blow on the last baddie, and locks eyes with {1}!\n\n"
                     ,(*p)->charTainer.CHARACTER_NAME,BADDIE->bTainer.CHARACTER_NAME);
                     playerDead = false;
@@ -720,7 +726,7 @@ void Room::fight_controller(std::shared_ptr<Player> inst)
             baseAttack = (*p)->charTainer.ATTACK;
 
             after_action += fmt::format("-PLAYER FIGHT DATA: [PLAYER: {0} | HEALTH: {1}] vs [BADDIE: {2} | HEALTH: {3}]\n\n",
-            (*p)->charTainer.CHARACTER_NAME,static_cast<int16_t>((*p)->charTainer.HEALTH,BADDIE->bTainer.CHARACTER_NAME,BADDIE->bTainer.HEALTH));
+            (*p)->charTainer.CHARACTER_NAME,static_cast<int16_t>((*p)->charTainer.HEALTH),BADDIE->bTainer.CHARACTER_NAME,static_cast<int16_t>(BADDIE->bTainer.HEALTH));
 
             defenderDef = BADDIE->bTainer.DEFENSE;
 
@@ -753,30 +759,39 @@ void Room::fight_controller(std::shared_ptr<Player> inst)
                 next = true;
                 collect_donations(BADDIE->loot_me());
                 tally_PVE_kill();
+                (*p)->full_restore_health();
+                after_action += fmt::format("{0} gets a huuuuge morale boost after smacking that baddie into the lake of fire, and {1} manages to restore full health!\n",
+                (*p)->charTainer.CHARACTER_NAME,(*p)->genderHeShe);
             }else{
                 after_action += fmt::format("{0} staggers after getting hit, but manages to persevere! Looks like {1} and {2} friends should give that baddie another Hurt Hug!\n",
                 BADDIE->bTainer.CHARACTER_NAME,(*p)->charTainer.CHARACTER_NAME,(*p)->genderPos);
             }
 
             // baddie heal attempt
-            int heelflip = (fast_rand() & 1) || (fast_rand() & 1);
-            if(heelflip)
-            {// baddie heals
-                uint16_t roll = heal_roll(BADDIE->bTainer.REGEN,BADDIE->bTainer.HEALTH);
-                // roll = (roll > serverStats::BADDIE_MAX_HEALTH) ? serverStats::BADDIE_MAX_HEALTH : roll;
-                BADDIE->heal_baddie(roll);
-                after_action += fmt::format("{0} appears to mutate! Restoring {1} health! YIKES KILL IT!!\n",
-                BADDIE->bTainer.CHARACTER_NAME,roll);
+            if(BADDIE->is_alive())
+            {
+                int heelflip = (fast_rand() & 1) || (fast_rand() & 1);
+                if(heelflip)
+                {// baddie heals
+                    uint16_t roll = heal_roll(BADDIE->bTainer.REGEN,BADDIE->bTainer.HEALTH);
+                    // roll = (roll > serverStats::BADDIE_MAX_HEALTH) ? serverStats::BADDIE_MAX_HEALTH : roll;
+                    BADDIE->heal_baddie(roll);
+                    after_action += fmt::format("{0} appears to mutate! Restoring {1} health! YIKES KILL IT!!\n",
+                    BADDIE->bTainer.CHARACTER_NAME,roll);
+                }else{
+                    after_action += fmt::format("{0} Grunts loudly and reaches for a Band-Aid, but it's big ugly baddie fingers fails to open the wrapper! Whew.\n",
+                    BADDIE->bTainer.CHARACTER_NAME);
+                }
             }else{
-                after_action += fmt::format("{0} Grunts loudly and reaches for a Band-Aid, but it's big ugly baddie fingers fails to open the wrapper! Whew.\n",
-                BADDIE->bTainer.CHARACTER_NAME);
+                after_action += fmt::format("{0} lets out a dying whimper..\n",BADDIE->bTainer.CHARACTER_NAME);
             }
+            
 
             // baddie attacks
             if(!next)
             {// baddie is still alive
                 after_action += fmt::format("-BADDIE FIGHT DATA: [BADDIE: {0} | HEALTH: {1}] vs [PLAYER: {2} | HEALTH: {3}]\n\n",
-                    BADDIE->bTainer.CHARACTER_NAME,BADDIE->bTainer.HEALTH,(*p)->charTainer.CHARACTER_NAME,(*p)->charTainer.HEALTH);
+                    BADDIE->bTainer.CHARACTER_NAME,static_cast<int16_t>(BADDIE->bTainer.HEALTH),(*p)->charTainer.CHARACTER_NAME,static_cast<int16_t>((*p)->charTainer.HEALTH));
                 
                 attackerCrit = BADDIE->getCrit();
                 baseAttack = BADDIE->bTainer.ATTACK;
@@ -804,7 +819,7 @@ void Room::fight_controller(std::shared_ptr<Player> inst)
                     totalDeaths++;
                     playerDead = true;
                 }else{
-                    after_action += fmt::format("{0} ends up rocking {1} right out of {2} dang boots! But looks like {2} managed to face-tank the hit!\n",
+                    after_action += fmt::format("{0} ends up rocking {1} right out of {2} dang boots! But looks like {3} managed to face-tank the hit!\n",
                     BADDIE->bTainer.CHARACTER_NAME,(*p)->charTainer.CHARACTER_NAME,(*p)->genderPos,(*p)->genderHeShe);
                 }
                 // heal player
@@ -823,6 +838,7 @@ void Room::fight_controller(std::shared_ptr<Player> inst)
                     (*p)->charTainer.CHARACTER_NAME,(*p)->genderHeShe,roll);
                 }
             }
+        
         }
         room_write(after_action);
         big_bundle_update();
@@ -1057,15 +1073,18 @@ int16_t Room::heal_roll(uint16_t regen, int16_t health)
     {
         regen = (regen / 2);
     }
-
-    int16_t roll = (fast_rand() % regen);
+    int16_t roll;
+    if(regen != 0)
+         roll = (fast_rand() % regen);
     return roll;
 }
 uint32_t Room::fight_roll(uint32_t crit, uint32_t base,uint32_t def)
 {
     if(crit - base < 1)
     {
-        return 0;
+        crit = 1;
+        base = 1;
+        // return 0;
     }
     if(!def)
     {
@@ -1091,7 +1110,7 @@ void Room::tally_PVE_kill()
 void Room::inform_death(std::shared_ptr<Player> p)
 {
     std::string m = fmt::format("\nHello. This is your friendly butler here. Looks like you got SMACKED up!\nFeel Free to just lie here while everyone else is doing their thing, or you can send any action to respawn!");
-    p->write_msg(rmpm,m);
+    p->write_msg(rmpm,m,__LINE__);
 }
 
 void Room::collect_donations(uint16_t p)
@@ -1148,7 +1167,7 @@ void Room::single_kill_report(std::shared_ptr<Player> b)
     n = fmt::format("========== CURRENT ROOM STATS ==========\nTotal Baddies Killed: {0}\nTotal Player Deaths: {1}\nCoffer:{2} gold\n{3}",
         totalKills,totalDeaths,coffer,o);
     m += n;
-    b->write_msg(rmpm,m);
+    b->write_msg(rmpm,m,__LINE__);
 
 }
 
@@ -1167,7 +1186,7 @@ void Room::room_write(std::string m)
 {
     for(auto p = player_list.begin(); p != player_list.end(); ++p)
     {
-        (*p)->write_msg(rmpm,m);
+        (*p)->write_msg(rmpm,m,__LINE__);
     }
 }
 
@@ -1203,8 +1222,8 @@ std::shared_ptr<Baddie> Room::retrieve_a_baddie()
         }
         i++;
     }
-    if(bTmp != nullptr)
-        {std::lock_guard<std::mutex>lock(printLock);fmt::print("bTmp sanity check: {0}\n",bTmp->bTainer.CHARACTER_NAME);}
+    // if(bTmp != nullptr)
+        // {std::lock_guard<std::mutex>lock(printLock);fmt::print("bTmp sanity check: {0}\n",bTmp->bTainer.CHARACTER_NAME);}
     
     return bTmp;
 }

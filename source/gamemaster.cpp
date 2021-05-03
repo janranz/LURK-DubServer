@@ -376,11 +376,13 @@ void Gamemaster::proc_pvp(std::shared_ptr<Player> p)
         }else if(p->getPVPKills() > pastPvpKills)
         {
             m = fmt::format("\nBEWARE: {0} is on a PVP rampage!\n{1} PVP kill count has increased: {2} (after killing {3})",p->charTainer.CHARACTER_NAME,p->genderPos,p->getPVPKills(),pkg.TARGET);
+            write_global(m);
         }else if(p->get_deaths() > pastDeaths){
             m = fmt::format("\nPVP FAILED: {0} just failed to kill {1}!, {1} is on a PVP rampage!\n",p->charTainer.CHARACTER_NAME,pkg.TARGET);
+            write_global(m);
         }
     }
-    write_global(m);
+    
 }
 
 void Gamemaster::proc_fight(std::shared_ptr<Player> p)
@@ -427,7 +429,7 @@ void Gamemaster::proc_msg(std::shared_ptr<Player> p)
             if(compare_to_lowers(M_ToCP(pkg.CEIVER_NAME),M_ToCP((*t)->charTainer.CHARACTER_NAME)))
             {
                 (*t)->write_accept(LURK_TYPES::TYPE_MSG);                
-                (*t)->write_msg(pkg,m);
+                (*t)->write_msg(pkg,m,__LINE__);
                 found = true;
                 break;
             }
@@ -676,7 +678,7 @@ bool Gamemaster::check_stat(std::shared_ptr<Player> p)
                 good = false;
                 std::string m = fmt::format("Sorry, {0} is actively playing! Pick a different name and go rough them up in Room #{1}!\n",
                 (*t)->charTainer.CHARACTER_NAME, std::to_string((*t)->charTainer.CURRENT_ROOM_NUMBER));
-                p->write_msg(gmpm,m);
+                p->write_msg(gmpm,m,__LINE__);
                 break;
             }
         }
@@ -716,13 +718,14 @@ void Gamemaster::write_global(std::string m)
     std::shared_lock<std::shared_mutex>lock(GMLock);
     for(auto p = master_player_list.begin(); p != master_player_list.end(); ++p)
     {
-        (*p)->write_msg(pkg,m);
+        (*p)->write_msg(pkg,m,__LINE__);
     }
 }
 
 void Gamemaster::move_player(std::shared_ptr<Player> p, uint16_t room)
 {
     {
+        // std::shared_lock<std::shared_mutex> lock(GMLock);
         std::lock_guard<std::shared_mutex> lock(GMLock);
         uint16_t rm = p->getRoomNumber();
         bool found = master_room_list.at(rm)->isValidConnection(room);
