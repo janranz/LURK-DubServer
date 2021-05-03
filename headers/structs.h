@@ -33,7 +33,7 @@ struct serverStats
     static const  uint8_t PLAYER_DFLAGS;
     static const  uint16_t PLAYER_MIN_GOLD;
     static const  uint16_t PLAYER_MAX_GOLD;
-    
+    static const  uint16_t CRUTCH_BUMP;
     static const  int16_t PLAYER_BASE_HEALTH;
     static const  uint8_t BASE_FLAGS;
 

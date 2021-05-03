@@ -23,8 +23,8 @@ Player::Player(int fd)
     desc = "";
     pvpKills = 0;
     totalDeaths = 0;
-    currScore = 0;
-    highScore = 0;
+    currPVEScore = 0;
+    highPVEScore = 0;
 }
 
 //state check
@@ -130,18 +130,18 @@ void Player::setValid()
     {std::lock_guard<std::shared_mutex> lock(pLock);validToon = true;}
 }
 
-void Player::tally_curr(uint32_t n)
+void Player::tally_PVE_kill()
 {
     std::lock_guard<std::shared_mutex>lock(pLock);
-    if((currScore + n) < std::numeric_limits<uint16_t>::max())
+    if((currPVEScore + 1) < std::numeric_limits<uint16_t>::max())
     {
-        currScore += n;
+        currPVEScore++;
     }else{
-        currScore = std::numeric_limits<uint16_t>::max();
+        currPVEScore = std::numeric_limits<uint16_t>::max();
     }
-    if(currScore > highScore)
+    if(currPVEScore > highPVEScore)
     {
-        highScore = currScore;
+        highPVEScore = currPVEScore;
     }
 
 }
@@ -153,7 +153,7 @@ void Player::respawn()
         charTainer.HEALTH = serverStats::PLAYER_BASE_HEALTH;
         charTainer.FLAGS = serverStats::PLAYER_AFLAGS;
         playerAlive = true;
-        currScore = 0;
+        currPVEScore = 0;
     }
 }
 
@@ -236,7 +236,7 @@ uint16_t Player::get_deaths()
 uint16_t Player::getHighScore()
 {
     std::shared_lock<std::shared_mutex>lock(pLock);
-    return highScore;
+    return highPVEScore;
 }
 
 uint16_t Player::get_gold()
@@ -248,7 +248,7 @@ uint16_t Player::get_gold()
 uint16_t Player::getCurrScore()
 {
     std::shared_lock<std::shared_mutex>lock(pLock);
-    return currScore;
+    return currPVEScore;
 }
 
 int Player::getFD()

@@ -71,7 +71,7 @@ class Room
         void bundle_update(std::shared_ptr<Player>);
         void big_bundle_update();
         void spread_wealth();
-        void tally_kills(uint16_t);
+        void tally_PVE_kill();
         void room_write(std::string);
         void respawn_baddies();
         void mass_kill_report();
@@ -79,6 +79,7 @@ class Room
         void collect_donations(uint16_t);
         void inform_death(std::shared_ptr<Player>);
         uint32_t fight_roll(uint32_t,uint32_t,uint32_t);
+        int16_t heal_roll(uint16_t,int16_t);
         
         //debug
         // size_t room_connection_size();

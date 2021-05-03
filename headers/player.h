@@ -17,8 +17,8 @@ class Player
         bool validToon;
         bool freshSpawn;
         bool playerAlive;
-        uint16_t highScore;
-        uint16_t currScore;
+        uint16_t highPVEScore;
+        uint16_t currPVEScore;
         uint16_t pvpKills;
 
 
@@ -52,7 +52,7 @@ class Player
         void despawn();
         bool hurt_player(int32_t);
         void heal_player(int32_t);
-        void tally_curr(uint32_t);
+        void tally_PVE_kill();
         void give_gold(uint32_t);
         void take_gold(uint16_t); // refund
         
