@@ -236,7 +236,7 @@ bool Room::loot_controller(std::shared_ptr<Player> t, unsigned char* target)
             t->charTainer.CHARACTER_NAME,pTmp->charTainer.CHARACTER_NAME,loot);
         }
         smack = fast_rand() & 1;
-        if(smack)
+        if(smack && pTmp->isPlayerAlive())
         {// smack succeeds
             m += fmt::format("But {0} doesn't appreciate {1} sizing {2} up like that!\n Going off like Coke and Mentos, {0} reaches for {3} trusty bat and delivers the most savage and ruthless blow to\nthe back of {4}'s goofy dome!\n",
             pTmp->charTainer.CHARACTER_NAME,t->charTainer.CHARACTER_NAME,pTmp->gender,pTmp->genderPos,t->charTainer.CHARACTER_NAME);
@@ -271,7 +271,7 @@ bool Room::loot_controller(std::shared_ptr<Player> t, unsigned char* target)
             m += fmt::format("After closer inspection, {0} consumes some water and re-thinks that decision.\n Would have gotten bopped for like {1} coins!\n",
             t->charTainer.CHARACTER_NAME,loot);
         }
-        if(smack)
+        if(smack && bTmp->is_alive())
         {
             m += fmt::format("But {0} manages to put two-and-two together... In fact, it looks rather hungry!\nWith a haste, {0} delivers a painful blow of {1} damage to the back of {2}'s noggin!\n",
             bTmp->bTainer.CHARACTER_NAME,damage,t->charTainer.CHARACTER_NAME);
@@ -293,7 +293,11 @@ bool Room::loot_controller(std::shared_ptr<Player> t, unsigned char* target)
         loot = t->loot_me();
         m += fmt::format("\n\nAbout as silent as a strategic bomber, {0} reaches for {1}'s coin pouch...\nonly to get elbow-dropped from the Stratosphere as {2} delivers a brutal {3} damage!\n",
         t->charTainer.CHARACTER_NAME,pTmp->charTainer.CHARACTER_NAME, pTmp->genderHeShe, damage);
-
+        if(!pTmp->isPlayerAlive())
+        {
+            m += fmt::format("Which literally makes ZERO sense... {0} was just lying there a moment ago, I thought {1} was dead??\n",
+            pTmp->charTainer.CHARACTER_NAME,pTmp->genderHeShe);
+        }
         if(loot <= 0)
         {// My bad!
             m += fmt::format("\n\nSTOP WAIT!! Uhh, okay... Time freezes.. {0}'s life flashes before {1} eyes.. {2} sees that the server author failed to check if {2} had gold on line {3} of {4}!\n",
@@ -307,6 +311,7 @@ bool Room::loot_controller(std::shared_ptr<Player> t, unsigned char* target)
             m += fmt::format("Unfortunately for {0}, the damage was too much for {1} to endure, smacking {1} back to the portal.\n Turning the tables like a hidden Uno card, {2} claims their bounty of {3} coins from {0}'s coin pouch\nThat's how mafia works!",
             t->charTainer.CHARACTER_NAME,t->gender,pTmp->charTainer.CHARACTER_NAME,loot);
             collect_donations(t->loot_me());
+            pTmp->give_gold(loot);
             inform_death(t);
             
         }else{
@@ -319,6 +324,11 @@ bool Room::loot_controller(std::shared_ptr<Player> t, unsigned char* target)
     {//fails baddie
         m += fmt::format("\n\nJust as {0} reaches for {1}'s coin pouch, \n {2} trips over a broom and makes {1} very... VERY angry...\n",
         t->charTainer.CHARACTER_NAME,bTmp->bTainer.CHARACTER_NAME,t->genderHeShe);
+        if(!bTmp->is_alive())
+        {
+            m += fmt::format("Of course, any logical person would be questioning how {0} mysteriously respawned and got angry...\nWell that's just the way it works in these savage streets!\n",
+            bTmp->bTainer.CHARACTER_NAME);
+        }
         loot = t->loot_me();
         if(!(t->hurt_player(damage)))
         {
@@ -745,7 +755,7 @@ void Room::fight_controller(std::shared_ptr<Player> inst)
                 after_action += fmt::format("{0} delivers CRITICAL damage of {1} straight to the dome of {2}! That's a lot of damage!\n",
                 (*p)->charTainer.CHARACTER_NAME,roll,BADDIE->bTainer.CHARACTER_NAME);
             }else{
-                after_action += fmt::format("{0} dishes out some gnarly damage upon {1}! Look out, it might explode like a Goo-filled Pinata!\n",
+                after_action += fmt::format("{0} dishes out some gnarly {1} damage upon {2}! Look out, it might explode like a Goo-filled Pinata!\n",
                 (*p)->charTainer.CHARACTER_NAME,roll,BADDIE->bTainer.CHARACTER_NAME);
             }
 
@@ -1098,7 +1108,11 @@ uint32_t Room::fight_roll(uint32_t crit, uint32_t base,uint32_t def)
     }
     uint32_t dmg = (fast_rand() % ((crit + 1) - base) + base );
     uint32_t negate = (fast_rand() % def);
-    return (dmg - negate);
+    if(negate > dmg)
+    {
+        dmg = 0;
+    }
+    return dmg;
 }
 
 void Room::tally_PVE_kill()
