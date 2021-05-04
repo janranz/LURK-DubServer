@@ -182,10 +182,10 @@ void Gamemaster::ragequit(std::shared_ptr<Player> p)
         std::lock_guard<std::shared_mutex> lock(GMLock);
         if(p->isStarted())
         {
-            m = fmt::format("{0} has disconnected from the server!\n",p->charTainer.CHARACTER_NAME);
+            m = fmt::format("{0} has disconnected from the server!\n",p->cTainer.CHARACTER_NAME);
 
-            master_room_list.at(p->charTainer.CURRENT_ROOM_NUMBER)->remove_player(p);
-            master_room_list.at(p->charTainer.CURRENT_ROOM_NUMBER)->inform_others_player(p);
+            master_room_list.at(p->cTainer.CURRENT_ROOM_NUMBER)->remove_player(p);
+            master_room_list.at(p->cTainer.CURRENT_ROOM_NUMBER)->inform_others_player(p);
 
             for(auto t = master_player_list.begin(); t != master_player_list.end(); ++t)
             {
@@ -207,7 +207,7 @@ void Gamemaster::ragequit(std::shared_ptr<Player> p)
     {
         std::lock_guard<std::mutex> lock(printLock);
         fmt::print("{0} has ragequit.\n Masterlist Size: {1}\n"
-        ,p->charTainer.CHARACTER_NAME,size);
+        ,p->cTainer.CHARACTER_NAME,size);
     }
     if(p->isStarted())
         write_global(m);
@@ -294,7 +294,7 @@ void Gamemaster::GMController(int fd)
             proc_loot(p);
         }else{
             {
-                std::lock_guard<std::mutex>lock(printLock);fmt::print("{0} SENT INVALID TYPE: {1}\n",p->charTainer.CHARACTER_NAME,type);
+                std::lock_guard<std::mutex>lock(printLock);fmt::print("{0} SENT INVALID TYPE: {1}\n",p->cTainer.CHARACTER_NAME,type);
                 error_invalid(p);
                 pump_n_dump(p);
             }
@@ -302,8 +302,8 @@ void Gamemaster::GMController(int fd)
 
         if(p->isHighScore())
         {
-            check_pveHighScore(M_ToCP(p->charTainer.CHARACTER_NAME),p->getCurrScore());
-            check_pvpHighScore(M_ToCP(p->charTainer.CHARACTER_NAME),p->getPVPKills());
+            check_pveHighScore(M_ToCP(p->cTainer.CHARACTER_NAME),p->getCurrScore());
+            check_pvpHighScore(M_ToCP(p->cTainer.CHARACTER_NAME),p->getPVPKills());
             p->HSchecked();
         }
     }
@@ -382,7 +382,7 @@ uint8_t Gamemaster::listener(std::shared_ptr<Player> p)
     uint8_t dipByte;
     bytes = recv(p->getFD(), &dipByte,sizeof(uint8_t),MSG_WAITALL);
     if(p->isValidToon())
-        // {std::lock_guard<std::mutex>lock(printLock);fmt::print("{0} sent type: {1}\n",p->charTainer.CHARACTER_NAME,dipByte);}
+        // {std::lock_guard<std::mutex>lock(printLock);fmt::print("{0} sent type: {1}\n",p->cTainer.CHARACTER_NAME,dipByte);}
     if(bytes < 1)
     {
         dipByte = 0;
@@ -408,7 +408,7 @@ void Gamemaster::proc_loot(std::shared_ptr<Player> p)
     // {std::lock_guard<std::mutex>lock(printLock);fmt::print("DEBUG proc_loot target:{0}: Line {1} - {2}\n",pkg.TARGET,__LINE__,__FILE__);}
     {
         std::shared_lock<std::shared_mutex>lock(GMLock);
-        int r = p->charTainer.CURRENT_ROOM_NUMBER;
+        int r = p->cTainer.CURRENT_ROOM_NUMBER;
         uint16_t pastGold = p->get_gold();
         if(!(master_room_list.at(r)->initiate_loot_sequence(p,pkg.TARGET)))
         {
@@ -416,11 +416,11 @@ void Gamemaster::proc_loot(std::shared_ptr<Player> p)
         }else if(p->get_gold() > pastGold)
         {// successfully looted
             m = fmt::format("\nTHIEF ALERT: {0} just stole from {1} in {2}!\nGo show {3} what happens to thieves!\n",
-            p->charTainer.CHARACTER_NAME,master_room_list.at(r)->roomTainer.ROOM_NAME,pkg.TARGET,p->gender);
+            p->cTainer.CHARACTER_NAME,master_room_list.at(r)->roomTainer.ROOM_NAME,pkg.TARGET,p->gender);
         }else{
             //failed to loot
             m = fmt::format("\nTHIEF ATTEMPT: {0} attempted to steal from {1} in {2}, but failed!\n Go show {3} what happens to thieves!\n",
-            p->charTainer.CHARACTER_NAME,pkg.TARGET,master_room_list.at(r)->roomTainer.ROOM_NAME,p->gender);
+            p->cTainer.CHARACTER_NAME,pkg.TARGET,master_room_list.at(r)->roomTainer.ROOM_NAME,p->gender);
         }
     }
 }
@@ -441,7 +441,7 @@ void Gamemaster::proc_pvp(std::shared_ptr<Player> p)
 
     {
         std::shared_lock<std::shared_mutex>lock(GMLock);
-        int r = p->charTainer.CURRENT_ROOM_NUMBER;
+        int r = p->cTainer.CURRENT_ROOM_NUMBER;
         uint16_t pastPvpKills = p->getPVPKills();
         uint16_t pastDeaths = p->get_deaths();
         if(!(master_room_list.at(r)->initiate_fight_player(p,pkg.TARGET)))
@@ -449,10 +449,10 @@ void Gamemaster::proc_pvp(std::shared_ptr<Player> p)
             error_pvp(p);
         }else if(p->getPVPKills() > pastPvpKills)
         {
-            m = fmt::format("\nBEWARE: {0} is on a PVP rampage!\n{1} PVP kill count has increased: {2} (after killing {3})",p->charTainer.CHARACTER_NAME,p->genderPos,p->getPVPKills(),pkg.TARGET);
+            m = fmt::format("\nBEWARE: {0} is on a PVP rampage!\n{1} PVP kill count has increased: {2} (after killing {3})",p->cTainer.CHARACTER_NAME,p->genderPos,p->getPVPKills(),pkg.TARGET);
             write_global(m);
         }else if(p->get_deaths() > pastDeaths){
-            m = fmt::format("\nPVP FAILED: {0} just failed to kill {1}!, {1} is on a PVP rampage!\n",p->charTainer.CHARACTER_NAME,pkg.TARGET);
+            m = fmt::format("\nPVP FAILED: {0} just failed to kill {1}!, {1} is on a PVP rampage!\n",p->cTainer.CHARACTER_NAME,pkg.TARGET);
             write_global(m);
         }
     }
@@ -463,7 +463,7 @@ void Gamemaster::proc_fight(std::shared_ptr<Player> p)
 {
     {
         std::shared_lock<std::shared_mutex>lock(GMLock);
-        int r = p->charTainer.CURRENT_ROOM_NUMBER;
+        int r = p->cTainer.CURRENT_ROOM_NUMBER;
         if(!(master_room_list.at(r)->initiate_fight_baddie(p)))
         {
             error_fight(p);
@@ -500,7 +500,7 @@ void Gamemaster::proc_msg(std::shared_ptr<Player> p)
         for(auto t = master_player_list.begin(); t != master_player_list.end(); ++t)
         {
             
-            if(compare_to_lowers(M_ToCP(pkg.CEIVER_NAME),M_ToCP((*t)->charTainer.CHARACTER_NAME)))
+            if(compare_to_lowers(M_ToCP(pkg.CEIVER_NAME),M_ToCP((*t)->cTainer.CHARACTER_NAME)))
             {
                 (*t)->write_accept(LURK_TYPES::TYPE_MSG);                
                 (*t)->write_msg(pkg,m);
@@ -532,9 +532,9 @@ void Gamemaster::proc_changeroom(std::shared_ptr<Player> p)
 void Gamemaster::proc_character(std::shared_ptr<Player> p)
 {
     ssize_t bytes;
-    recv(p->getFD(), &p->charTainer, sizeof(LURK_CHARACTER),MSG_WAITALL);
-    p->charTainer.CHARACTER_NAME[31] = 0;
-    uint16_t len = p->charTainer.DESC_LENGTH;
+    recv(p->getFD(), &p->cTainer, sizeof(LURK_CHARACTER),MSG_WAITALL);
+    p->cTainer.CHARACTER_NAME[31] = 0;
+    uint16_t len = p->cTainer.DESC_LENGTH;
     
     // char desc[len];
     char* desc = new char[len + 1];
@@ -557,7 +557,7 @@ void Gamemaster::proc_character(std::shared_ptr<Player> p)
     {
         p->setValid();
         p->write_accept(LURK_TYPES::TYPE_CHARACTER);
-        p->write_character(p->charTainer,p->desc);
+        p->write_character(p->cTainer,p->desc);
     }else{
         error_character(p);
     }
@@ -577,7 +577,7 @@ void Gamemaster::proc_start(std::shared_ptr<Player> p)
     }
     {
         std::lock_guard<std::mutex> lock(printLock);
-        fmt::print("{0} has been added to Master: {1} (size)\n",p->charTainer.CHARACTER_NAME,size);
+        fmt::print("{0} has been added to Master: {1} (size)\n",p->cTainer.CHARACTER_NAME,size);
     }
     
     p->write_accept(LURK_TYPES::TYPE_START);
@@ -616,8 +616,8 @@ void Gamemaster::error_pvp(std::shared_ptr<Player> p)
     pkg.CODE = 0;
     std::string m = fmt::format("{0}: The player may not exist, or is currently involved in a fight.\nCheck the name and try again! (not case sensitive)\n",serverStats::GM_NAME);
     p->write_error(pkg,m);
-    int rm = p->charTainer.CURRENT_ROOM_NUMBER;
-    m = fmt::format("{0} is looking for a PVP fight in the {1}. Anyone looking to step up to {2}?\n",p->charTainer.CHARACTER_NAME,master_room_list.at(rm)->roomTainer.ROOM_NAME,p->gender);
+    int rm = p->cTainer.CURRENT_ROOM_NUMBER;
+    m = fmt::format("{0} is looking for a PVP fight in the {1}. Anyone looking to step up to {2}?\n",p->cTainer.CHARACTER_NAME,master_room_list.at(rm)->roomTainer.ROOM_NAME,p->gender);
     write_global(m);
 }
 
@@ -627,8 +627,8 @@ void Gamemaster::error_fight(std::shared_ptr<Player> p)
     pkg.CODE = 3;
     std::string m = fmt::format("{0}: You swing out of your skull, but the baddies are already dead.\n",serverStats::GM_NAME);
     p->write_error(pkg,m);
-    int rm = p->charTainer.CURRENT_ROOM_NUMBER;
-    m = fmt::format("{0} is losing {1} mind in {2}... Kicking random dead baddies. Go set {3} straight!\n",p->charTainer.CHARACTER_NAME,p->genderPos,master_room_list.at(rm)->roomTainer.ROOM_NAME,p->gender);
+    int rm = p->cTainer.CURRENT_ROOM_NUMBER;
+    m = fmt::format("{0} is losing {1} mind in {2}... Kicking random dead baddies. Go set {3} straight!\n",p->cTainer.CHARACTER_NAME,p->genderPos,master_room_list.at(rm)->roomTainer.ROOM_NAME,p->gender);
     write_global(m);
 }
 
@@ -662,9 +662,9 @@ void Gamemaster::error_character(std::shared_ptr<Player> p)
         {
             m = fmt::format("{0}: Join battle is always on "
                 "and is not a choice (yet).\n",serverStats::GM_NAME);
-            int rm = p->charTainer.CURRENT_ROOM_NUMBER;
+            int rm = p->cTainer.CURRENT_ROOM_NUMBER;
             n = fmt::format("Attention Portal Survivors!\n{0} is attempting to toggle off Join Battle! Go show {1} how you feel about that in {2}!\n",
-            p->charTainer.CHARACTER_NAME,p->gender, master_room_list.at(rm)->roomTainer.ROOM_NAME);
+            p->cTainer.CHARACTER_NAME,p->gender, master_room_list.at(rm)->roomTainer.ROOM_NAME);
             write_global(n);
         }else if(!(p->isValidToon()))
         {
@@ -689,9 +689,9 @@ void Gamemaster::error_start(std::shared_ptr<Player> p)
         if(p->isStarted())
         {
         m = fmt::format("{0}: Dearest {1}, you have already started. I love the passion, though.\n",
-        serverStats::GM_NAME,p->charTainer.CHARACTER_NAME);
+        serverStats::GM_NAME,p->cTainer.CHARACTER_NAME);
         }else{
-            m = fmt::format("{0}: {1}, Send me a start! (Type 6)\n", serverStats::GM_NAME,p->charTainer.CHARACTER_NAME);
+            m = fmt::format("{0}: {1}, Send me a start! (Type 6)\n", serverStats::GM_NAME,p->cTainer.CHARACTER_NAME);
         }
     }
     pkg.MSG_LEN = m.length();
@@ -704,14 +704,14 @@ void Gamemaster::error_start(std::shared_ptr<Player> p)
 bool Gamemaster::check_name(std::shared_ptr<Player> p)
 {
     std::shared_lock<std::shared_mutex> lock(GMLock);
-    // p->charTainer.CHARACTER_NAME[32] = 0;
+    // p->cTainer.CHARACTER_NAME[32] = 0;
     bool unique = true;
     if(!(master_player_list.empty()))
     {
         
         for(auto t = master_player_list.begin(); t != master_player_list.end(); ++t)
         {
-            if((*t)->charTainer.CHARACTER_NAME == p->charTainer.CHARACTER_NAME)
+            if((*t)->cTainer.CHARACTER_NAME == p->cTainer.CHARACTER_NAME)
             {
                 unique = false;
                 break;
@@ -726,8 +726,8 @@ bool Gamemaster::check_stat(std::shared_ptr<Player> p)
     bool good = false;
     
     
-    uint16_t stat = p->charTainer.ATTACK + p->charTainer.DEFENSE + p->charTainer.REGEN;
-    p->charTainer.GOLD = (fast_rand() %
+    uint16_t stat = p->cTainer.ATTACK + p->cTainer.DEFENSE + p->cTainer.REGEN;
+    p->cTainer.GOLD = (fast_rand() %
         ((serverStats::PLAYER_MAX_GOLD + 1) - serverStats::PLAYER_MIN_GOLD) + serverStats::PLAYER_MIN_GOLD);
     
     if(stat <= serverStats::PLAYER_INIT_POINTS)
@@ -735,23 +735,23 @@ bool Gamemaster::check_stat(std::shared_ptr<Player> p)
         // uint16_t remaining = serverStats::PLAYER_INIT_POINTS - stat;
         p->full_restore_health();
         good = true;
-        p->charTainer.CURRENT_ROOM_NUMBER = 0;
+        p->cTainer.CURRENT_ROOM_NUMBER = 0;
         // giving a bonus point to alleviate any chance of Div By 0.
-        p->charTainer.ATTACK  += 1;
-        p->charTainer.DEFENSE += 1;
-        p->charTainer.REGEN   += 1;
+        p->cTainer.ATTACK  += 1;
+        p->cTainer.DEFENSE += 1;
+        p->cTainer.REGEN   += 1;
     }
-    p->charTainer.DESC_LENGTH = p->desc.length();
+    p->cTainer.DESC_LENGTH = p->desc.length();
 
     {
         std::shared_lock<std::shared_mutex> lock(GMLock);
         for(auto t = master_player_list.begin(); t != master_player_list.end(); ++t)
         {
-            if(compare_to_lowers(M_ToCP(p->charTainer.CHARACTER_NAME),M_ToCP((*t)->charTainer.CHARACTER_NAME)))
+            if(compare_to_lowers(M_ToCP(p->cTainer.CHARACTER_NAME),M_ToCP((*t)->cTainer.CHARACTER_NAME)))
             {
                 good = false;
                 std::string m = fmt::format("Sorry, {0} is actively playing! Pick a different name and go rough them up in Room #{1}!\n",
-                (*t)->charTainer.CHARACTER_NAME, std::to_string((*t)->charTainer.CURRENT_ROOM_NUMBER));
+                (*t)->cTainer.CHARACTER_NAME, std::to_string((*t)->cTainer.CURRENT_ROOM_NUMBER));
                 p->write_msg(gmpm,m);
                 break;
             }
@@ -770,7 +770,7 @@ void Gamemaster::spawn_player(std::shared_ptr<Player> p)
         if(!(p->isPlayerAlive()))
         {
             uint16_t rm = p->getRoomNumber();
-            m = fmt::format("{0} just got smacked up in {1}! How embarrassing!\n",p->charTainer.CHARACTER_NAME,master_room_list.at(rm)->roomTainer.ROOM_NAME);
+            m = fmt::format("{0} just got smacked up in {1}! How embarrassing!\n",p->cTainer.CHARACTER_NAME,master_room_list.at(rm)->roomTainer.ROOM_NAME);
             p->respawn();
             master_room_list.at(rm)->remove_player(p);
             master_room_list.at(0)->emplace_player(p);
@@ -779,7 +779,7 @@ void Gamemaster::spawn_player(std::shared_ptr<Player> p)
         }else{
             p->respawn();
             master_room_list.at(0)->emplace_player(p);
-            m = fmt::format("Fresh Meat Sale! {0} just joined in The Portal Room! Go give {1} a warm welcome!\n",p->charTainer.CHARACTER_NAME,p->gender);
+            m = fmt::format("Fresh Meat Sale! {0} just joined in The Portal Room! Go give {1} a warm welcome!\n",p->cTainer.CHARACTER_NAME,p->gender);
         }
     }
     write_global(m);
