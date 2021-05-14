@@ -3,20 +3,20 @@
 Player::Player(int fd)
 {
     std::string m = "unknown Player";
-    strncpy(M_ToCP(charTainer.CHARACTER_NAME),m.c_str(),sizeof(charTainer.CHARACTER_NAME));
+    strncpy(M_ToCP(cTainer.CHARACTER_NAME),m.c_str(),sizeof(cTainer.CHARACTER_NAME));
     socketFD = fd;
     sktAlive = true;
     playerAlive = false;
     started = false;
     validToon = false;
     freshSpawn = true;
-    charTainer.HEALTH = serverStats::PLAYER_BASE_HEALTH;
-    charTainer.FLAGS = serverStats::BASE_FLAGS;
-    charTainer.ATTACK = 0;
-    charTainer.DEFENSE = 0;
-    charTainer.REGEN = 0;
-    charTainer.GOLD = 0;
-    charTainer.CURRENT_ROOM_NUMBER = 0;
+    cTainer.HEALTH = serverStats::PLAYER_BASE_HEALTH;
+    cTainer.FLAGS = serverStats::BASE_FLAGS;
+    cTainer.ATTACK = 0;
+    cTainer.DEFENSE = 0;
+    cTainer.REGEN = 0;
+    cTainer.GOLD = 0;
+    cTainer.CURRENT_ROOM_NUMBER = 0;
     gender = "a";
     genderPos = "a";
     genderHeShe = "a";
@@ -76,7 +76,7 @@ void Player::HSchecked()
 void Player::full_restore_health()
 {
     std::lock_guard<std::shared_mutex>lock(pLock);
-    charTainer.HEALTH = serverStats::PLAYER_BASE_HEALTH;
+    cTainer.HEALTH = serverStats::PLAYER_BASE_HEALTH;
 }
 
 void Player::tally_pvp()
@@ -97,7 +97,7 @@ void Player::giveRoom(uint16_t n)
 {
     {
         std::lock_guard<std::shared_mutex> lock(pLock);
-        charTainer.CURRENT_ROOM_NUMBER = n;
+        cTainer.CURRENT_ROOM_NUMBER = n;
     }
 }
 
@@ -107,9 +107,9 @@ void Player::startPlayer(bool g)
         std::lock_guard<std::shared_mutex> lock(pLock);
         started = true;
         playerAlive = true;
-        charTainer.FLAGS = serverStats::PLAYER_AFLAGS;
+        cTainer.FLAGS = serverStats::PLAYER_AFLAGS;
         
-        critDamage = (charTainer.ATTACK * 3);
+        critDamage = (cTainer.ATTACK * 3);
         if(g)
         {
             gender = "her";
@@ -130,7 +130,7 @@ void Player::quitPlayer()
         std::string m;
         if(started)
         {
-            m = fmt::format("{0} has staged to quit!\n",charTainer.CHARACTER_NAME);
+            m = fmt::format("{0} has staged to quit!\n",cTainer.CHARACTER_NAME);
         }else{
             m = "Unknown player staged to quit!\n";
         }
@@ -163,8 +163,8 @@ void Player::respawn()
 {
     {
         std::lock_guard<std::shared_mutex> lock(pLock);
-        charTainer.HEALTH = serverStats::PLAYER_BASE_HEALTH;
-        charTainer.FLAGS = serverStats::PLAYER_AFLAGS;
+        cTainer.HEALTH = serverStats::PLAYER_BASE_HEALTH;
+        cTainer.FLAGS = serverStats::PLAYER_AFLAGS;
         playerAlive = true;
         currPVEScore = 0;
     }
@@ -175,13 +175,13 @@ bool Player::hurt_player(int32_t h)
     // bool dead = false;
     {
         std::lock_guard<std::shared_mutex>lock(pLock);
-        if((charTainer.HEALTH - h) > 0)
+        if((cTainer.HEALTH - h) > 0)
         {
-            charTainer.HEALTH -= h;
+            cTainer.HEALTH -= h;
         }else{
-            charTainer.HEALTH = 0;
+            cTainer.HEALTH = 0;
             // currScore = 0;
-            charTainer.FLAGS = serverStats::PLAYER_DFLAGS;
+            cTainer.FLAGS = serverStats::PLAYER_DFLAGS;
             totalDeaths++;
             playerAlive = false;
             
@@ -194,11 +194,11 @@ void Player::heal_player(int32_t h)
 {
     {
         std::lock_guard<std::shared_mutex>lock(pLock);
-        if((charTainer.HEALTH + h) <= serverStats::PLAYER_BASE_HEALTH)
+        if((cTainer.HEALTH + h) <= serverStats::PLAYER_BASE_HEALTH)
         {
-            charTainer.HEALTH += h;
+            cTainer.HEALTH += h;
         }else{
-            charTainer.HEALTH = serverStats::PLAYER_BASE_HEALTH;
+            cTainer.HEALTH = serverStats::PLAYER_BASE_HEALTH;
         }
     }
 }
@@ -206,11 +206,11 @@ void Player::heal_player(int32_t h)
 void Player::give_gold(uint32_t g)
 {
     std::lock_guard<std::shared_mutex>lock(pLock);
-    if((charTainer.GOLD + g ) > serverStats::PLAYER_MAX_STAT)
+    if((cTainer.GOLD + g ) > serverStats::PLAYER_MAX_STAT)
     {
-        charTainer.GOLD = serverStats::PLAYER_MAX_STAT;
+        cTainer.GOLD = serverStats::PLAYER_MAX_STAT;
     }else{
-        charTainer.GOLD += g;
+        cTainer.GOLD += g;
     }
 }
 
@@ -218,10 +218,10 @@ uint16_t Player::drop_gold()
 {
     uint16_t drop = 0;
     std::lock_guard<std::shared_mutex>lock(pLock);
-    if(charTainer.GOLD > 0)
+    if(cTainer.GOLD > 0)
     {
-        drop = (fast_rand() % ((charTainer.GOLD + 1) - 1) + 1);
-        charTainer.GOLD -= drop;
+        drop = (fast_rand() % ((cTainer.GOLD + 1) - 1) + 1);
+        cTainer.GOLD -= drop;
     }
     
     return drop;
@@ -230,11 +230,11 @@ uint16_t Player::drop_gold()
 void Player::take_gold(uint16_t g)
 {// for refunding
     std::lock_guard<std::shared_mutex>lock(pLock);
-    if((charTainer.GOLD - g) < 0)
+    if((cTainer.GOLD - g) < 0)
     {
-        charTainer.GOLD = 0;
+        cTainer.GOLD = 0;
     }else{
-        charTainer.GOLD -= g;
+        cTainer.GOLD -= g;
     }
 }
 
@@ -255,7 +255,7 @@ uint16_t Player::getHighScore()
 uint16_t Player::get_gold()
 {
     std::shared_lock<std::shared_mutex>lock(pLock);
-    return charTainer.GOLD;
+    return cTainer.GOLD;
 }
 
 uint16_t Player::getCurrScore()
@@ -272,7 +272,7 @@ int Player::getFD()
 uint16_t Player::getRoomNumber()
 {
     std::shared_lock<std::shared_mutex>lock(pLock);
-    return charTainer.CURRENT_ROOM_NUMBER;
+    return cTainer.CURRENT_ROOM_NUMBER;
 }
 uint16_t Player::getCrit()
 {
@@ -284,13 +284,13 @@ uint16_t Player::loot_me()
 {
     uint16_t drop = 0;
     std::lock_guard<std::shared_mutex>lock(pLock);
-    if(charTainer.GOLD > 0)
+    if(cTainer.GOLD > 0)
     {
-        drop = (fast_rand() % (charTainer.GOLD) + 1);
-        charTainer.GOLD -= drop;
-    }else if(charTainer.GOLD == 1){
+        drop = (fast_rand() % (cTainer.GOLD) + 1);
+        cTainer.GOLD -= drop;
+    }else if(cTainer.GOLD == 1){
         drop = 1;
-        charTainer.GOLD -= drop;
+        cTainer.GOLD -= drop;
     }
     return drop;
 }
@@ -303,8 +303,8 @@ void Player::write_reflect()
     {
         std::shared_lock<std::shared_mutex>lock(pLock);
         write(socketFD,&LURK_TYPES::TYPE_CHARACTER, sizeof(uint8_t));
-        write(socketFD,&charTainer,sizeof(LURK_CHARACTER));
-        bytes = write(socketFD,desc.c_str(),charTainer.DESC_LENGTH);
+        write(socketFD,&cTainer,sizeof(LURK_CHARACTER));
+        bytes = write(socketFD,desc.c_str(),cTainer.DESC_LENGTH);
     }
     if( bytes < 1)
     {
@@ -319,13 +319,13 @@ void Player::write_msg(LURK_MSG pkg, std::string msg)
     {
         std::lock_guard<std::shared_mutex> lock(pLock);
         
-        strncpy(M_ToCP(pkg.CEIVER_NAME),M_ToCP(charTainer.CHARACTER_NAME),sizeof(pkg.CEIVER_NAME));
+        strncpy(M_ToCP(pkg.CEIVER_NAME),M_ToCP(cTainer.CHARACTER_NAME),sizeof(pkg.CEIVER_NAME));
         pkg.MSG_LEN = msg.length();
         
         write(socketFD,&LURK_TYPES::TYPE_MSG,sizeof(uint8_t));
         write(socketFD, &pkg, sizeof(LURK_MSG));
         bytes = write(socketFD,msg.c_str(), pkg.MSG_LEN);
-        // {std::lock_guard<std::mutex>lock(printLock);fmt::print("PLAYER: {0} BYTES:{1} -> Line {2} - {3}\nMESSAGE:{4}\nCALLED FROM LINE: {5}\n",charTainer.CHARACTER_NAME,bytes,__LINE__,__FILE__,msg,called);}
+        // {std::lock_guard<std::mutex>lock(printLock);fmt::print("PLAYER: {0} BYTES:{1} -> Line {2} - {3}\nMESSAGE:{4}\nCALLED FROM LINE: {5}\n",cTainer.CHARACTER_NAME,bytes,__LINE__,__FILE__,msg,called);}
     }
         if(bytes < 1)
         {

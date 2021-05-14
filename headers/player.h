@@ -26,7 +26,7 @@ class Player
         uint32_t totalDeaths;
     
     public:
-        LURK_CHARACTER charTainer;
+        LURK_CHARACTER cTainer;
         std::string desc;
         std::string gender;
         std::string genderPos;
