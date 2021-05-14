@@ -74,44 +74,4 @@ void Baddie::respawn()
     }else{
         critDamage = bTainer.ATTACK * 3;
     }
-    
-    // int remaining = serverStats::PLAYER_INIT_POINTS;
-    // uint16_t remaining = (fast_rand() % ((serverStats::BADDIE_MAX_STAT + 1) - serverStats::BADDIE_MIN_STAT) + serverStats::BADDIE_MIN_STAT);
-    // uint16_t attack = 0;
-    // uint16_t defense = 0;
-    // uint16_t regen = 0;
-    // int roll;
-    // int i = 0;
-    // while(remaining != 0)
-    // {
-    //     switch(i % 3)
-    //     {
-    //         case 0:
-    //         {
-    //             roll = (fast_rand() % (remaining) + 1);
-    //             attack += roll;
-    //             remaining -= roll;
-    //             break;                
-    //         }
-    //         case 1:
-    //         {
-    //             roll = (fast_rand() % (remaining) + 1);
-    //             defense += roll;
-    //             remaining -= roll;
-    //             break;
-    //         }
-    //         case 2:
-    //         {
-    //             roll = (fast_rand() % (remaining) + 1);
-    //             regen += roll;
-    //             remaining -= roll;
-    //             break;
-    //         }
-    //     }
-    //     i++;
-    // }
-    // bTainer.ATTACK = attack;
-    // bTainer.DEFENSE = defense;
-    // bTainer.REGEN = regen;
-    // critDamage = (bTainer.ATTACK * 3);
 }

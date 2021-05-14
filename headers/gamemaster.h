@@ -32,8 +32,6 @@ class Gamemaster
         uint32_t pvpHighScore;
 
     public:
-        //events
-        // int fast_rand();
         //initializers
         Gamemaster();
         void build_chatter(int, std::vector<std::string>::iterator);
@@ -42,14 +40,12 @@ class Gamemaster
         void build_rooms();
         std::shared_ptr<Baddie> build_a_baddie(uint16_t);
         void populate_rooms();
-        
         //cleanup
         void ragequit(std::shared_ptr<Player>);
         void pump_n_dump(std::shared_ptr<Player>);
         //network
         void GMController(int);
         uint8_t listener(std::shared_ptr<Player>);
-
         // type processing
         void proc_character(std::shared_ptr<Player>);
         void proc_start(std::shared_ptr<Player>);
@@ -59,7 +55,6 @@ class Gamemaster
         void proc_fight(std::shared_ptr<Player>);
         void proc_pvp(std::shared_ptr<Player>);
         void proc_loot(std::shared_ptr<Player>);
-
         //helper
         bool check_name(std::shared_ptr<Player>);
         bool check_stat(std::shared_ptr<Player>);
@@ -67,7 +62,6 @@ class Gamemaster
         void spawn_player(std::shared_ptr<Player>);
         void check_pveHighScore(char*,uint32_t);
         void check_pvpHighScore(char*,uint32_t);
-        
         void write_global(std::string);
         // error handling
         void error_character(std::shared_ptr<Player>);

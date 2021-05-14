@@ -98,7 +98,6 @@ struct cm_sizes
 // LURK Tainers
 struct LURK_MSG
 {
-    // uint8_t TYPE = 1;
     uint16_t MSG_LEN;
     unsigned char CEIVER_NAME[32];
     unsigned char SENDER_NAME[32];
@@ -106,38 +105,32 @@ struct LURK_MSG
 
 struct LURK_CHANGEROOM
 {
-    // uint8_t TYPE = 2;
     uint16_t ROOM_NUMBER;
 }__attribute__((packed));
 
 struct LURK_PVP
 {
-    // uint8_t TYPE = 4;
     unsigned char TARGET[32];
 }__attribute__((packed));
 
 struct LURK_LOOT
 {
-    // uint8_t TYPE = 5;
     unsigned char TARGET[32];
 }__attribute__((packed));
 
 struct LURK_ERROR
 {
-    // uint8_t TYPE = 7;
     uint8_t CODE;
     uint16_t MSG_LEN;
 }__attribute__((packed));
 
 struct LURK_ACCEPT
 {
-    // uint8_t TYPE = 8;
     uint8_t ACCEPT_TYPE;
 }__attribute__((packed));
 
 struct LURK_ROOM
 {
-    // uint8_t TYPE = 9;
     uint16_t ROOM_NUMBER;
     unsigned char ROOM_NAME[32];
     uint16_t DESC_LENGTH;
@@ -145,7 +138,6 @@ struct LURK_ROOM
 
 struct LURK_CHARACTER
 {
-    // uint8_t TYPE = 10;
     unsigned char CHARACTER_NAME[32];
     uint8_t FLAGS;
     uint16_t ATTACK;
@@ -159,34 +151,19 @@ struct LURK_CHARACTER
 
 struct LURK_GAME
 {
-    // uint8_t TYPE = 11;
     uint16_t INITIAL_POINTS;
     uint16_t STAT_LIMIT;
     uint16_t DESC_LENGTH;
 }__attribute__((packed));
 
-// struct LURK_CONNECTION
-// {
-//     // uint8_t TYPE = 13;
-//     uint16_t ROOM_NUMBER;
-//     char ROOM_NAME[32];
-//     uint16_t DESC_LENGTH;
-// }__attribute__((packed));
-
 struct LURK_VERSION
 {
-    // uint8_t TYPE = 14;
     uint8_t MAJOR = 2;
     uint8_t MINOR = 2;
     uint16_t EXTENS_SIZE;
 }__attribute__((packed));
 
-// struct Baddie
-// {
-//     LURK_CHARACTER bTainer;
-//     std::string desc;
-//     std::mutex bLock;
-// };
+
 
 #endif // STRUCTS_H
 

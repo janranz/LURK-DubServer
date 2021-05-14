@@ -1,7 +1,7 @@
 #include"../headers/gamemaster.h"
 /* 
     TODO:
-    check coffer collection on dead homies.
+    Test cases
 
 */
 
@@ -25,15 +25,6 @@ Gamemaster::Gamemaster()
     
     
 }
-
-//events
-// int Gamemaster::fast_rand()
-// {
-//     std::lock_guard<std::mutex> lock(randLock);
-//     g_seed = (214013*g_seed+2531011);
-//     return (g_seed>>16)&0x7FFF;
-// }
-
 // initializers
 void Gamemaster::build_chatter(int i,std::vector<std::string>::iterator m)
 {
@@ -197,10 +188,6 @@ void Gamemaster::ragequit(std::shared_ptr<Player> p)
                     {std::lock_guard<std::mutex> lock(printLock);fmt::print("Found in master_player list. removed!\n");}
                 }
             }
-            // for(auto t = master_player_list.begin(); t != master_player_list.end(); ++t)
-            // {
-            //     (*t)->write_msg(gmpm,m);
-            // }
         }
             size = master_player_list.size();
     }
@@ -242,7 +229,6 @@ void Gamemaster::GMController(int fd)
         }
     }
     // potentially global message
-
     while(p->isSktAlive() && !(p->isStarted()))
     {
         uint8_t type = listener(p);

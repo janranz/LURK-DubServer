@@ -11,7 +11,6 @@
 class Baddie
 {
     private:
-
         std::shared_mutex bLock;
         bool alive;
         uint16_t critDamage;
@@ -27,10 +26,6 @@ class Baddie
         //getter
         uint16_t getCrit();
         bool is_alive();
-        
-
-    
-
 };
 
 #endif // BADDIE_H
