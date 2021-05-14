@@ -21,9 +21,6 @@ class Player
         uint16_t highPVEScore;
         uint16_t currPVEScore;
         uint16_t pvpKills;
-
-
-
         // fight logic
         uint32_t critDamage;
         uint32_t totalDeaths;
@@ -57,12 +54,9 @@ class Player
         void tally_PVE_kill();
         void give_gold(uint32_t);
         void take_gold(uint16_t); // refund
-        
         void HSchecked();
         void tally_pvp();
         void full_restore_health();
-        
-
         //getter
         int getFD();
         uint16_t getCrit();
